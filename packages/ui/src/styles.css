@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles for MingLog */
+.prose {
+  max-width: none;
+}
+
+.prose p {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Block editor styles */
+.block-editor {
+  @apply focus:outline-none;
+}
+
+.block-editor p {
+  @apply m-0;
+}
+
+.block-editor .is-empty::before {
+  content: attr(data-placeholder);
+  @apply text-gray-400 pointer-events-none;
+}
+
+/* Link styles */
+.block-editor a {
+  @apply text-blue-600 hover:text-blue-800 underline;
+}
+
+/* Page reference styles */
+.page-reference {
+  @apply text-blue-600 hover:text-blue-800 bg-blue-50 px-1 rounded;
+}
+
+/* Block reference styles */
+.block-reference {
+  @apply text-purple-600 hover:text-purple-800 bg-purple-50 px-1 rounded;
+}
+
+/* Tag styles */
+.tag {
+  @apply text-green-600 hover:text-green-800 bg-green-50 px-1 rounded;
+}

@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./logseq.db"
+}
+
+model Graph {
+  id       String @id
+  name     String
+  path     String @unique
+  settings String? // JSON as string for SQLite
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pages  Page[]
+  blocks Block[]
+
+  @@map("graphs")
+}
+
+model Page {
+  id          String  @id
+  name        String
+  title       String?
+  properties  String? // JSON as string for SQLite
+  tags        String  @default("")
+  isJournal   Boolean @default(false)
+  journalDate String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  graphId String
+  graph   Graph  @relation(fields: [graphId], references: [id], onDelete: Cascade)
+
+  blocks      Block[]
+  linksTo     Link[] @relation("LinkToPage")
+  linksFrom   Link[] @relation("LinkFromPage")
+
+  @@unique([graphId, name])
+  @@index([name])
+  @@index([journalDate])
+  @@map("pages")
+}
+
+model Block {
+  id         String  @id
+  content    String
+  parentId   String?
+  properties String? // JSON as string for SQLite
+  refs       String  @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pageId  String
+  page    Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  graphId String
+  graph   Graph  @relation(fields: [graphId], references: [id], onDelete: Cascade)
+
+  parent   Block?  @relation("BlockHierarchy", fields: [parentId], references: [id])
+  children Block[] @relation("BlockHierarchy")
+
+  linksFrom Link[] @relation("LinkFromBlock")
+
+  @@index([pageId])
+  @@index([parentId])
+  @@index([content])
+  @@map("blocks")
+}
+
+model Link {
+  id       String @id
+  linkType String // "REFERENCE", "EMBED", "TAG"
+
+  createdAt DateTime @default(now())
+
+  fromBlockId String
+  fromBlock   Block  @relation("LinkFromBlock", fields: [fromBlockId], references: [id], onDelete: Cascade)
+
+  toPageId String?
+  toPage   Page?  @relation("LinkToPage", fields: [toPageId], references: [id], onDelete: Cascade)
+
+  fromPageId String?
+  fromPage   Page?  @relation("LinkFromPage", fields: [fromPageId], references: [id], onDelete: Cascade)
+
+  @@index([fromBlockId])
+  @@index([toPageId])
+  @@map("links")
+}
+
+model Plugin {
+  id          String  @id
+  name        String
+  version     String
+  description String?
+  author      String?
+  main        String
+  permissions String  @default("")
+  enabled     Boolean @default(true)
+  settings    String? // JSON as string for SQLite
+
+  installedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("plugins")
+}
+
+model Setting {
+  key   String @id
+  value String // JSON as string for SQLite
+
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
