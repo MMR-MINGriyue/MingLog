@@ -1,9 +1,17 @@
 import { nanoid } from 'nanoid';
 import { Block, BlockSchema } from '../types';
 import { EventEmitter } from '../utils/event-emitter';
+import { BlockRepository } from '@minglog/database';
 
 export class BlockService extends EventEmitter {
   private blocks = new Map<string, Block>();
+  private blockRepo: BlockRepository;
+  private currentGraphId: string = 'default';
+
+  constructor() {
+    super();
+    this.blockRepo = new BlockRepository();
+  }
 
   async createBlock(
     content: string,
@@ -25,22 +33,38 @@ export class BlockService extends EventEmitter {
 
     // Validate block
     const validatedBlock = BlockSchema.parse(block);
-    
-    // Store block
-    this.blocks.set(block.id, validatedBlock);
-    
+
+    // Save to database
+    try {
+      await this.blockRepo.create({
+        id: validatedBlock.id,
+        content: validatedBlock.content,
+        parentId: validatedBlock.parentId,
+        properties: JSON.stringify(validatedBlock.properties),
+        refs: validatedBlock.refs.join(','),
+        pageId: validatedBlock.pageId,
+        graphId: this.currentGraphId,
+      });
+    } catch (error) {
+      console.error('Failed to save block to database:', error);
+      // Continue with in-memory storage for now
+    }
+
+    // Store in memory
+    this.blocks.set(validatedBlock.id, validatedBlock);
+
     // Update parent's children
     if (parentId) {
       const parent = this.blocks.get(parentId);
       if (parent) {
-        parent.children.push(block.id);
+        parent.children.push(validatedBlock.id);
         parent.updatedAt = now;
       }
     }
 
     // Emit event
     this.emit('block:created', validatedBlock);
-    
+
     return validatedBlock;
   }
 

@@ -14,6 +14,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@heroicons/react": "^2.0.18",
     "@minglog/core": "workspace:*",
     "@minglog/database": "workspace:*",
     "@minglog/editor": "workspace:*",

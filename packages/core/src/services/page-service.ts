@@ -13,6 +13,8 @@ export class PageService extends EventEmitter {
   constructor() {
     super();
     this.pageRepo = new PageRepository();
+    // Auto-load pages on initialization
+    this.loadPagesFromDatabase().catch(console.error);
   }
 
   async createPage(name: string, isJournal = false): Promise<Page> {

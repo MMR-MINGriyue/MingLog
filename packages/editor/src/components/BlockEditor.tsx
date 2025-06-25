@@ -85,7 +85,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   const handlePageReference = useCallback(() => {
     if (!editor) return;
     
-    const { from, to } = editor.state.selection;
+    const { to } = editor.state.selection;
     editor.chain().focus().insertContent('[[]]').run();
     // Move cursor between brackets
     editor.commands.setTextSelection(to + 2);
@@ -94,7 +94,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   const handleBlockReference = useCallback(() => {
     if (!editor) return;
     
-    const { from, to } = editor.state.selection;
+    const { to } = editor.state.selection;
     editor.chain().focus().insertContent('(())').run();
     // Move cursor between brackets
     editor.commands.setTextSelection(to + 2);
