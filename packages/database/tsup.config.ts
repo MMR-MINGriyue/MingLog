@@ -3,6 +3,6 @@ import { defineConfig } from 'tsup';
 export default defineConfig({
   entry: ['src/index.ts'],
   format: ['esm'],
-  dts: true,
+  dts: false, // Temporarily disabled for testing
   clean: true,
 });

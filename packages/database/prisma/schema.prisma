@@ -11,7 +11,7 @@ datasource db {
 }
 
 model Graph {
-  id       String @id
+  id       String @id @default(cuid())
   name     String
   path     String @unique
   settings String? // JSON as string for SQLite
@@ -26,7 +26,7 @@ model Graph {
 }
 
 model Page {
-  id          String  @id
+  id          String  @id @default(cuid())
   name        String
   title       String?
   properties  String? // JSON as string for SQLite
@@ -51,7 +51,7 @@ model Page {
 }
 
 model Block {
-  id         String  @id
+  id         String  @id @default(cuid())
   content    String
   parentId   String?
   properties String? // JSON as string for SQLite
@@ -80,7 +80,7 @@ model Block {
 }
 
 model Link {
-  id       String @id
+  id       String @id @default(cuid())
   linkType String // "REFERENCE", "EMBED", "TAG"
 
   createdAt DateTime @default(now())

@@ -23,7 +23,8 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.1",
-    "zustand": "^4.4.7"
+    "zustand": "^4.4.7",
+    "lodash-es": "^4.17.21"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",

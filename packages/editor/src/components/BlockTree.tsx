@@ -63,21 +63,53 @@ export const BlockTree: React.FC<BlockTreeProps> = ({
   const renderBlock = (block: Block) => {
     const childBlocks = getChildBlocks(block.id);
     const hasChildren = childBlocks.length > 0;
+    const isCollapsed = block.collapsed && hasChildren;
 
     return (
       <div key={block.id} className="group">
-        <div 
-          className="flex items-start space-x-2 py-1 hover:bg-gray-50 rounded"
-          style={{ paddingLeft: `${level * 24}px` }}
-        >
-          {/* Bullet point */}
-          <div className="flex-shrink-0 w-2 h-2 bg-gray-400 rounded-full mt-2" />
-          
+        <div className="flex items-start space-x-2 py-1 hover:bg-gray-50 rounded relative">
+          {/* Indentation lines */}
+          {level > 0 && (
+            <div className="absolute left-0 top-0 bottom-0 flex">
+              {Array.from({ length: level }).map((_, i) => (
+                <div
+                  key={i}
+                  className="w-6 border-l border-gray-200"
+                  style={{ marginLeft: `${i * 24}px` }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Bullet point and collapse toggle */}
+          <div
+            className="flex-shrink-0 flex items-center justify-center w-6 h-6 relative z-10"
+            style={{ marginLeft: `${level * 24}px` }}
+          >
+            {hasChildren ? (
+              <button
+                onClick={() => onToggleCollapse(block.id)}
+                className="w-4 h-4 flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                title={isCollapsed ? 'Expand' : 'Collapse'}
+              >
+                <svg
+                  className={`w-3 h-3 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                </svg>
+              </button>
+            ) : (
+              <div className="w-2 h-2 bg-gray-400 rounded-full" />
+            )}
+          </div>
+
           {/* Block content */}
           <div className="flex-1 min-w-0">
             <BlockEditor
               block={block}
-              level={level}
+              level={0} // Reset level since we handle indentation in the tree
               onUpdate={(content) => handleBlockUpdate(block.id, content)}
               onEnter={() => handleEnter(block.id)}
               onBackspace={() => handleBackspace(block.id)}
@@ -91,19 +123,21 @@ export const BlockTree: React.FC<BlockTreeProps> = ({
         </div>
 
         {/* Child blocks */}
-        {hasChildren && (
-          <BlockTree
-            blocks={childBlocks}
-            onUpdateBlock={onUpdateBlock}
-            onCreateBlock={onCreateBlock}
-            onDeleteBlock={onDeleteBlock}
-            onIndentBlock={onIndentBlock}
-            onOutdentBlock={onOutdentBlock}
-            onToggleCollapse={onToggleCollapse}
-            onFocusBlock={onFocusBlock}
-            level={level + 1}
-            focusedBlockId={focusedBlockId}
-          />
+        {hasChildren && !isCollapsed && (
+          <div className="ml-6">
+            <BlockTree
+              blocks={childBlocks}
+              onUpdateBlock={onUpdateBlock}
+              onCreateBlock={onCreateBlock}
+              onDeleteBlock={onDeleteBlock}
+              onIndentBlock={onIndentBlock}
+              onOutdentBlock={onOutdentBlock}
+              onToggleCollapse={onToggleCollapse}
+              onFocusBlock={onFocusBlock}
+              level={level + 1}
+              focusedBlockId={focusedBlockId}
+            />
+          </div>
         )}
       </div>
     );

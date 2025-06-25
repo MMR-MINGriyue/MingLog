@@ -1,17 +1,33 @@
 import { nanoid } from 'nanoid';
 import { Block, BlockSchema } from '../types';
 import { EventEmitter } from '../utils/event-emitter';
-// import { BlockRepository } from '@minglog/database'; // Disabled for browser compatibility
+import { BlockRepository } from '@minglog/database';
 
 export class BlockService extends EventEmitter {
   private blocks = new Map<string, Block>();
-  // private blockRepo: BlockRepository; // Disabled for browser compatibility
-  // private currentGraphId: string = 'default'; // Disabled for browser compatibility
+  private blockRepo: BlockRepository;
+  private currentGraphId: string = 'default';
+  private isInitialized = false;
 
   constructor() {
     super();
-    // this.blockRepo = new BlockRepository(); // Disabled for browser compatibility
-    this.initializeSampleBlocks();
+    this.blockRepo = new BlockRepository();
+  }
+
+  async initialize(): Promise<void> {
+    if (this.isInitialized) return;
+
+    try {
+      // Load existing blocks from database
+      await this.loadBlocksFromDatabase();
+      this.isInitialized = true;
+      console.log('BlockService initialized successfully');
+    } catch (error) {
+      console.warn('Failed to load from database, using sample data:', error);
+      // Fallback to sample data if database fails
+      this.initializeSampleBlocks();
+      this.isInitialized = true;
+    }
   }
 
   async createBlock(
@@ -19,6 +35,8 @@ export class BlockService extends EventEmitter {
     pageId: string,
     parentId?: string
   ): Promise<Block> {
+    await this.initialize();
+
     const now = Date.now();
     const block: Block = {
       id: nanoid(),
@@ -37,28 +55,47 @@ export class BlockService extends EventEmitter {
     // Validate block
     const validatedBlock = BlockSchema.parse(block);
 
-    // Database operations disabled for browser compatibility
-    // Store in memory only for now
+    try {
+      // Save to database
+      await this.blockRepo.create({
+        id: validatedBlock.id,
+        content: validatedBlock.content,
+        pageId: validatedBlock.pageId,
+        parentId: validatedBlock.parentId,
+        properties: JSON.stringify(validatedBlock.properties || {}),
+        refs: validatedBlock.refs.join(','),
+        order: validatedBlock.order,
+        collapsed: validatedBlock.collapsed,
+        graphId: this.currentGraphId,
+      });
 
-    // Store in memory
-    this.blocks.set(validatedBlock.id, validatedBlock);
+      // Store in memory cache
+      this.blocks.set(validatedBlock.id, validatedBlock);
 
-    // Update parent's children
-    if (parentId) {
-      const parent = this.blocks.get(parentId);
-      if (parent) {
-        parent.children.push(validatedBlock.id);
-        parent.updatedAt = now;
+      // Update parent's children
+      if (parentId) {
+        const parent = this.blocks.get(parentId);
+        if (parent) {
+          parent.children.push(validatedBlock.id);
+          parent.updatedAt = now;
+          // Update parent in database
+          await this.updateBlockInDatabase(parent);
+        }
       }
+
+      // Emit event
+      this.emit('block:created', validatedBlock);
+
+      return validatedBlock;
+    } catch (error) {
+      console.error('Failed to create block in database:', error);
+      throw error;
     }
-
-    // Emit event
-    this.emit('block:created', validatedBlock);
-
-    return validatedBlock;
   }
 
   async updateBlock(id: string, content: string): Promise<Block> {
+    await this.initialize();
+
     const block = this.blocks.get(id);
     if (!block) {
       throw new Error(`Block with id ${id} not found`);
@@ -73,49 +110,130 @@ export class BlockService extends EventEmitter {
 
     // Validate updated block
     const validatedBlock = BlockSchema.parse(updatedBlock);
-    
-    // Store updated block
-    this.blocks.set(id, validatedBlock);
-    
-    // Emit event
-    this.emit('block:updated', validatedBlock);
-    
-    return validatedBlock;
+
+    try {
+      // Update in database
+      await this.updateBlockInDatabase(validatedBlock);
+
+      // Store updated block in cache
+      this.blocks.set(id, validatedBlock);
+
+      // Emit event
+      this.emit('block:updated', validatedBlock);
+
+      return validatedBlock;
+    } catch (error) {
+      console.error('Failed to update block in database:', error);
+      throw error;
+    }
   }
 
   async deleteBlock(id: string): Promise<void> {
+    await this.initialize();
+
     const block = this.blocks.get(id);
     if (!block) {
       throw new Error(`Block with id ${id} not found`);
     }
 
-    // Remove from parent's children
-    if (block.parentId) {
-      const parent = this.blocks.get(block.parentId);
-      if (parent) {
-        parent.children = parent.children.filter(childId => childId !== id);
-        parent.updatedAt = Date.now();
+    try {
+      // Delete all children recursively first
+      for (const childId of block.children) {
+        await this.deleteBlock(childId);
       }
-    }
 
-    // Delete all children recursively
-    for (const childId of block.children) {
-      await this.deleteBlock(childId);
-    }
+      // Remove from parent's children
+      if (block.parentId) {
+        const parent = this.blocks.get(block.parentId);
+        if (parent) {
+          parent.children = parent.children.filter(childId => childId !== id);
+          parent.updatedAt = Date.now();
+          // Update parent in database
+          await this.updateBlockInDatabase(parent);
+        }
+      }
 
-    // Remove block
-    this.blocks.delete(id);
-    
-    // Emit event
-    this.emit('block:deleted', { id });
+      // Delete from database
+      await this.blockRepo.delete(id);
+
+      // Remove from memory cache
+      this.blocks.delete(id);
+
+      // Emit event
+      this.emit('block:deleted', { id });
+    } catch (error) {
+      console.error('Failed to delete block from database:', error);
+      throw error;
+    }
   }
 
-  getBlock(id: string): Block | undefined {
+  async getBlock(id: string): Promise<Block | undefined> {
+    await this.initialize();
     return this.blocks.get(id);
+  }
+
+  // Helper method to update block in database
+  private async updateBlockInDatabase(block: Block): Promise<void> {
+    await this.blockRepo.update(block.id, {
+      content: block.content,
+      properties: JSON.stringify(block.properties || {}),
+      refs: block.refs.join(','),
+      order: block.order,
+      collapsed: block.collapsed,
+    });
+  }
+
+  // Helper method to convert database block to internal block format
+  private dbBlockToBlock(dbBlock: any): Block {
+    return {
+      id: dbBlock.id,
+      content: dbBlock.content,
+      pageId: dbBlock.pageId,
+      parentId: dbBlock.parentId,
+      createdAt: dbBlock.createdAt.getTime(),
+      updatedAt: dbBlock.updatedAt.getTime(),
+      children: [], // Will be populated when loading children
+      refs: dbBlock.refs ? dbBlock.refs.split(',').filter(Boolean) : [],
+      properties: dbBlock.properties ? JSON.parse(dbBlock.properties) : {},
+      order: dbBlock.order,
+      collapsed: dbBlock.collapsed,
+    };
+  }
+
+  // Load blocks from database
+  async loadBlocksFromDatabase(): Promise<void> {
+    try {
+      const dbBlocks = await this.blockRepo.findMany({
+        graphId: this.currentGraphId,
+      });
+
+      // First pass: create all blocks
+      for (const dbBlock of dbBlocks) {
+        const block = this.dbBlockToBlock(dbBlock);
+        this.blocks.set(block.id, block);
+      }
+
+      // Second pass: populate children relationships
+      for (const dbBlock of dbBlocks) {
+        if (dbBlock.parentId) {
+          const parent = this.blocks.get(dbBlock.parentId);
+          if (parent) {
+            parent.children.push(dbBlock.id);
+          }
+        }
+      }
+
+      console.log(`Loaded ${dbBlocks.length} blocks from database`);
+    } catch (error) {
+      console.error('Failed to load blocks from database:', error);
+      throw error;
+    }
   }
 
   // Indent block (make it a child of the previous sibling)
   async indentBlock(blockId: string): Promise<void> {
+    await this.initialize();
+
     const block = this.blocks.get(blockId);
     if (!block) return;
 
@@ -140,84 +258,135 @@ export class BlockService extends EventEmitter {
 
     if (!previousSibling) return; // No previous sibling to become parent
 
-    // Remove from current parent
-    if (block.parentId) {
-      const currentParent = this.blocks.get(block.parentId);
-      if (currentParent) {
-        currentParent.children = currentParent.children.filter(id => id !== blockId);
+    try {
+      // Remove from current parent
+      if (block.parentId) {
+        const currentParent = this.blocks.get(block.parentId);
+        if (currentParent) {
+          currentParent.children = currentParent.children.filter(id => id !== blockId);
+          await this.updateBlockInDatabase(currentParent);
+        }
       }
+
+      // Add to new parent (previous sibling)
+      block.parentId = previousSibling.id;
+      block.order = previousSibling.children.length;
+      previousSibling.children.push(blockId);
+
+      // Update timestamps
+      block.updatedAt = Date.now();
+      previousSibling.updatedAt = Date.now();
+
+      // Update both blocks in database
+      await this.updateBlockInDatabase(block);
+      await this.updateBlockInDatabase(previousSibling);
+
+      this.emit('block:updated', block);
+    } catch (error) {
+      console.error('Failed to indent block:', error);
+      throw error;
     }
-
-    // Add to new parent (previous sibling)
-    block.parentId = previousSibling.id;
-    block.order = previousSibling.children.length;
-    previousSibling.children.push(blockId);
-
-    // Update timestamps
-    block.updatedAt = Date.now();
-    previousSibling.updatedAt = Date.now();
-
-    this.emit('block:updated', block);
   }
 
   // Outdent block (move it up one level)
   async outdentBlock(blockId: string): Promise<void> {
+    await this.initialize();
+
     const block = this.blocks.get(blockId);
     if (!block || !block.parentId) return; // Can't outdent root blocks
 
     const currentParent = this.blocks.get(block.parentId);
     if (!currentParent) return;
 
-    // Remove from current parent
-    currentParent.children = currentParent.children.filter(id => id !== blockId);
+    try {
+      // Remove from current parent
+      currentParent.children = currentParent.children.filter(id => id !== blockId);
 
-    // Set new parent (grandparent)
-    block.parentId = currentParent.parentId;
+      // Set new parent (grandparent)
+      block.parentId = currentParent.parentId;
 
-    // Add to new parent's children
-    if (block.parentId) {
-      const newParent = this.blocks.get(block.parentId);
-      if (newParent) {
-        newParent.children.push(blockId);
-        block.order = newParent.children.length - 1;
+      // Add to new parent's children
+      if (block.parentId) {
+        const newParent = this.blocks.get(block.parentId);
+        if (newParent) {
+          newParent.children.push(blockId);
+          block.order = newParent.children.length - 1;
+          await this.updateBlockInDatabase(newParent);
+        }
+      } else {
+        // Becoming a root block
+        const rootBlocks = Array.from(this.blocks.values())
+          .filter(b => b.pageId === block.pageId && !b.parentId);
+        block.order = rootBlocks.length;
       }
-    } else {
-      // Becoming a root block
-      const rootBlocks = Array.from(this.blocks.values())
-        .filter(b => b.pageId === block.pageId && !b.parentId);
-      block.order = rootBlocks.length;
+
+      // Update timestamps
+      block.updatedAt = Date.now();
+      currentParent.updatedAt = Date.now();
+
+      // Update blocks in database
+      await this.updateBlockInDatabase(block);
+      await this.updateBlockInDatabase(currentParent);
+
+      this.emit('block:updated', block);
+    } catch (error) {
+      console.error('Failed to outdent block:', error);
+      throw error;
     }
-
-    // Update timestamps
-    block.updatedAt = Date.now();
-    currentParent.updatedAt = Date.now();
-
-    this.emit('block:updated', block);
   }
 
   // Toggle collapse state
   async toggleCollapse(blockId: string): Promise<void> {
+    await this.initialize();
+
     const block = this.blocks.get(blockId);
     if (!block) return;
 
-    block.collapsed = !block.collapsed;
-    block.updatedAt = Date.now();
+    try {
+      block.collapsed = !block.collapsed;
+      block.updatedAt = Date.now();
 
-    this.emit('block:updated', block);
+      // Update in database
+      await this.updateBlockInDatabase(block);
+
+      this.emit('block:updated', block);
+    } catch (error) {
+      console.error('Failed to toggle collapse:', error);
+      throw error;
+    }
   }
 
-  getBlocksByPage(pageId: string): Block[] {
+  async getBlocksByPage(pageId: string): Promise<Block[]> {
+    await this.initialize();
     return Array.from(this.blocks.values())
-      .filter(block => block.pageId === pageId);
+      .filter(block => block.pageId === pageId)
+      .sort((a, b) => a.order - b.order);
   }
 
-  getChildren(blockId: string): Block[] {
+  async getAllBlocks(): Promise<Block[]> {
+    await this.initialize();
+    return Array.from(this.blocks.values())
+      .sort((a, b) => a.order - b.order);
+  }
+
+  async getChildren(blockId: string): Promise<Block[]> {
+    await this.initialize();
     const block = this.blocks.get(blockId);
     if (!block) return [];
-    
+
     return block.children
       .map(childId => this.blocks.get(childId))
       .filter(Boolean) as Block[];
+  }
+
+  // Set current graph
+  async setCurrentGraph(graphId: string): Promise<void> {
+    this.currentGraphId = graphId;
+    // Clear in-memory cache when switching graphs
+    this.blocks.clear();
+    this.isInitialized = false;
+    // Reload blocks for new graph
+    await this.initialize();
   }
 
   private extractRefs(content: string): string[] {

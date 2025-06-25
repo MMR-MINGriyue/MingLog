@@ -2,22 +2,39 @@ import { nanoid } from 'nanoid';
 import { Page, PageSchema } from '../types';
 import { EventEmitter } from '../utils/event-emitter';
 import { format } from 'date-fns';
-// import { PageRepository } from '@minglog/database'; // Disabled for browser compatibility
+import { PageRepository } from '@minglog/database';
 
 export class PageService extends EventEmitter {
   private pages = new Map<string, Page>();
   private nameIndex = new Map<string, string>(); // name -> id mapping
-  // private pageRepo: PageRepository; // Disabled for browser compatibility
-  // private currentGraphId: string = 'default'; // Disabled for browser compatibility
+  private pageRepo: PageRepository;
+  private currentGraphId: string = 'default';
+  private isInitialized = false;
 
   constructor() {
     super();
-    // this.pageRepo = new PageRepository(); // Disabled for browser compatibility
-    // Auto-load sample data for demo
-    this.initializeSampleData();
+    this.pageRepo = new PageRepository();
+  }
+
+  async initialize(): Promise<void> {
+    if (this.isInitialized) return;
+
+    try {
+      // Load existing pages from database
+      await this.loadPagesFromDatabase();
+      this.isInitialized = true;
+      console.log('PageService initialized successfully');
+    } catch (error) {
+      console.warn('Failed to load from database, using sample data:', error);
+      // Fallback to sample data if database fails
+      this.initializeSampleData();
+      this.isInitialized = true;
+    }
   }
 
   async createPage(name: string, isJournal = false): Promise<Page> {
+    await this.initialize();
+
     // Check if page already exists
     const existingId = this.nameIndex.get(name.toLowerCase());
     if (existingId) {
@@ -41,17 +58,36 @@ export class PageService extends EventEmitter {
     // Validate page
     const validatedPage = PageSchema.parse(page);
 
-    // Store in memory (database operations disabled for browser compatibility)
-    this.pages.set(validatedPage.id, validatedPage);
-    this.nameIndex.set(name.toLowerCase(), validatedPage.id);
+    try {
+      // Save to database
+      await this.pageRepo.create({
+        id: validatedPage.id,
+        name: validatedPage.name,
+        title: validatedPage.title,
+        properties: JSON.stringify(validatedPage.properties || {}),
+        tags: validatedPage.tags.join(','),
+        isJournal: validatedPage.isJournal,
+        journalDate: validatedPage.journalDate,
+        graphId: this.currentGraphId,
+      });
 
-    // Emit event
-    this.emit('page:created', validatedPage);
+      // Store in memory cache
+      this.pages.set(validatedPage.id, validatedPage);
+      this.nameIndex.set(name.toLowerCase(), validatedPage.id);
 
-    return validatedPage;
+      // Emit event
+      this.emit('page:created', validatedPage);
+
+      return validatedPage;
+    } catch (error) {
+      console.error('Failed to create page in database:', error);
+      throw error;
+    }
   }
 
   async updatePage(id: string, updates: Partial<Omit<Page, 'id' | 'createdAt'>>): Promise<Page> {
+    await this.initialize();
+
     const page = this.pages.get(id);
     if (!page) {
       throw new Error(`Page with id ${id} not found`);
@@ -71,60 +107,91 @@ export class PageService extends EventEmitter {
 
     // Validate updated page
     const validatedPage = PageSchema.parse(updatedPage);
-    
-    // Store updated page
-    this.pages.set(id, validatedPage);
-    
-    // Emit event
-    this.emit('page:updated', validatedPage);
-    
-    return validatedPage;
+
+    try {
+      // Update in database
+      await this.pageRepo.update(id, {
+        name: validatedPage.name,
+        title: validatedPage.title,
+        properties: JSON.stringify(validatedPage.properties || {}),
+        tags: validatedPage.tags.join(','),
+        isJournal: validatedPage.isJournal,
+        journalDate: validatedPage.journalDate,
+      });
+
+      // Update memory cache
+      this.pages.set(id, validatedPage);
+
+      // Emit event
+      this.emit('page:updated', validatedPage);
+
+      return validatedPage;
+    } catch (error) {
+      console.error('Failed to update page in database:', error);
+      throw error;
+    }
   }
 
   async deletePage(id: string): Promise<void> {
+    await this.initialize();
+
     const page = this.pages.get(id);
     if (!page) {
       throw new Error(`Page with id ${id} not found`);
     }
 
-    // Remove from name index
-    this.nameIndex.delete(page.name.toLowerCase());
-    
-    // Remove page
-    this.pages.delete(id);
-    
-    // Emit event
-    this.emit('page:deleted', { id });
+    try {
+      // Delete from database (will cascade delete blocks)
+      await this.pageRepo.delete(id);
+
+      // Remove from name index
+      this.nameIndex.delete(page.name.toLowerCase());
+
+      // Remove from memory cache
+      this.pages.delete(id);
+
+      // Emit event
+      this.emit('page:deleted', { id });
+    } catch (error) {
+      console.error('Failed to delete page from database:', error);
+      throw error;
+    }
   }
 
-  getPage(id: string): Page | undefined {
+  async getPage(id: string): Promise<Page | undefined> {
+    await this.initialize();
     return this.pages.get(id);
   }
 
-  getPageByName(name: string): Page | undefined {
+  async getPageByName(name: string): Promise<Page | undefined> {
+    await this.initialize();
     const id = this.nameIndex.get(name.toLowerCase());
     return id ? this.pages.get(id) : undefined;
   }
 
-  getAllPages(): Page[] {
+  async getAllPages(): Promise<Page[]> {
+    await this.initialize();
     return Array.from(this.pages.values());
   }
 
-  getJournalPages(): Page[] {
+  async getJournalPages(): Promise<Page[]> {
+    await this.initialize();
     return Array.from(this.pages.values())
       .filter(page => page.isJournal)
       .sort((a, b) => (b.journalDate || '').localeCompare(a.journalDate || ''));
   }
 
-  getPagesByTag(tag: string): Page[] {
+  async getPagesByTag(tag: string): Promise<Page[]> {
+    await this.initialize();
     return Array.from(this.pages.values())
       .filter(page => page.tags.includes(tag));
   }
 
-  searchPages(query: string): Page[] {
+  async searchPages(query: string): Promise<Page[]> {
+    await this.initialize();
     const lowerQuery = query.toLowerCase();
     return Array.from(this.pages.values())
-      .filter(page => 
+      .filter(page =>
         page.name.toLowerCase().includes(lowerQuery) ||
         page.title?.toLowerCase().includes(lowerQuery)
       )
@@ -134,13 +201,13 @@ export class PageService extends EventEmitter {
         const bExact = b.name.toLowerCase() === lowerQuery;
         if (aExact && !bExact) return -1;
         if (!aExact && bExact) return 1;
-        
+
         // Then prioritize starts with
         const aStarts = a.name.toLowerCase().startsWith(lowerQuery);
         const bStarts = b.name.toLowerCase().startsWith(lowerQuery);
         if (aStarts && !bStarts) return -1;
         if (!aStarts && bStarts) return 1;
-        
+
         // Finally sort alphabetically
         return a.name.localeCompare(b.name);
       });
@@ -148,7 +215,7 @@ export class PageService extends EventEmitter {
 
   async createTodayJournal(): Promise<Page> {
     const today = format(new Date(), 'yyyy-MM-dd');
-    const existing = this.getPageByName(today);
+    const existing = await this.getPageByName(today);
 
     if (existing) {
       return existing;
@@ -157,8 +224,6 @@ export class PageService extends EventEmitter {
     return this.createPage(today, true);
   }
 
-  // Database methods disabled for browser compatibility
-  /*
   // Helper method to convert database page to internal page format
   private dbPageToPage(dbPage: any): Page {
     return {
@@ -170,7 +235,7 @@ export class PageService extends EventEmitter {
       tags: dbPage.tags ? dbPage.tags.split(',').filter(Boolean) : [],
       isJournal: dbPage.isJournal,
       journalDate: dbPage.journalDate,
-      properties: dbPage.properties || {},
+      properties: dbPage.properties ? JSON.parse(dbPage.properties) : {},
     };
   }
 
@@ -188,21 +253,46 @@ export class PageService extends EventEmitter {
       }
 
       console.log(`Loaded ${dbPages.length} pages from database`);
+
+      // If no pages exist, initialize with sample data
+      if (dbPages.length === 0) {
+        await this.initializeSampleDataInDatabase();
+      }
     } catch (error) {
       console.error('Failed to load pages from database:', error);
+      throw error;
     }
   }
-  */
 
-  // Set current graph (disabled for browser compatibility)
-  setCurrentGraph(_graphId: string): void {
-    // this.currentGraphId = graphId; // Disabled for browser compatibility
+  // Set current graph
+  async setCurrentGraph(graphId: string): Promise<void> {
+    this.currentGraphId = graphId;
     // Clear in-memory cache when switching graphs
     this.pages.clear();
     this.nameIndex.clear();
+    this.isInitialized = false;
+    // Reload pages for new graph
+    await this.initialize();
   }
 
-  // Initialize sample data for demo
+  // Initialize sample data in database
+  private async initializeSampleDataInDatabase(): Promise<void> {
+    try {
+      // Create welcome page
+      const welcomePage = await this.createPage('Welcome to MingLog', false);
+      welcomePage.tags = ['welcome', 'getting-started'];
+      await this.updatePage(welcomePage.id, { tags: welcomePage.tags });
+
+      // Create today's journal page
+      await this.createTodayJournal();
+
+      console.log('Sample data initialized in database');
+    } catch (error) {
+      console.error('Failed to initialize sample data in database:', error);
+    }
+  }
+
+  // Initialize sample data for demo (fallback)
   private initializeSampleData(): void {
     // Create welcome page
     const welcomePage: Page = {
@@ -236,6 +326,6 @@ export class PageService extends EventEmitter {
     this.pages.set(journalPage.id, journalPage);
     this.nameIndex.set(journalPage.name.toLowerCase(), journalPage.id);
 
-    console.log('Sample data initialized:', { welcomePage, journalPage });
+    console.log('Sample data initialized (fallback):', { welcomePage, journalPage });
   }
 }

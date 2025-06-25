@@ -1,8 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastProvider } from '@minglog/ui';
 import { Layout } from './components/Layout';
 import { HomePage } from './pages/HomePage';
+import { PagesPage } from './pages/PagesPage';
+import { JournalsPage } from './pages/JournalsPage';
+import { SearchPage } from './pages/SearchPage';
 import '@minglog/ui/styles';
 
 // Create a client
@@ -18,17 +22,20 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<HomePage />} />
-            <Route path="pages" element={<div>All Pages (Coming Soon)</div>} />
-            <Route path="journals" element={<div>Journals (Coming Soon)</div>} />
-            <Route path="graph" element={<div>Graph View (Coming Soon)</div>} />
-            <Route path="settings" element={<div>Settings (Coming Soon)</div>} />
-          </Route>
-        </Routes>
-      </Router>
+      <ToastProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<HomePage />} />
+              <Route path="pages" element={<PagesPage />} />
+              <Route path="journals" element={<JournalsPage />} />
+              <Route path="search" element={<SearchPage />} />
+              <Route path="graph" element={<div>Graph View (Coming Soon)</div>} />
+              <Route path="settings" element={<div>Settings (Coming Soon)</div>} />
+            </Route>
+          </Routes>
+        </Router>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

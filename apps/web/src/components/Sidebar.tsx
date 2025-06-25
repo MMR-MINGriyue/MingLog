@@ -1,9 +1,10 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { 
+import {
   HomeIcon,
   DocumentTextIcon,
   CalendarIcon,
+  MagnifyingGlassIcon,
   ChartBarIcon,
   CogIcon,
 } from '@heroicons/react/24/outline';
@@ -12,6 +13,7 @@ const navigation = [
   { name: 'Home', href: '/', icon: HomeIcon },
   { name: 'All Pages', href: '/pages', icon: DocumentTextIcon },
   { name: 'Journals', href: '/journals', icon: CalendarIcon },
+  { name: 'Search', href: '/search', icon: MagnifyingGlassIcon },
   { name: 'Graph', href: '/graph', icon: ChartBarIcon },
   { name: 'Settings', href: '/settings', icon: CogIcon },
 ];

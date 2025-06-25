@@ -1,136 +1,80 @@
 import React, { useEffect, useState } from 'react';
-import { BlockTree } from '@minglog/editor';
-import { Button } from '@minglog/ui';
-import { useLogseqStore } from '../stores/logseq-store';
+import { useApiStore } from '../stores/api-store';
 import { PageList } from '../components/PageList';
-import type { Block, Page } from '@minglog/core';
+import { PageEditor } from '../components/PageEditor';
+import { LoadingSpinner, ErrorMessage, useToast } from '@minglog/ui';
+import type { Page } from '../services/api';
 
 export const HomePage: React.FC = () => {
   const {
-    core,
-    createBlock,
-    updateBlock,
-    deleteBlock,
-    createPage,
-  } = useLogseqStore();
+    initialize,
+    isInitialized,
+    isLoading,
+    error,
+    currentGraph,
+    currentPage,
+    setCurrentPage,
+    createTodayJournal,
+  } = useApiStore();
 
   const [todayPage, setTodayPage] = useState<Page | null>(null);
-  const [currentPage, setCurrentPage] = useState<Page | null>(null);
-  const [blocks, setBlocks] = useState<Block[]>([]);
-  const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   useEffect(() => {
     const initializeTodayPage = async () => {
       try {
-        const page = await core.pages.createTodayJournal();
-        setTodayPage(page);
-        setCurrentPage(page);
+        await initialize();
 
-        // Get blocks for today's page
-        const pageBlocks = core.blocks.getBlocksByPage(page.id);
-        setBlocks(pageBlocks);
+        if (currentGraph) {
+          const page = await createTodayJournal(currentGraph.id);
+          setTodayPage(page);
+          setCurrentPage(page);
+
+          addToast({
+            type: 'success',
+            title: '欢迎回来！',
+            message: '今日日记已准备就绪',
+            duration: 3000
+          });
+        }
       } catch (error) {
         console.error('Failed to initialize today page:', error);
+        addToast({
+          type: 'error',
+          title: '初始化失败',
+          message: '无法创建今日日记，请稍后重试',
+          duration: 5000
+        });
       }
     };
 
     initializeTodayPage();
-  }, [core]);
-
-  const handleUpdateBlock = async (blockId: string, content: string) => {
-    try {
-      await updateBlock(blockId, content);
-      // Refresh blocks
-      if (currentPage) {
-        const pageBlocks = core.blocks.getBlocksByPage(currentPage.id);
-        setBlocks(pageBlocks);
-      }
-    } catch (error) {
-      console.error('Failed to update block:', error);
-    }
-  };
-
-  const handleCreateBlock = async (parentId?: string) => {
-    if (!currentPage) return;
-
-    try {
-      await createBlock('', currentPage.id, parentId);
-      // Refresh blocks
-      const pageBlocks = core.blocks.getBlocksByPage(currentPage.id);
-      setBlocks(pageBlocks);
-    } catch (error) {
-      console.error('Failed to create block:', error);
-    }
-  };
-
-  const handleDeleteBlock = async (blockId: string) => {
-    try {
-      await deleteBlock(blockId);
-      // Refresh blocks
-      if (currentPage) {
-        const pageBlocks = core.blocks.getBlocksByPage(currentPage.id);
-        setBlocks(pageBlocks);
-      }
-    } catch (error) {
-      console.error('Failed to delete block:', error);
-    }
-  };
-
-  const handleIndentBlock = async (blockId: string) => {
-    try {
-      await core.blocks.indentBlock(blockId);
-      // Refresh blocks
-      if (todayPage) {
-        const pageBlocks = core.blocks.getBlocksByPage(todayPage.id);
-        setBlocks(pageBlocks);
-      }
-    } catch (error) {
-      console.error('Failed to indent block:', error);
-    }
-  };
-
-  const handleOutdentBlock = async (blockId: string) => {
-    try {
-      await core.blocks.outdentBlock(blockId);
-      // Refresh blocks
-      if (todayPage) {
-        const pageBlocks = core.blocks.getBlocksByPage(todayPage.id);
-        setBlocks(pageBlocks);
-      }
-    } catch (error) {
-      console.error('Failed to outdent block:', error);
-    }
-  };
-
-  const handleToggleCollapse = async (blockId: string) => {
-    try {
-      await core.blocks.toggleCollapse(blockId);
-      // Refresh blocks
-      if (todayPage) {
-        const pageBlocks = core.blocks.getBlocksByPage(todayPage.id);
-        setBlocks(pageBlocks);
-      }
-    } catch (error) {
-      console.error('Failed to toggle collapse:', error);
-    }
-  };
-
-  const handleFocusBlock = (blockId: string) => {
-    setFocusedBlockId(blockId);
-  };
+  }, [initialize, currentGraph, createTodayJournal, setCurrentPage, addToast]);
 
   const handlePageSelect = (page: Page) => {
     setCurrentPage(page);
-    // Load blocks for the selected page
-    const pageBlocks = core.blocks.getBlocksByPage(page.id);
-    setBlocks(pageBlocks);
-    setFocusedBlockId(null);
   };
 
-  if (!todayPage) {
+  if (isLoading || !isInitialized) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading today's journal...</div>
+        <LoadingSpinner
+          size="lg"
+          text="正在初始化 MingLog..."
+        />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <ErrorMessage
+          title="初始化失败"
+          message={error}
+          type="error"
+          onRetry={() => window.location.reload()}
+        />
       </div>
     );
   }
@@ -144,68 +88,23 @@ export const HomePage: React.FC = () => {
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">
-              {currentPage?.title || currentPage?.name || 'Select a page'}
-            </h1>
-            {currentPage && (
-              <Button
-                onClick={() => handleCreateBlock()}
-                variant="primary"
-                size="sm"
-              >
-                Add Block
-              </Button>
-            )}
+      <div className="flex-1 overflow-y-auto">
+        {currentPage ? (
+          <div className="p-6">
+            <PageEditor page={currentPage} />
           </div>
-        </div>
-
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {currentPage ? (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              {blocks.length > 0 ? (
-                <BlockTree
-                  blocks={blocks}
-                  onUpdateBlock={handleUpdateBlock}
-                  onCreateBlock={handleCreateBlock}
-                  onDeleteBlock={handleDeleteBlock}
-                  onIndentBlock={handleIndentBlock}
-                  onOutdentBlock={handleOutdentBlock}
-                  onToggleCollapse={handleToggleCollapse}
-                  onFocusBlock={handleFocusBlock}
-                  focusedBlockId={focusedBlockId}
-                />
-              ) : (
-                <div className="text-center py-12">
-                  <div className="text-gray-500 mb-4">
-                    No blocks yet. Start writing your thoughts!
-                  </div>
-                  <Button
-                    onClick={() => handleCreateBlock()}
-                    variant="primary"
-                  >
-                    Create First Block
-                  </Button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <div className="text-gray-500 text-lg mb-4">
-                  Welcome to MingLog
-                </div>
-                <div className="text-gray-400">
-                  Select a page from the sidebar to start editing
-                </div>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="text-gray-500 text-lg mb-4">
+                Welcome to MingLog
+              </div>
+              <div className="text-gray-400">
+                Select a page from the sidebar to start editing
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
