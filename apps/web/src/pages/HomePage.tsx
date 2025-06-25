@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BlockTree } from '@minglog/editor';
 import { Button } from '@minglog/ui';
 import { useLogseqStore } from '../stores/logseq-store';
+import { PageList } from '../components/PageList';
 import type { Block, Page } from '@minglog/core';
 
 export const HomePage: React.FC = () => {
@@ -14,6 +15,7 @@ export const HomePage: React.FC = () => {
   } = useLogseqStore();
 
   const [todayPage, setTodayPage] = useState<Page | null>(null);
+  const [currentPage, setCurrentPage] = useState<Page | null>(null);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
 
@@ -22,7 +24,8 @@ export const HomePage: React.FC = () => {
       try {
         const page = await core.pages.createTodayJournal();
         setTodayPage(page);
-        
+        setCurrentPage(page);
+
         // Get blocks for today's page
         const pageBlocks = core.blocks.getBlocksByPage(page.id);
         setBlocks(pageBlocks);
@@ -38,8 +41,8 @@ export const HomePage: React.FC = () => {
     try {
       await updateBlock(blockId, content);
       // Refresh blocks
-      if (todayPage) {
-        const pageBlocks = core.blocks.getBlocksByPage(todayPage.id);
+      if (currentPage) {
+        const pageBlocks = core.blocks.getBlocksByPage(currentPage.id);
         setBlocks(pageBlocks);
       }
     } catch (error) {
@@ -48,12 +51,12 @@ export const HomePage: React.FC = () => {
   };
 
   const handleCreateBlock = async (parentId?: string) => {
-    if (!todayPage) return;
-    
+    if (!currentPage) return;
+
     try {
-      await createBlock('', todayPage.id, parentId);
+      await createBlock('', currentPage.id, parentId);
       // Refresh blocks
-      const pageBlocks = core.blocks.getBlocksByPage(todayPage.id);
+      const pageBlocks = core.blocks.getBlocksByPage(currentPage.id);
       setBlocks(pageBlocks);
     } catch (error) {
       console.error('Failed to create block:', error);
@@ -64,8 +67,8 @@ export const HomePage: React.FC = () => {
     try {
       await deleteBlock(blockId);
       // Refresh blocks
-      if (todayPage) {
-        const pageBlocks = core.blocks.getBlocksByPage(todayPage.id);
+      if (currentPage) {
+        const pageBlocks = core.blocks.getBlocksByPage(currentPage.id);
         setBlocks(pageBlocks);
       }
     } catch (error) {
@@ -74,22 +77,54 @@ export const HomePage: React.FC = () => {
   };
 
   const handleIndentBlock = async (blockId: string) => {
-    // TODO: Implement block indentation logic
-    console.log('Indent block:', blockId);
+    try {
+      await core.blocks.indentBlock(blockId);
+      // Refresh blocks
+      if (todayPage) {
+        const pageBlocks = core.blocks.getBlocksByPage(todayPage.id);
+        setBlocks(pageBlocks);
+      }
+    } catch (error) {
+      console.error('Failed to indent block:', error);
+    }
   };
 
   const handleOutdentBlock = async (blockId: string) => {
-    // TODO: Implement block outdentation logic
-    console.log('Outdent block:', blockId);
+    try {
+      await core.blocks.outdentBlock(blockId);
+      // Refresh blocks
+      if (todayPage) {
+        const pageBlocks = core.blocks.getBlocksByPage(todayPage.id);
+        setBlocks(pageBlocks);
+      }
+    } catch (error) {
+      console.error('Failed to outdent block:', error);
+    }
   };
 
   const handleToggleCollapse = async (blockId: string) => {
-    // TODO: Implement block collapse/expand logic
-    console.log('Toggle collapse:', blockId);
+    try {
+      await core.blocks.toggleCollapse(blockId);
+      // Refresh blocks
+      if (todayPage) {
+        const pageBlocks = core.blocks.getBlocksByPage(todayPage.id);
+        setBlocks(pageBlocks);
+      }
+    } catch (error) {
+      console.error('Failed to toggle collapse:', error);
+    }
   };
 
   const handleFocusBlock = (blockId: string) => {
     setFocusedBlockId(blockId);
+  };
+
+  const handlePageSelect = (page: Page) => {
+    setCurrentPage(page);
+    // Load blocks for the selected page
+    const pageBlocks = core.blocks.getBlocksByPage(page.id);
+    setBlocks(pageBlocks);
+    setFocusedBlockId(null);
   };
 
   if (!todayPage) {
@@ -101,65 +136,75 @@ export const HomePage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {todayPage.name}
-        </h1>
-        <Button
-          onClick={() => handleCreateBlock()}
-          variant="primary"
-          size="sm"
-        >
-          Add Block
-        </Button>
-      </div>
+    <div className="flex h-screen bg-gray-100">
+      {/* Page List Sidebar */}
+      <PageList
+        onPageSelect={handlePageSelect}
+        selectedPageId={currentPage?.id}
+      />
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        {blocks.length > 0 ? (
-          <BlockTree
-            blocks={blocks}
-            onUpdateBlock={handleUpdateBlock}
-            onCreateBlock={handleCreateBlock}
-            onDeleteBlock={handleDeleteBlock}
-            onIndentBlock={handleIndentBlock}
-            onOutdentBlock={handleOutdentBlock}
-            onToggleCollapse={handleToggleCollapse}
-            onFocusBlock={handleFocusBlock}
-            focusedBlockId={focusedBlockId}
-          />
-        ) : (
-          <div className="text-center py-12">
-            <div className="text-gray-500 mb-4">
-              No blocks yet. Start writing your thoughts!
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-gray-900">
+              {currentPage?.title || currentPage?.name || 'Select a page'}
+            </h1>
+            {currentPage && (
+              <Button
+                onClick={() => handleCreateBlock()}
+                variant="primary"
+                size="sm"
+              >
+                Add Block
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {currentPage ? (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              {blocks.length > 0 ? (
+                <BlockTree
+                  blocks={blocks}
+                  onUpdateBlock={handleUpdateBlock}
+                  onCreateBlock={handleCreateBlock}
+                  onDeleteBlock={handleDeleteBlock}
+                  onIndentBlock={handleIndentBlock}
+                  onOutdentBlock={handleOutdentBlock}
+                  onToggleCollapse={handleToggleCollapse}
+                  onFocusBlock={handleFocusBlock}
+                  focusedBlockId={focusedBlockId}
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <div className="text-gray-500 mb-4">
+                    No blocks yet. Start writing your thoughts!
+                  </div>
+                  <Button
+                    onClick={() => handleCreateBlock()}
+                    variant="primary"
+                  >
+                    Create First Block
+                  </Button>
+                </div>
+              )}
             </div>
-            <Button
-              onClick={() => handleCreateBlock()}
-              variant="primary"
-            >
-              Create First Block
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="text-2xl font-bold text-blue-600">{blocks.length}</div>
-          <div className="text-sm text-gray-500">Blocks Today</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="text-2xl font-bold text-green-600">
-            {core.pages.getAllPages().length}
-          </div>
-          <div className="text-sm text-gray-500">Total Pages</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="text-2xl font-bold text-purple-600">
-            {core.pages.getJournalPages().length}
-          </div>
-          <div className="text-sm text-gray-500">Journal Days</div>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="text-gray-500 text-lg mb-4">
+                  Welcome to MingLog
+                </div>
+                <div className="text-gray-400">
+                  Select a page from the sidebar to start editing
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

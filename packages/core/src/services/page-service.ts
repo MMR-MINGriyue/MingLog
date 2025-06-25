@@ -2,29 +2,27 @@ import { nanoid } from 'nanoid';
 import { Page, PageSchema } from '../types';
 import { EventEmitter } from '../utils/event-emitter';
 import { format } from 'date-fns';
-import { PageRepository } from '@minglog/database';
+// import { PageRepository } from '@minglog/database'; // Disabled for browser compatibility
 
 export class PageService extends EventEmitter {
   private pages = new Map<string, Page>();
   private nameIndex = new Map<string, string>(); // name -> id mapping
-  private pageRepo: PageRepository;
-  private currentGraphId: string = 'default'; // TODO: Make this configurable
+  // private pageRepo: PageRepository; // Disabled for browser compatibility
+  // private currentGraphId: string = 'default'; // Disabled for browser compatibility
 
   constructor() {
     super();
-    this.pageRepo = new PageRepository();
-    // Auto-load pages on initialization
-    this.loadPagesFromDatabase().catch(console.error);
+    // this.pageRepo = new PageRepository(); // Disabled for browser compatibility
+    // Auto-load sample data for demo
+    this.initializeSampleData();
   }
 
   async createPage(name: string, isJournal = false): Promise<Page> {
-    // Check if page already exists in database
-    const existing = await this.pageRepo.findByName(this.currentGraphId, name);
-    if (existing) {
-      const page = this.dbPageToPage(existing);
-      this.pages.set(page.id, page);
-      this.nameIndex.set(name.toLowerCase(), page.id);
-      return page;
+    // Check if page already exists
+    const existingId = this.nameIndex.get(name.toLowerCase());
+    if (existingId) {
+      const existing = this.pages.get(existingId);
+      if (existing) return existing;
     }
 
     const now = Date.now();
@@ -43,24 +41,7 @@ export class PageService extends EventEmitter {
     // Validate page
     const validatedPage = PageSchema.parse(page);
 
-    // Save to database
-    try {
-      await this.pageRepo.create({
-        id: validatedPage.id,
-        name: validatedPage.name,
-        title: validatedPage.title,
-        properties: validatedPage.properties,
-        tags: validatedPage.tags.join(','),
-        isJournal: validatedPage.isJournal,
-        journalDate: validatedPage.journalDate,
-        graphId: this.currentGraphId,
-      });
-    } catch (error) {
-      console.error('Failed to save page to database:', error);
-      // Continue with in-memory storage for now
-    }
-
-    // Store in memory
+    // Store in memory (database operations disabled for browser compatibility)
     this.pages.set(validatedPage.id, validatedPage);
     this.nameIndex.set(name.toLowerCase(), validatedPage.id);
 
@@ -176,6 +157,8 @@ export class PageService extends EventEmitter {
     return this.createPage(today, true);
   }
 
+  // Database methods disabled for browser compatibility
+  /*
   // Helper method to convert database page to internal page format
   private dbPageToPage(dbPage: any): Page {
     return {
@@ -209,12 +192,50 @@ export class PageService extends EventEmitter {
       console.error('Failed to load pages from database:', error);
     }
   }
+  */
 
-  // Set current graph
-  setCurrentGraph(graphId: string): void {
-    this.currentGraphId = graphId;
+  // Set current graph (disabled for browser compatibility)
+  setCurrentGraph(_graphId: string): void {
+    // this.currentGraphId = graphId; // Disabled for browser compatibility
     // Clear in-memory cache when switching graphs
     this.pages.clear();
     this.nameIndex.clear();
+  }
+
+  // Initialize sample data for demo
+  private initializeSampleData(): void {
+    // Create welcome page
+    const welcomePage: Page = {
+      id: 'welcome-page',
+      name: 'Welcome to MingLog',
+      title: 'Welcome to MingLog',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      tags: ['welcome', 'getting-started'],
+      isJournal: false,
+      properties: {},
+    };
+
+    this.pages.set(welcomePage.id, welcomePage);
+    this.nameIndex.set(welcomePage.name.toLowerCase(), welcomePage.id);
+
+    // Create today's journal page
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const journalPage: Page = {
+      id: `journal-${today}`,
+      name: today,
+      title: `Journal - ${today}`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      tags: [],
+      isJournal: true,
+      journalDate: today,
+      properties: {},
+    };
+
+    this.pages.set(journalPage.id, journalPage);
+    this.nameIndex.set(journalPage.name.toLowerCase(), journalPage.id);
+
+    console.log('Sample data initialized:', { welcomePage, journalPage });
   }
 }
