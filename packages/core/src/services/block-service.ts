@@ -29,6 +29,8 @@ export class BlockService extends EventEmitter {
       children: [],
       refs: this.extractRefs(content),
       properties: {},
+      order: 0,
+      collapsed: false,
     };
 
     // Validate block
@@ -44,6 +46,8 @@ export class BlockService extends EventEmitter {
         refs: validatedBlock.refs.join(','),
         pageId: validatedBlock.pageId,
         graphId: this.currentGraphId,
+        order: validatedBlock.order,
+        collapsed: validatedBlock.collapsed,
       });
     } catch (error) {
       console.error('Failed to save block to database:', error);

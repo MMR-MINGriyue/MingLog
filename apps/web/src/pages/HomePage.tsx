@@ -15,6 +15,7 @@ export const HomePage: React.FC = () => {
 
   const [todayPage, setTodayPage] = useState<Page | null>(null);
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
 
   useEffect(() => {
     const initializeTodayPage = async () => {
@@ -72,6 +73,25 @@ export const HomePage: React.FC = () => {
     }
   };
 
+  const handleIndentBlock = async (blockId: string) => {
+    // TODO: Implement block indentation logic
+    console.log('Indent block:', blockId);
+  };
+
+  const handleOutdentBlock = async (blockId: string) => {
+    // TODO: Implement block outdentation logic
+    console.log('Outdent block:', blockId);
+  };
+
+  const handleToggleCollapse = async (blockId: string) => {
+    // TODO: Implement block collapse/expand logic
+    console.log('Toggle collapse:', blockId);
+  };
+
+  const handleFocusBlock = (blockId: string) => {
+    setFocusedBlockId(blockId);
+  };
+
   if (!todayPage) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -102,6 +122,11 @@ export const HomePage: React.FC = () => {
             onUpdateBlock={handleUpdateBlock}
             onCreateBlock={handleCreateBlock}
             onDeleteBlock={handleDeleteBlock}
+            onIndentBlock={handleIndentBlock}
+            onOutdentBlock={handleOutdentBlock}
+            onToggleCollapse={handleToggleCollapse}
+            onFocusBlock={handleFocusBlock}
+            focusedBlockId={focusedBlockId}
           />
         ) : (
           <div className="text-center py-12">

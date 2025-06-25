@@ -1,13 +1,18 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { BlockEditor } from './BlockEditor';
 import type { Block } from '@minglog/core';
 
 interface BlockTreeProps {
   blocks: Block[];
   onUpdateBlock: (blockId: string, content: string) => void;
-  onCreateBlock: (parentId?: string) => void;
+  onCreateBlock: (parentId?: string, order?: number) => void;
   onDeleteBlock: (blockId: string) => void;
+  onIndentBlock: (blockId: string) => void;
+  onOutdentBlock: (blockId: string) => void;
+  onToggleCollapse: (blockId: string) => void;
+  onFocusBlock: (blockId: string) => void;
   level?: number;
+  focusedBlockId?: string;
 }
 
 export const BlockTree: React.FC<BlockTreeProps> = ({
@@ -15,9 +20,13 @@ export const BlockTree: React.FC<BlockTreeProps> = ({
   onUpdateBlock,
   onCreateBlock,
   onDeleteBlock,
+  onIndentBlock,
+  onOutdentBlock,
+  onToggleCollapse,
+  onFocusBlock,
   level = 0,
+  focusedBlockId,
 }) => {
-  const [focusedBlockId] = useState<string | null>(null);
 
   const handleBlockUpdate = useCallback((blockId: string, content: string) => {
     onUpdateBlock(blockId, content);
@@ -30,6 +39,22 @@ export const BlockTree: React.FC<BlockTreeProps> = ({
   const handleBackspace = useCallback((blockId: string) => {
     onDeleteBlock(blockId);
   }, [onDeleteBlock]);
+
+  const handleTab = useCallback((blockId: string) => {
+    onIndentBlock(blockId);
+  }, [onIndentBlock]);
+
+  const handleShiftTab = useCallback((blockId: string) => {
+    onOutdentBlock(blockId);
+  }, [onOutdentBlock]);
+
+  const handleArrowUp = useCallback((blockId: string) => {
+    onFocusBlock(blockId);
+  }, [onFocusBlock]);
+
+  const handleArrowDown = useCallback((blockId: string) => {
+    onFocusBlock(blockId);
+  }, [onFocusBlock]);
 
   const getChildBlocks = useCallback((parentId: string): Block[] => {
     return blocks.filter(block => block.parentId === parentId);
@@ -52,9 +77,14 @@ export const BlockTree: React.FC<BlockTreeProps> = ({
           <div className="flex-1 min-w-0">
             <BlockEditor
               block={block}
+              level={level}
               onUpdate={(content) => handleBlockUpdate(block.id, content)}
               onEnter={() => handleEnter(block.id)}
               onBackspace={() => handleBackspace(block.id)}
+              onTab={() => handleTab(block.id)}
+              onShiftTab={() => handleShiftTab(block.id)}
+              onArrowUp={() => handleArrowUp(block.id)}
+              onArrowDown={() => handleArrowDown(block.id)}
               autoFocus={focusedBlockId === block.id}
             />
           </div>
@@ -67,7 +97,12 @@ export const BlockTree: React.FC<BlockTreeProps> = ({
             onUpdateBlock={onUpdateBlock}
             onCreateBlock={onCreateBlock}
             onDeleteBlock={onDeleteBlock}
+            onIndentBlock={onIndentBlock}
+            onOutdentBlock={onOutdentBlock}
+            onToggleCollapse={onToggleCollapse}
+            onFocusBlock={onFocusBlock}
             level={level + 1}
+            focusedBlockId={focusedBlockId}
           />
         )}
       </div>

@@ -174,12 +174,16 @@ export class BlockRepository extends BaseRepository<any> {
     refs?: string;
     pageId: string;
     graphId: string;
+    order?: number;
+    collapsed?: boolean;
   }) {
     return this.client.block.create({
       data: {
         ...data,
         refs: data.refs || '',
         properties: data.properties || {},
+        order: data.order || 0,
+        collapsed: data.collapsed || false,
       },
     });
   }

@@ -17,19 +17,61 @@
   margin-bottom: 0.5rem;
 }
 
-/* Block editor styles */
+/* Block editor styles - Mubu-like design */
 .block-editor {
   @apply focus:outline-none;
 }
 
 .block-editor p {
-  @apply m-0;
+  @apply m-0 leading-relaxed;
 }
 
 .block-editor .is-empty::before {
   content: attr(data-placeholder);
   @apply text-gray-400 pointer-events-none;
 }
+
+/* Mubu-style outline structure */
+.block-tree {
+  @apply space-y-1;
+}
+
+.block-item {
+  @apply relative;
+}
+
+.block-item:hover {
+  @apply bg-gray-50 rounded-md;
+}
+
+.block-content {
+  @apply flex items-start space-x-2 py-1 px-2 rounded-md transition-colors;
+}
+
+.block-bullet {
+  @apply w-2 h-2 bg-gray-400 rounded-full mt-2 flex-shrink-0;
+}
+
+.block-collapse-btn {
+  @apply w-4 h-4 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors cursor-pointer;
+}
+
+.block-level-line {
+  @apply absolute w-px bg-gray-200;
+}
+
+/* Focus states */
+.block-focused {
+  @apply ring-2 ring-blue-500 ring-opacity-50 bg-blue-50;
+}
+
+/* Indentation levels */
+.block-level-0 { padding-left: 0; }
+.block-level-1 { padding-left: 1.5rem; }
+.block-level-2 { padding-left: 3rem; }
+.block-level-3 { padding-left: 4.5rem; }
+.block-level-4 { padding-left: 6rem; }
+.block-level-5 { padding-left: 7.5rem; }
 
 /* Link styles */
 .block-editor a {

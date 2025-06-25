@@ -15,6 +15,8 @@ export const BlockSchema = BaseEntitySchema.extend({
   properties: z.record(z.any()).optional(),
   children: z.array(z.string()).default([]),
   refs: z.array(z.string()).default([]),
+  order: z.number().default(0),
+  collapsed: z.boolean().default(false),
 });
 
 // Page schema
