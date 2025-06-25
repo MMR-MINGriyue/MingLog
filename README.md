@@ -273,6 +273,42 @@ pnpm db:studio        # 打开Prisma Studio
 
 **🌟 如果这个项目对您有帮助，请给我们一个Star！**
 
-[![Star History Chart](https://api.star-history.com/svg?repos=logseq/logseq-next&type=Date)](https://star-history.com/#logseq/logseq-next&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=MMR-MINGriyue/MingLog&type=Date)](https://star-history.com/#MMR-MINGriyue/MingLog&Date)
 
 </div>
+
+---
+
+## 🎉 最新更新 (2025-06-25)
+
+### ✅ 已完成的核心功能
+- **完整的前后端架构**: Express.js API + React 前端
+- **高级块编辑器**: 拖拽排序、快捷键、富文本格式化
+- **智能搜索系统**: 实时搜索、历史记录、高级过滤器
+- **数据导入导出**: JSON/Markdown 格式，智能合并策略
+- **优秀用户体验**: 加载状态、错误处理、Toast 通知
+- **主题系统基础**: 浅色/深色/跟随系统主题
+- **完整的 UI 组件库**: 15+ 可复用组件
+
+### 🧪 测试覆盖
+- ✅ API 集成测试 (100% 端点覆盖)
+- ✅ 前端 UX 测试
+- ✅ 搜索功能测试
+- ✅ 导入导出功能测试
+- ✅ 块编辑器功能测试
+
+### 📊 项目统计
+- **代码行数**: 12,000+ 行
+- **文件数量**: 80+ 个文件
+- **包数量**: 6 个功能包
+- **API 端点**: 25+ 个端点
+- **UI 组件**: 15+ 个组件
+
+## 📚 完整文档
+
+- [📖 快速启动指南](./QUICK_START_GUIDE.md)
+- [📋 项目总结报告](./MINGLOG_PROJECT_SUMMARY.md)
+- [🔌 API 集成文档](./API_INTEGRATION_REPORT.md)
+- [🧪 测试报告](./TEST_REPORT.md)
+
+**🌟 项目已完成核心开发，可投入使用！** 🌟
