@@ -72,6 +72,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      - name: Build packages
+        run: pnpm run build:packages
+
       - name: Build web app
         run: pnpm run web:build
 

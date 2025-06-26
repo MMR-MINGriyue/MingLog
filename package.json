@@ -16,6 +16,7 @@
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
     "clean": "turbo run clean",
+    "build:packages": "pnpm -r --filter \"./packages/*\" build",
     "desktop:dev": "pnpm --filter minglog-desktop dev",
     "desktop:build": "pnpm --filter minglog-desktop build",
     "desktop:pack": "pnpm --filter minglog-desktop pack",
