@@ -30,6 +30,7 @@
   "build": {
     "appId": "com.minglog.desktop",
     "productName": "MingLog",
+    "asar": false,
     "directories": {
       "output": "build",
       "buildResources": "assets"
@@ -37,8 +38,9 @@
     "files": [
       "dist/**/*",
       "assets/**/*",
-      "node_modules/**/*",
-      "package.json"
+      "package.json",
+      "node_modules/electron-updater/**/*",
+      "node_modules/electron-store/**/*"
     ],
 
     "win": {

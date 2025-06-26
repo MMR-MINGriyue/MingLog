@@ -1,5 +1,5 @@
 const { app, BrowserWindow, Menu, shell, ipcMain, dialog, screen: electronScreen, nativeTheme, Tray } = require('electron');
-const { autoUpdater } = require('electron-updater');
+// const { autoUpdater } = require('electron-updater');
 const Store = require('electron-store');
 const path = require('path');
 
@@ -330,9 +330,9 @@ function createWindow(): void {
     // Defer non-critical operations to improve perceived startup time
     setTimeout(() => {
       // Check for updates in production (deferred)
-      if (isProduction && mainWindow && !mainWindow.isDestroyed()) {
-        autoUpdater.checkForUpdatesAndNotify();
-      }
+      // if (isProduction && mainWindow && !mainWindow.isDestroyed()) {
+      //   autoUpdater.checkForUpdatesAndNotify();
+      // }
 
       // Preload commonly used dialogs
       if (mainWindow && !mainWindow.isDestroyed()) {
@@ -623,16 +623,17 @@ function createMenu(): void {
 }
 
 // Auto-updater configuration
-if (isProduction) {
-  autoUpdater.checkForUpdatesAndNotify();
+// if (isProduction) {
+//   autoUpdater.checkForUpdatesAndNotify();
 
-  // Check for updates every hour
-  setInterval(() => {
-    autoUpdater.checkForUpdatesAndNotify();
-  }, 60 * 60 * 1000);
-}
+//   // Check for updates every hour
+//   setInterval(() => {
+//     autoUpdater.checkForUpdatesAndNotify();
+//   }, 60 * 60 * 1000);
+// }
 
-// Auto-updater events
+// Auto-updater events (temporarily disabled)
+/*
 autoUpdater.on('checking-for-update', () => {
   console.log('Checking for update...');
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -705,6 +706,7 @@ autoUpdater.on('update-downloaded', (info: any) => {
     autoUpdater.quitAndInstall();
   }
 });
+*/
 
 // IPC handlers
 ipcMain.handle('app-version', () => {
@@ -775,7 +777,8 @@ ipcMain.handle('set-theme', (_: any, theme: 'light' | 'dark' | 'system') => {
   }
 });
 
-// Update handlers
+// Update handlers (temporarily disabled)
+/*
 ipcMain.handle('check-for-updates', () => {
   if (isProduction) {
     autoUpdater.checkForUpdatesAndNotify();
@@ -787,6 +790,7 @@ ipcMain.handle('check-for-updates', () => {
 ipcMain.handle('install-update', () => {
   autoUpdater.quitAndInstall();
 });
+*/
 
 // Settings handlers
 ipcMain.handle('get-user-preferences', () => {
