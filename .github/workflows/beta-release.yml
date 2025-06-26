@@ -52,18 +52,21 @@ jobs:
           echo "Generated version: $NEW_VERSION"
           echo "Generated tag: $TAG"
 
-  build-and-release:
-    name: Build and Release Beta
+  trigger-release:
+    name: Trigger Release Workflow
     needs: version
-    uses: ./.github/workflows/release-desktop.yml
-    with:
-      version: ${{ needs.version.outputs.version }}
-      prerelease: true
-    secrets: inherit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger release workflow
+        run: |
+          echo "Version: ${{ needs.version.outputs.version }}"
+          echo "Tag: ${{ needs.version.outputs.tag }}"
+          echo "Release workflow will be triggered by the tag push"
 
   update-version:
     name: Update Package Version
-    needs: [version, build-and-release]
+    needs: [version, trigger-release]
     runs-on: ubuntu-latest
     
     steps:
@@ -72,10 +75,16 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'pnpm'
 
       - name: Update package.json versions
         run: |
@@ -102,19 +111,19 @@ jobs:
 
   notify:
     name: Notify Release
-    needs: [version, build-and-release, update-version]
+    needs: [version, trigger-release, update-version]
     runs-on: ubuntu-latest
     if: always()
-    
+
     steps:
       - name: Notify success
-        if: needs.build-and-release.result == 'success'
+        if: needs.trigger-release.result == 'success'
         run: |
-          echo "✅ Beta release ${{ needs.version.outputs.version }} created successfully!"
-          echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ needs.version.outputs.tag }}"
+          echo "✅ Beta release ${{ needs.version.outputs.version }} initiated successfully!"
+          echo "🔗 Release will be available at: https://github.com/${{ github.repository }}/releases/tag/${{ needs.version.outputs.tag }}"
 
       - name: Notify failure
-        if: needs.build-and-release.result == 'failure'
+        if: needs.trigger-release.result == 'failure'
         run: |
           echo "❌ Beta release ${{ needs.version.outputs.version }} failed!"
           exit 1
