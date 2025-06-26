@@ -213,13 +213,34 @@ jobs:
           draft: false
           prerelease: ${{ steps.version.outputs.prerelease == 'true' }}
 
+      - name: Zip Windows artifacts
+        if: always() && hashFiles('./artifacts/minglog-windows-x64/*')
+        run: |
+          cd ./artifacts/minglog-windows-x64
+          zip -r ../minglog-windows-x64.zip .
+          cd ../..
+
+      - name: Zip macOS artifacts
+        if: always() && hashFiles('./artifacts/minglog-macos-universal/*')
+        run: |
+          cd ./artifacts/minglog-macos-universal
+          zip -r ../minglog-macos-universal.zip .
+          cd ../..
+
+      - name: Zip Linux artifacts
+        if: always() && hashFiles('./artifacts/minglog-linux-x64/*')
+        run: |
+          cd ./artifacts/minglog-linux-x64
+          zip -r ../minglog-linux-x64.zip .
+          cd ../..
+
       - name: Upload Windows artifacts
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/minglog-windows-x64
+          asset_path: ./artifacts/minglog-windows-x64.zip
           asset_name: minglog-windows-x64.zip
           asset_content_type: application/zip
 
@@ -229,7 +250,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/minglog-macos-universal
+          asset_path: ./artifacts/minglog-macos-universal.zip
           asset_name: minglog-macos-universal.zip
           asset_content_type: application/zip
 
@@ -239,6 +260,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/minglog-linux-x64
+          asset_path: ./artifacts/minglog-linux-x64.zip
           asset_name: minglog-linux-x64.zip
           asset_content_type: application/zip
