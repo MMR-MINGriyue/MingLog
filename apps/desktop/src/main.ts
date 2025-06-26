@@ -1,16 +1,12 @@
-import { app, BrowserWindow, Menu, shell, ipcMain, dialog, screen, nativeTheme, Tray } from 'electron';
-import { autoUpdater } from 'electron-updater';
-import Store from 'electron-store';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const { app, BrowserWindow, Menu, shell, ipcMain, dialog, screen: electronScreen, nativeTheme, Tray } = require('electron');
+const { autoUpdater } = require('electron-updater');
+const Store = require('electron-store');
+const path = require('path');
 
 // Keep a global reference of the window object and tray
-let mainWindow: BrowserWindow | null = null;
-let splashWindow: BrowserWindow | null = null;
-let tray: Tray | null = null;
+let mainWindow: typeof BrowserWindow | null = null;
+let splashWindow: typeof BrowserWindow | null = null;
+let tray: typeof Tray | null = null;
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 const isProduction = process.env.NODE_ENV === 'production';
@@ -40,7 +36,7 @@ interface StoreSchema {
   };
 }
 
-const store = new Store<StoreSchema>({
+const store = new Store({
   defaults: {
     windowState: {
       width: 1200,
@@ -235,7 +231,7 @@ function createTray(): void {
 
 function createWindow(): void {
   // Get primary display dimensions
-  const primaryDisplay = screen.getPrimaryDisplay();
+  const primaryDisplay = electronScreen.getPrimaryDisplay();
   const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
 
   // Restore window state or use defaults
@@ -379,13 +375,13 @@ function createWindow(): void {
   });
 
   // Handle external links
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+  mainWindow.webContents.setWindowOpenHandler(({ url }: { url: string }) => {
     shell.openExternal(url);
     return { action: 'deny' };
   });
 
   // Prevent new window creation
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+  mainWindow.webContents.setWindowOpenHandler(({ url }: { url: string }) => {
     shell.openExternal(url);
     return { action: 'deny' };
   });
@@ -486,9 +482,9 @@ app.on('gpu-info-update', async () => {
 });
 
 // Security: Prevent navigation to external websites
-app.on('web-contents-created', (_event, contents) => {
+app.on('web-contents-created', (_event: any, contents: any) => {
   // Prevent navigation to external URLs
-  contents.on('will-navigate', (event, navigationUrl) => {
+  contents.on('will-navigate', (event: any, navigationUrl: string) => {
     try {
       const parsedUrl = new URL(navigationUrl);
 
@@ -509,7 +505,7 @@ app.on('web-contents-created', (_event, contents) => {
   });
 
   // Prevent opening new windows
-  contents.setWindowOpenHandler(({ url }) => {
+  contents.setWindowOpenHandler(({ url }: { url: string }) => {
     shell.openExternal(url);
     return { action: 'deny' };
   });
@@ -644,7 +640,7 @@ autoUpdater.on('checking-for-update', () => {
   }
 });
 
-autoUpdater.on('update-available', (info) => {
+autoUpdater.on('update-available', (info: any) => {
   console.log('Update available:', info.version);
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('update-available', info);
@@ -659,21 +655,21 @@ autoUpdater.on('update-available', (info) => {
   });
 });
 
-autoUpdater.on('update-not-available', (_info) => {
+autoUpdater.on('update-not-available', (_info: any) => {
   console.log('Update not available.');
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('update-not-available');
   }
 });
 
-autoUpdater.on('error', (err) => {
+autoUpdater.on('error', (err: any) => {
   console.error('Error in auto-updater:', err);
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('update-error', err.message);
   }
 });
 
-autoUpdater.on('download-progress', (progressObj) => {
+autoUpdater.on('download-progress', (progressObj: any) => {
   const logMessage = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${Math.round(progressObj.percent)}% (${progressObj.transferred}/${progressObj.total})`;
   console.log(logMessage);
 
@@ -687,7 +683,7 @@ autoUpdater.on('download-progress', (progressObj) => {
   }
 });
 
-autoUpdater.on('update-downloaded', (info) => {
+autoUpdater.on('update-downloaded', (info: any) => {
   console.log('Update downloaded:', info.version);
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('update-downloaded', info);
@@ -770,7 +766,7 @@ ipcMain.handle('get-theme', () => {
   return nativeTheme.themeSource;
 });
 
-ipcMain.handle('set-theme', (_, theme: 'light' | 'dark' | 'system') => {
+ipcMain.handle('set-theme', (_: any, theme: 'light' | 'dark' | 'system') => {
   nativeTheme.themeSource = theme;
 
   // Notify renderer of theme change
@@ -797,7 +793,7 @@ ipcMain.handle('get-user-preferences', () => {
   return store.get('userPreferences');
 });
 
-ipcMain.handle('set-user-preferences', (_, preferences: Partial<StoreSchema['userPreferences']>) => {
+ipcMain.handle('set-user-preferences', (_: any, preferences: any) => {
   const currentPrefs = store.get('userPreferences');
   const newPrefs = { ...currentPrefs, ...preferences };
   store.set('userPreferences', newPrefs);
@@ -817,7 +813,7 @@ ipcMain.handle('get-app-settings', () => {
   return store.get('appSettings');
 });
 
-ipcMain.handle('set-app-settings', (_, settings: Partial<StoreSchema['appSettings']>) => {
+ipcMain.handle('set-app-settings', (_: any, settings: any) => {
   const currentSettings = store.get('appSettings');
   const newSettings = { ...currentSettings, ...settings };
   store.set('appSettings', newSettings);
@@ -849,7 +845,7 @@ ipcMain.handle('export-settings', () => {
   };
 });
 
-ipcMain.handle('import-settings', (_, settings: any) => {
+ipcMain.handle('import-settings', (_: any, settings: any) => {
   try {
     if (settings.userPreferences) {
       store.set('userPreferences', settings.userPreferences);
