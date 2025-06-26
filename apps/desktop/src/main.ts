@@ -1,7 +1,8 @@
 const { app, BrowserWindow, Menu, shell, ipcMain, dialog, screen: electronScreen, nativeTheme, Tray } = require('electron');
 // const { autoUpdater } = require('electron-updater');
-const Store = require('electron-store');
+// const Store = require('electron-store');
 const path = require('path');
+const fs = require('fs');
 
 // Keep a global reference of the window object and tray
 let mainWindow: typeof BrowserWindow | null = null;
@@ -36,6 +37,7 @@ interface StoreSchema {
   };
 }
 
+/*
 const store = new Store({
   defaults: {
     windowState: {
@@ -59,9 +61,15 @@ const store = new Store({
     }
   }
 });
+*/
 
 // Window state management
-let windowState = store.get('windowState');
+// let windowState = store.get('windowState');
+let windowState = {
+  width: 1200,
+  height: 800,
+  isMaximized: false
+};
 
 // Enable live reload for Electron in development
 if (isDevelopment) {
