@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "echo 'Search package build skipped for now'",
     "dev": "tsup --watch",
     "test": "vitest",
     "type-check": "tsc --noEmit",

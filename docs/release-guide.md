@@ -1,6 +1,6 @@
-# MingLog Release Guide
+# 🚀 MingLog 发布指南
 
-This guide explains how to create and manage releases for the MingLog desktop application.
+本指南详细说明了 MingLog 项目的发布流程，包括版本管理、构建、测试和分发。
 
 ## 🚀 Release Types
 

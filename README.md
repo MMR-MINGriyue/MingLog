@@ -250,18 +250,6 @@ pnpm db:studio        # 打开Prisma Studio
 - **AR/VR支持**: 沉浸式知识探索
 - **语音交互**: 自然语言输入和查询
 
-## 📞 联系我们
-
-### 🔗 **项目链接**
-- 🏠 **主页**: [Logseq Next](https://github.com/logseq/logseq-next)
-- 🐛 **问题反馈**: [GitHub Issues](https://github.com/logseq/logseq-next/issues)
-- 💬 **讨论交流**: [GitHub Discussions](https://github.com/logseq/logseq-next/discussions)
-- 📖 **文档**: [项目文档](./docs/)
-
-### 🤝 **社区**
-- 💬 **Discord**: [加入讨论](https://discord.gg/logseq)
-- 🐦 **Twitter**: [@logseq](https://twitter.com/logseq)
-- 📧 **邮件**: hello@logseq.com
 
 ## 📄 开源协议
 
