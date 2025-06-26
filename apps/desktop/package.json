@@ -14,7 +14,7 @@
     "dev": "concurrently \"npm run dev:main\" \"npm run dev:preload\"",
     "dev:main": "tsc -w --project tsconfig.main.json",
     "dev:preload": "tsc -w --project tsconfig.preload.json",
-    "build": "echo 'Desktop app build skipped for now'",
+    "build": "npm run build:main && npm run build:preload",
     "build:main": "tsc --project tsconfig.main.json",
     "build:preload": "tsc --project tsconfig.preload.json",
     "start": "electron .",
@@ -40,13 +40,7 @@
       "node_modules/**/*",
       "package.json"
     ],
-    "extraResources": [
-      {
-        "from": "../web/dist",
-        "to": "web",
-        "filter": ["**/*"]
-      }
-    ],
+    "extraResources": [],
     "win": {
       "target": [
         {

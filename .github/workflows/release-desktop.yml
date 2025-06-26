@@ -54,7 +54,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -64,7 +64,7 @@ jobs:
           version: 8
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: '18'
           cache: 'pnpm'
@@ -110,7 +110,7 @@ jobs:
 
       - name: Upload artifacts (Windows)
         if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: minglog-windows-${{ matrix.arch }}
           path: |
@@ -120,7 +120,7 @@ jobs:
 
       - name: Upload artifacts (macOS)
         if: matrix.os == 'macos-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: minglog-macos-${{ matrix.arch }}
           path: |
@@ -130,7 +130,7 @@ jobs:
 
       - name: Upload artifacts (Linux)
         if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: minglog-linux-${{ matrix.arch }}
           path: |
@@ -146,10 +146,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           path: ./artifacts
 
@@ -174,12 +174,12 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ steps.version.outputs.version }}
-          release_name: MingLog v${{ steps.version.outputs.version }}
+          name: MingLog v${{ steps.version.outputs.version }}
           body: |
             ## MingLog Desktop v${{ steps.version.outputs.version }}
             
@@ -212,54 +212,7 @@ jobs:
             请查看 [CHANGELOG.md](CHANGELOG.md) 获取详细更新信息。
           draft: false
           prerelease: ${{ steps.version.outputs.prerelease == 'true' }}
-
-      - name: Zip Windows artifacts
-        if: always() && hashFiles('./artifacts/minglog-windows-x64/*')
-        run: |
-          cd ./artifacts/minglog-windows-x64
-          zip -r ../minglog-windows-x64.zip .
-          cd ../..
-
-      - name: Zip macOS artifacts
-        if: always() && hashFiles('./artifacts/minglog-macos-universal/*')
-        run: |
-          cd ./artifacts/minglog-macos-universal
-          zip -r ../minglog-macos-universal.zip .
-          cd ../..
-
-      - name: Zip Linux artifacts
-        if: always() && hashFiles('./artifacts/minglog-linux-x64/*')
-        run: |
-          cd ./artifacts/minglog-linux-x64
-          zip -r ../minglog-linux-x64.zip .
-          cd ../..
-
-      - name: Upload Windows artifacts
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/minglog-windows-x64.zip
-          asset_name: minglog-windows-x64.zip
-          asset_content_type: application/zip
-
-      - name: Upload macOS artifacts
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/minglog-macos-universal.zip
-          asset_name: minglog-macos-universal.zip
-          asset_content_type: application/zip
-
-      - name: Upload Linux artifacts
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/minglog-linux-x64.zip
-          asset_name: minglog-linux-x64.zip
-          asset_content_type: application/zip
+          files: |
+            ./artifacts/minglog-windows-x64/**/*
+            ./artifacts/minglog-macos-universal/**/*
+            ./artifacts/minglog-linux-x64/**/*
