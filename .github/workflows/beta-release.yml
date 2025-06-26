@@ -1,0 +1,120 @@
+name: Beta Release
+
+on:
+  push:
+    branches:
+      - develop
+      - beta
+  workflow_dispatch:
+    inputs:
+      beta_version:
+        description: 'Beta version number (e.g., 1, 2, 3)'
+        required: true
+        default: '1'
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  version:
+    name: Generate Beta Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate version
+        id: version
+        run: |
+          # Get the current version from package.json
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          BASE_VERSION=$(echo $CURRENT_VERSION | sed 's/-beta.*//')
+          
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            BETA_NUM=${{ github.event.inputs.beta_version }}
+          else
+            # Auto-increment beta version
+            BETA_NUM=$(date +%Y%m%d%H%M)
+          fi
+          
+          NEW_VERSION="${BASE_VERSION}-beta.${BETA_NUM}"
+          TAG="v${NEW_VERSION}"
+          
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          
+          echo "Generated version: $NEW_VERSION"
+          echo "Generated tag: $TAG"
+
+  build-and-release:
+    name: Build and Release Beta
+    needs: version
+    uses: ./.github/workflows/release-desktop.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+      prerelease: true
+    secrets: inherit
+
+  update-version:
+    name: Update Package Version
+    needs: [version, build-and-release]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Update package.json versions
+        run: |
+          # Update root package.json
+          npm version ${{ needs.version.outputs.version }} --no-git-tag-version
+          
+          # Update desktop app package.json
+          cd apps/desktop
+          npm version ${{ needs.version.outputs.version }} --no-git-tag-version
+          cd ../..
+
+      - name: Commit version changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add package.json apps/desktop/package.json
+          git commit -m "chore: bump version to ${{ needs.version.outputs.version }}" || exit 0
+
+      - name: Create and push tag
+        run: |
+          git tag ${{ needs.version.outputs.tag }}
+          git push origin ${{ needs.version.outputs.tag }}
+          git push origin HEAD:${{ github.ref_name }}
+
+  notify:
+    name: Notify Release
+    needs: [version, build-and-release, update-version]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Notify success
+        if: needs.build-and-release.result == 'success'
+        run: |
+          echo "✅ Beta release ${{ needs.version.outputs.version }} created successfully!"
+          echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ needs.version.outputs.tag }}"
+
+      - name: Notify failure
+        if: needs.build-and-release.result == 'failure'
+        run: |
+          echo "❌ Beta release ${{ needs.version.outputs.version }} failed!"
+          exit 1

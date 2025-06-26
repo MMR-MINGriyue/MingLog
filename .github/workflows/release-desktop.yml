@@ -1,0 +1,231 @@
+name: Release Desktop App
+
+on:
+  push:
+    tags:
+      - 'v*.*.*-beta.*'
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.1.0-beta.1)'
+        required: true
+        default: '0.1.0-beta.1'
+      prerelease:
+        description: 'Is this a prerelease?'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    name: Build Desktop App
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            platform: win
+            arch: x64
+          - os: macos-latest
+            platform: mac
+            arch: universal
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web app
+        run: pnpm run web:build
+
+      - name: Install desktop dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: apps/desktop
+
+      - name: Build desktop app
+        run: pnpm run build
+        working-directory: apps/desktop
+
+      - name: Build Electron app (Windows)
+        if: matrix.os == 'windows-latest'
+        run: pnpm run dist:win
+        working-directory: apps/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Electron app (macOS)
+        if: matrix.os == 'macos-latest'
+        run: pnpm run dist:mac
+        working-directory: apps/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Build Electron app (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: pnpm run dist:linux
+        working-directory: apps/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglog-windows-${{ matrix.arch }}
+          path: |
+            apps/desktop/build/*.exe
+            apps/desktop/build/*.msi
+          retention-days: 30
+
+      - name: Upload artifacts (macOS)
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglog-macos-${{ matrix.arch }}
+          path: |
+            apps/desktop/build/*.dmg
+            apps/desktop/build/*.zip
+          retention-days: 30
+
+      - name: Upload artifacts (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglog-linux-${{ matrix.arch }}
+          path: |
+            apps/desktop/build/*.AppImage
+            apps/desktop/build/*.deb
+          retention-days: 30
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -la ./artifacts
+
+      - name: Determine version and prerelease status
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "prerelease=${{ github.event.inputs.prerelease }}" >> $GITHUB_OUTPUT
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            if [[ "$VERSION" == *"beta"* ]] || [[ "$VERSION" == *"alpha"* ]] || [[ "$VERSION" == *"rc"* ]]; then
+              echo "prerelease=true" >> $GITHUB_OUTPUT
+            else
+              echo "prerelease=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          release_name: MingLog v${{ steps.version.outputs.version }}
+          body: |
+            ## MingLog Desktop v${{ steps.version.outputs.version }}
+            
+            ### 🚀 新功能
+            - 桌面应用发布
+            - 跨平台支持 (Windows, macOS, Linux)
+            - 自动更新功能
+            
+            ### 📦 下载
+            选择适合您操作系统的版本：
+            
+            **Windows:**
+            - `.exe` - 安装程序
+            - `.msi` - MSI 安装包
+            
+            **macOS:**
+            - `.dmg` - 磁盘映像
+            - `.zip` - 压缩包
+            
+            **Linux:**
+            - `.AppImage` - 便携应用
+            - `.deb` - Debian 包
+            
+            ### 🔧 系统要求
+            - Windows 10 或更高版本
+            - macOS 10.15 或更高版本
+            - Ubuntu 18.04 或更高版本 (或其他现代 Linux 发行版)
+            
+            ### 📝 更新日志
+            请查看 [CHANGELOG.md](CHANGELOG.md) 获取详细更新信息。
+          draft: false
+          prerelease: ${{ steps.version.outputs.prerelease == 'true' }}
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/minglog-windows-x64
+          asset_name: minglog-windows-x64.zip
+          asset_content_type: application/zip
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/minglog-macos-universal
+          asset_name: minglog-macos-universal.zip
+          asset_content_type: application/zip
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/minglog-linux-x64
+          asset_name: minglog-linux-x64.zip
+          asset_content_type: application/zip
