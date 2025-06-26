@@ -91,6 +91,7 @@ jobs:
         working-directory: apps/desktop
 
       - name: Debug - List files after build
+        shell: bash
         run: |
           echo "=== Contents of apps/desktop ==="
           ls -la
