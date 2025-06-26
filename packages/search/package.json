@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsc -p tsconfig.build.json",
     "dev": "tsup --watch",
     "test": "vitest",
     "type-check": "tsc --noEmit",

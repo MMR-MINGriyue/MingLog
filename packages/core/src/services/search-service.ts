@@ -436,6 +436,6 @@ export class SearchService extends EventEmitter {
     this.pages = [];
     this.blocks = [];
     this.isInitialized = false;
-    this.emit('index:cleared');
+    this.emit('index:cleared', null);
   }
 }

@@ -14,9 +14,11 @@ export interface Graph {
 export class GraphService extends EventEmitter {
   private currentGraph: Graph | null = null;
   private graphs: Map<string, Graph> = new Map();
+  private client: any;
 
   constructor() {
     super();
+    this.client = getPrismaClient();
   }
 
   async initialize(): Promise<Graph> {
@@ -87,6 +89,7 @@ export class GraphService extends EventEmitter {
       name: dbGraph.name,
       path: dbGraph.path,
       settings: dbGraph.settings ? JSON.parse(dbGraph.settings) : {},
+      createdAt: dbGraph.createdAt.getTime(),
       updatedAt: dbGraph.updatedAt.getTime(),
     };
 

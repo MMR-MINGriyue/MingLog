@@ -17,7 +17,7 @@ import { PageService } from './services/page-service';
 import { GraphService } from './services/graph-service';
 import { SearchService } from './services/search-service';
 import { EventEmitter } from './utils/event-emitter';
-import type { Graph, LogseqEvent } from './types';
+import type { LogseqEvent } from './types';
 
 export class MingLogCore extends EventEmitter {
   public readonly blocks: BlockService;
