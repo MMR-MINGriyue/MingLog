@@ -249,7 +249,7 @@ function createWindow(): void {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      enableRemoteModule: false,
+      // enableRemoteModule: false, // Deprecated in newer Electron versions
       preload: path.join(__dirname, 'preload.js'),
       webSecurity: true,
       allowRunningInsecureContent: false,
@@ -385,9 +385,9 @@ function createWindow(): void {
   });
 
   // Prevent new window creation
-  mainWindow.webContents.on('new-window', (event, url) => {
-    event.preventDefault();
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
+    return { action: 'deny' };
   });
 }
 
@@ -473,10 +473,10 @@ app.on('window-all-closed', () => {
 });
 
 // Handle memory warnings
-app.on('gpu-info-update', () => {
+app.on('gpu-info-update', async () => {
   // Monitor GPU memory usage
   if (mainWindow && !mainWindow.isDestroyed()) {
-    const memoryInfo = process.getProcessMemoryInfo();
+    const memoryInfo = await process.getProcessMemoryInfo();
     if (memoryInfo.private > 200 * 1024 * 1024) { // 200MB threshold
       console.warn('High memory usage detected:', memoryInfo);
       // Optionally notify renderer to clean up
@@ -486,7 +486,7 @@ app.on('gpu-info-update', () => {
 });
 
 // Security: Prevent navigation to external websites
-app.on('web-contents-created', (event, contents) => {
+app.on('web-contents-created', (_event, contents) => {
   // Prevent navigation to external URLs
   contents.on('will-navigate', (event, navigationUrl) => {
     try {
@@ -566,7 +566,7 @@ function createMenu(): void {
         { role: 'cut' },
         { role: 'copy' },
         { role: 'paste' },
-        { role: 'selectall' }
+        { role: 'selectAll' }
       ]
     },
     {
@@ -659,7 +659,7 @@ autoUpdater.on('update-available', (info) => {
   });
 });
 
-autoUpdater.on('update-not-available', (info) => {
+autoUpdater.on('update-not-available', (_info) => {
   console.log('Update not available.');
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('update-not-available');
@@ -862,6 +862,6 @@ ipcMain.handle('import-settings', (_, settings: any) => {
     }
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 });
