@@ -23,7 +23,6 @@ export default defineConfig({
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
           query: ['@tanstack/react-query'],
-          editor: ['@tiptap/react', '@tiptap/core'],
         },
       },
     },
