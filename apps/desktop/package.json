@@ -1,13 +1,15 @@
 {
   "name": "minglog-desktop",
-  "version": "0.1.0-beta.1",
-  "description": "MingLog Desktop Application",
+  "version": "0.1.0-beta.32",
+  "description": "MingLog - 现代化知识管理工具桌面版",
   "main": "dist/main.js",
   "homepage": "https://github.com/MMR-MINGriyue/MingLog",
   "author": {
     "name": "MingLog Team",
-    "email": "Dasein1997@outlook.com"
+    "email": "Dasein1997@outlook.com",
+    "url": "https://github.com/MMR-MINGriyue"
   },
+  "keywords": ["knowledge-management", "note-taking", "productivity", "electron", "desktop"],
   "license": "MIT",
   "private": true,
   "scripts": {
@@ -25,14 +27,19 @@
     "dist:linux": "electron-builder --linux",
     "dist:all": "electron-builder --win --mac --linux",
     "clean": "rimraf dist build",
+    "generate-icons": "node ../../scripts/generate-icons.js",
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {
     "appId": "com.minglog.desktop",
     "productName": "MingLog",
+    "copyright": "Copyright © 2025 MingLog Team",
     "directories": {
       "output": "build",
       "buildResources": "assets"
+    },
+    "extraMetadata": {
+      "description": "现代化知识管理工具 - 专注于性能、开发体验和可维护性"
     },
     "files": [
       "dist/**/*",
