@@ -34,9 +34,11 @@ interface LogseqState {
   deletePage: (id: string) => Promise<void>;
 }
 
+// Create core instance
+const core = new MingLogCore();
+
 export const useLogseqStore = create<LogseqState>()(
   subscribeWithSelector((set, get) => {
-    const core = new MingLogCore();
 
     return {
       // Initial state
@@ -112,3 +114,6 @@ export const useLogseqStore = create<LogseqState>()(
     };
   })
 );
+
+// Export core instance for direct access
+export { core };

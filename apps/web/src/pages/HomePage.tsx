@@ -1,55 +1,46 @@
 import React, { useEffect, useState } from 'react';
-import { useApiStore } from '../stores/api-store';
+import { useLogseqStore, core } from '../stores/logseq-store';
 import { PageList } from '../components/PageList';
 import { PageEditor } from '../components/PageEditor';
 import { LoadingSpinner, ErrorMessage, useToast } from '@minglog/ui';
-import type { Page } from '../services/api';
+import type { Page } from '@minglog/core';
 
 export const HomePage: React.FC = () => {
   const {
     initialize,
     isInitialized,
-    isLoading,
-    error,
-    currentGraph,
     currentPage,
     setCurrentPage,
-    createTodayJournal,
-  } = useApiStore();
+  } = useLogseqStore();
 
   const [todayPage, setTodayPage] = useState<Page | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { addToast } = useToast();
 
   useEffect(() => {
     const initializeTodayPage = async () => {
       try {
+        setIsLoading(true);
         await initialize();
 
-        if (currentGraph) {
-          const page = await createTodayJournal(currentGraph.id);
-          setTodayPage(page);
-          setCurrentPage(page);
-
-          addToast({
-            type: 'success',
-            title: '欢迎回来！',
-            message: '今日日记已准备就绪',
-            duration: 3000
-          });
-        }
+        // Create today's journal page
+        const page = await core.pages.createTodayJournal();
+        setTodayPage(page);
+        setCurrentPage(page);
+        setError(null);
       } catch (error) {
         console.error('Failed to initialize today page:', error);
-        addToast({
-          type: 'error',
-          title: '初始化失败',
-          message: '无法创建今日日记，请稍后重试',
-          duration: 5000
-        });
+        setError('无法创建今日日记，请稍后重试');
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    initializeTodayPage();
-  }, [initialize, currentGraph, createTodayJournal, setCurrentPage, addToast]);
+    if (!isInitialized) {
+      initializeTodayPage();
+    }
+  }, [initialize, setCurrentPage, isInitialized]);
 
   const handlePageSelect = (page: Page) => {
     setCurrentPage(page);

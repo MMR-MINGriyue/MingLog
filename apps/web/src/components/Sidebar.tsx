@@ -10,12 +10,13 @@ import {
 } from '@heroicons/react/24/outline';
 
 const navigation = [
-  { name: 'Home', href: '/', icon: HomeIcon },
-  { name: 'All Pages', href: '/pages', icon: DocumentTextIcon },
-  { name: 'Journals', href: '/journals', icon: CalendarIcon },
-  { name: 'Search', href: '/search', icon: MagnifyingGlassIcon },
-  { name: 'Graph', href: '/graph', icon: ChartBarIcon },
-  { name: 'Settings', href: '/settings', icon: CogIcon },
+  { name: '首页', href: '/', icon: HomeIcon },
+  { name: '所有页面', href: '/pages', icon: DocumentTextIcon },
+  { name: '日记', href: '/journals', icon: CalendarIcon },
+  { name: '搜索', href: '/search', icon: MagnifyingGlassIcon },
+  { name: '🧪 测试', href: '/test', icon: CogIcon },
+  { name: '图谱', href: '/graph', icon: ChartBarIcon },
+  { name: '设置', href: '/settings', icon: CogIcon },
 ];
 
 export const Sidebar: React.FC = () => {
@@ -47,12 +48,12 @@ export const Sidebar: React.FC = () => {
         {/* Recent pages */}
         <div className="mt-8">
           <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Recent Pages
+            最近页面
           </h3>
           <div className="mt-2 space-y-1">
             {/* TODO: Implement recent pages */}
             <div className="px-3 py-2 text-sm text-gray-500">
-              No recent pages
+              暂无最近页面
             </div>
           </div>
         </div>

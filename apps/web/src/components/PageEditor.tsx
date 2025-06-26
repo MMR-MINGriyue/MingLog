@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { DraggableBlockTree } from '@minglog/editor';
 import { Button, LoadingSpinner, EmptyBlocks, ErrorMessage, useToast } from '@minglog/ui';
-import { useApiStore } from '../stores/api-store';
-import type { Block, Page } from '../services/api';
+import { useLogseqStore, core } from '../stores/logseq-store';
+import type { Block, Page } from '@minglog/core';
 
 interface PageEditorProps {
   page: Page;
@@ -13,40 +13,47 @@ export const PageEditor: React.FC<PageEditorProps> = ({
   page,
   onPageChange,
 }) => {
-  const {
-    blocks,
-    currentGraph,
-    isLoading,
-    error,
-    createBlock,
-    updateBlock,
-    deleteBlock,
-    moveBlock,
-    toggleBlockCollapse,
-    loadBlocks,
-  } = useApiStore();
+  const { currentGraph } = useLogseqStore();
 
+  const [blocks, setBlocks] = useState<Block[]>([]);
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
   const [isCreatingBlock, setIsCreatingBlock] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { addToast } = useToast();
 
   // Load blocks for the current page
   useEffect(() => {
-    if (page) {
-      loadBlocks(page.id);
-    }
-  }, [page.id, loadBlocks]);
+    const loadBlocks = async () => {
+      if (page) {
+        try {
+          setIsLoading(true);
+          const pageBlocks = core.blocks.getBlocksByPage(page.id);
+          setBlocks(pageBlocks);
+          setError(null);
+        } catch (error) {
+          console.error('Failed to load blocks:', error);
+          setError('Failed to load blocks');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadBlocks();
+  }, [page.id]);
 
   // Refresh blocks helper
   const refreshBlocks = useCallback(async () => {
     if (page) {
-      await loadBlocks(page.id);
+      const pageBlocks = core.blocks.getBlocksByPage(page.id);
+      setBlocks(pageBlocks);
     }
-  }, [page.id, loadBlocks]);
+  }, [page.id]);
 
   const handleUpdateBlock = async (blockId: string, content: string) => {
     try {
-      await updateBlock(blockId, content);
+      await core.blocks.updateBlock(blockId, { content });
       await refreshBlocks();
     } catch (error) {
       console.error('Failed to update block:', error);
@@ -65,7 +72,7 @@ export const PageEditor: React.FC<PageEditorProps> = ({
 
     setIsCreatingBlock(true);
     try {
-      const newBlock = await createBlock('', page.id, currentGraph.id, parentId);
+      const newBlock = await core.blocks.createBlock('', page.id, parentId);
       await refreshBlocks();
       setFocusedBlockId(newBlock.id);
 
@@ -89,7 +96,7 @@ export const PageEditor: React.FC<PageEditorProps> = ({
 
   const handleDeleteBlock = async (blockId: string) => {
     try {
-      await deleteBlock(blockId);
+      await core.blocks.deleteBlock(blockId);
       await refreshBlocks();
       setFocusedBlockId(null);
     } catch (error) {
@@ -99,9 +106,7 @@ export const PageEditor: React.FC<PageEditorProps> = ({
 
   const handleIndentBlock = async (blockId: string) => {
     try {
-      // TODO: Implement indent/outdent in API
-      console.log('Indent block:', blockId);
-      // For now, just refresh blocks
+      await core.blocks.indentBlock(blockId);
       await refreshBlocks();
     } catch (error) {
       console.error('Failed to indent block:', error);
@@ -110,9 +115,7 @@ export const PageEditor: React.FC<PageEditorProps> = ({
 
   const handleOutdentBlock = async (blockId: string) => {
     try {
-      // TODO: Implement indent/outdent in API
-      console.log('Outdent block:', blockId);
-      // For now, just refresh blocks
+      await core.blocks.outdentBlock(blockId);
       await refreshBlocks();
     } catch (error) {
       console.error('Failed to outdent block:', error);
@@ -121,7 +124,7 @@ export const PageEditor: React.FC<PageEditorProps> = ({
 
   const handleToggleCollapse = async (blockId: string) => {
     try {
-      await toggleBlockCollapse(blockId);
+      await core.blocks.toggleCollapse(blockId);
       await refreshBlocks();
 
       addToast({
@@ -142,7 +145,8 @@ export const PageEditor: React.FC<PageEditorProps> = ({
 
   const handleMoveBlock = async (blockId: string, newParentId?: string, newOrder?: number) => {
     try {
-      await moveBlock(blockId, newParentId, newOrder || 0);
+      // TODO: Implement move block in core
+      console.log('Move block:', blockId, 'to parent:', newParentId, 'order:', newOrder);
       await refreshBlocks();
 
       addToast({
@@ -298,18 +302,18 @@ export const PageEditor: React.FC<PageEditorProps> = ({
           </div>
         </div>
         <div className="mt-3 pt-3 border-t border-gray-200">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 mb-2">
             💡 提示：您也可以拖拽块来重新排序，点击折叠按钮来隐藏子块
           </p>
-        </div>
-      </div>
-          <div><kbd className="bg-white px-1 rounded">Tab</kbd> Indent</div>
-          <div><kbd className="bg-white px-1 rounded">Shift+Tab</kbd> Outdent</div>
-          <div><kbd className="bg-white px-1 rounded">Backspace</kbd> Delete empty</div>
-          <div><kbd className="bg-white px-1 rounded">Ctrl+↑</kbd> Previous block</div>
-          <div><kbd className="bg-white px-1 rounded">Ctrl+↓</kbd> Next block</div>
-          <div><kbd className="bg-white px-1 rounded">[[]]</kbd> Page link</div>
-          <div><kbd className="bg-white px-1 rounded">(())</kbd> Block ref</div>
+          <div className="grid grid-cols-2 gap-1 text-xs text-gray-600">
+            <div><kbd className="bg-white px-1 rounded">Tab</kbd> Indent</div>
+            <div><kbd className="bg-white px-1 rounded">Shift+Tab</kbd> Outdent</div>
+            <div><kbd className="bg-white px-1 rounded">Backspace</kbd> Delete empty</div>
+            <div><kbd className="bg-white px-1 rounded">Ctrl+↑</kbd> Previous block</div>
+            <div><kbd className="bg-white px-1 rounded">Ctrl+↓</kbd> Next block</div>
+            <div><kbd className="bg-white px-1 rounded">[[]]</kbd> Page link</div>
+            <div><kbd className="bg-white px-1 rounded">(())</kbd> Block ref</div>
+          </div>
         </div>
       </div>
     </div>
