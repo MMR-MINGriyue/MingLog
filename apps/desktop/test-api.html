@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tauri API 测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #005a9e;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        .error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Tauri API 测试</h1>
+        <p>这个页面用于测试Tauri应用的前后端API通信。</p>
+        
+        <div>
+            <button onclick="testGreet()">测试 Greet</button>
+            <button onclick="testAppInfo()">测试 App Info</button>
+            <button onclick="testLoadWorkspace()">测试 Load Workspace</button>
+            <button onclick="testCreatePage()">测试 Create Page</button>
+            <button onclick="testUpdatePage()">测试 Update Page</button>
+            <button onclick="testGetMetadata()">测试 Get Metadata</button>
+            <button onclick="testAllAPIs()">测试所有API</button>
+            <button onclick="clearResults()">清空结果</button>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // 检查Tauri API是否可用
+        let tauriAPI = null;
+        
+        if (window.__TAURI__) {
+            tauriAPI = window.__TAURI__.tauri;
+            addResult('✅ Tauri API 可用', 'success');
+        } else {
+            addResult('❌ Tauri API 不可用 - 可能在浏览器中运行', 'error');
+        }
+
+        function addResult(message, type = '') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+
+        async function testGreet() {
+            try {
+                if (!tauriAPI) {
+                    addResult('Tauri API 不可用', 'error');
+                    return;
+                }
+                
+                addResult('正在调用 greet 命令...');
+                const result = await tauriAPI.invoke('greet', { name: 'MingLog测试用户' });
+                addResult(`Greet 结果: ${result}`, 'success');
+            } catch (error) {
+                addResult(`Greet 错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAppInfo() {
+            try {
+                if (!tauriAPI) {
+                    addResult('Tauri API 不可用', 'error');
+                    return;
+                }
+                
+                addResult('正在调用 get_app_info 命令...');
+                const result = await tauriAPI.invoke('get_app_info');
+                addResult(`App Info 结果: ${JSON.stringify(result, null, 2)}`, 'success');
+            } catch (error) {
+                addResult(`App Info 错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLoadWorkspace() {
+            try {
+                if (!tauriAPI) {
+                    addResult('Tauri API 不可用', 'error');
+                    return;
+                }
+                
+                addResult('正在调用 load_workspace 命令...');
+                const result = await tauriAPI.invoke('load_workspace');
+                addResult(`Load Workspace 结果: ${JSON.stringify(result, null, 2)}`, 'success');
+            } catch (error) {
+                addResult(`Load Workspace 错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCreatePage() {
+            try {
+                if (!tauriAPI) {
+                    addResult('Tauri API 不可用', 'error');
+                    return;
+                }
+                
+                const title = `测试页面 ${new Date().toLocaleTimeString()}`;
+                addResult(`正在调用 create_page 命令，标题: ${title}`);
+                const result = await tauriAPI.invoke('create_page', { title });
+                addResult(`Create Page 结果: ${JSON.stringify(result, null, 2)}`, 'success');
+            } catch (error) {
+                addResult(`Create Page 错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testUpdatePage() {
+            try {
+                if (!tauriAPI) {
+                    addResult('Tauri API 不可用', 'error');
+                    return;
+                }
+
+                // 先创建一个页面
+                const createResult = await tauriAPI.invoke('create_page', { title: '测试更新页面' });
+                if (!createResult.success) {
+                    addResult('创建页面失败，无法测试更新', 'error');
+                    return;
+                }
+
+                const pageId = createResult.data.id;
+                addResult(`页面创建成功，ID: ${pageId}`);
+
+                // 更新页面
+                const updates = {
+                    title: '已更新的测试页面',
+                    blocks: [
+                        {
+                            id: 'block1',
+                            block_type: 'h1',
+                            content: '更新后的标题',
+                            properties: {},
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        },
+                        {
+                            id: 'block2',
+                            block_type: 'p',
+                            content: '这是更新后的内容',
+                            properties: {},
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        }
+                    ]
+                };
+
+                addResult('正在调用 update_page 命令...');
+                const result = await tauriAPI.invoke('update_page', { pageId, updates });
+                addResult(`Update Page 结果: ${JSON.stringify(result, null, 2)}`, 'success');
+            } catch (error) {
+                addResult(`Update Page 错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetMetadata() {
+            try {
+                if (!tauriAPI) {
+                    addResult('Tauri API 不可用', 'error');
+                    return;
+                }
+
+                addResult('正在调用 get_metadata 命令...');
+                const result = await tauriAPI.invoke('get_metadata');
+                addResult(`Get Metadata 结果: ${JSON.stringify(result, null, 2)}`, 'success');
+            } catch (error) {
+                addResult(`Get Metadata 错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAllAPIs() {
+            addResult('=== 开始完整API测试 ===', 'success');
+            await testGreet();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testAppInfo();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testLoadWorkspace();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testCreatePage();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testUpdatePage();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testGetMetadata();
+            addResult('=== API测试完成 ===', 'success');
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            if (tauriAPI) {
+                addResult('✅ Tauri API 可用', 'success');
+            } else {
+                addResult('❌ Tauri API 不可用 - 可能在浏览器中运行', 'error');
+            }
+        }
+
+        // 页面加载时自动测试
+        window.addEventListener('load', () => {
+            addResult('页面加载完成');
+            if (tauriAPI) {
+                addResult('准备进行API测试...');
+            }
+        });
+    </script>
+</body>
+</html>

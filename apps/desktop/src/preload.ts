@@ -4,7 +4,10 @@ import { contextBridge, ipcRenderer } from 'electron';
 interface ElectronAPI {
   platform: string;
   version: string;
-  
+
+  // 通用调用方法
+  invoke: (channel: string, ...args: any[]) => Promise<any>;
+
   // 基础功能
   openExternal: (url: string) => Promise<void>;
   getAppInfo: () => Promise<{
@@ -14,15 +17,15 @@ interface ElectronAPI {
     arch: string;
     nodeVersion: string;
   }>;
-  
+
   // 对话框
   showMessageBox: (options: any) => Promise<any>;
   showOpenDialog: (options: any) => Promise<any>;
   showSaveDialog: (options: any) => Promise<any>;
-  
+
   // 应用控制
   restartApp: () => Promise<void>;
-  
+
   // 事件监听
   on: (channel: string, callback: (...args: any[]) => void) => void;
   removeAllListeners: (channel: string) => void;
@@ -30,6 +33,7 @@ interface ElectronAPI {
 
 // 验证频道名称以防止滥用
 const validChannels = [
+  // 菜单事件
   'menu-new-file',
   'menu-open-file',
   'menu-save-file',
@@ -47,14 +51,55 @@ const validChannels = [
   'update-error',
   'update-download-progress',
   'update-downloaded',
-  'memory-warning'
+  'memory-warning',
+
+  // 存储相关
+  'storage:loadWorkspace',
+  'storage:saveWorkspace',
+  'storage:createPage',
+  'storage:updatePage',
+  'storage:deletePage',
+  'storage:createBackup',
+  'storage:getBackupList',
+  'storage:restoreBackup',
+  'storage:exportMarkdown',
+  'storage:importMarkdown',
+  'storage:getMetadata',
+
+  // 对话框
+  'dialog:showOpenDialog',
+  'dialog:showSaveDialog',
+
+  // 文件系统
+  'fs:readFile',
+  'fs:writeFile',
+
+  // 路径
+  'path:getTempDir',
+
+  // 应用信息
+  'get-app-info',
+  'open-external',
+  'show-message-box',
+  'show-open-dialog',
+  'show-save-dialog',
+  'restart-app'
 ];
 
 // 创建 Electron API
 const electronAPI: ElectronAPI = {
   platform: process.platform,
   version: process.versions.electron,
-  
+
+  // 通用调用方法
+  invoke: (channel: string, ...args: any[]) => {
+    if (validChannels.includes(channel)) {
+      return ipcRenderer.invoke(channel, ...args);
+    } else {
+      throw new Error(`Invalid IPC channel: ${channel}`);
+    }
+  },
+
   // 基础功能
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   getAppInfo: () => ipcRenderer.invoke('get-app-info'),

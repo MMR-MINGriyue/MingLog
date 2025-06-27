@@ -29,6 +29,8 @@
     "desktop:pack": "pnpm --filter minglog-desktop pack",
     "desktop:dist": "pnpm --filter minglog-desktop dist",
     "desktop:dist:all": "pnpm --filter minglog-desktop dist:all",
+    "desktop:tauri:dev": "pnpm --filter minglog-desktop dev",
+    "desktop:tauri:build": "pnpm --filter minglog-desktop build",
     "web:dev": "pnpm --filter minglog-web dev",
     "web:build": "pnpm --filter minglog-web build",
     "api:dev": "pnpm --filter minglog-api dev",

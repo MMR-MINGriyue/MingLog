@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MingLog 编辑器</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">M</div>
+            <span>MingLog</span>
+        </div>
+        <div class="toolbar">
+            <button type="button" class="btn" id="newPageBtn" title="创建新页面 (Ctrl+N)">
+                <span class="btn-icon">📄</span>
+                新建页面
+            </button>
+            <button type="button" class="btn" id="saveBtn" title="保存页面 (Ctrl+S)">
+                <span class="btn-icon">💾</span>
+                保存
+            </button>
+            <button type="button" class="btn" id="importBtn" title="导入Markdown文件">
+                <span class="btn-icon">📥</span>
+                导入
+            </button>
+            <button type="button" class="btn" id="exportBtn" title="导出当前页面">
+                <span class="btn-icon">📤</span>
+                导出
+            </button>
+            <button type="button" class="btn" id="backupBtn" title="创建备份">
+                <span class="btn-icon">🔄</span>
+                备份
+            </button>
+            <button type="button" class="btn" id="themeBtn" title="切换主题">
+                <span class="btn-icon" id="themeIcon">🌙</span>
+            </button>
+            <button type="button" class="btn" id="settingsBtn" title="打开设置">
+                <span class="btn-icon">⚙️</span>
+                设置
+            </button>
+            <button type="button" class="btn primary" id="performanceBtn" title="查看性能信息">
+                <span class="btn-icon">📊</span>
+                性能
+            </button>
+            <button type="button" class="btn" id="testBtn" title="测试Tauri API" style="background: red; color: white;">
+                测试API
+            </button>
+        </div>
+    </div>
+    <div class="main">
+        <div class="sidebar">
+            <div class="sidebar-header">页面列表</div>
+            <div class="page-list" id="pageList">
+                <div class="page-item active" data-page-id="welcome">
+                    <div class="page-title">欢迎使用 MingLog</div>
+                    <div class="page-preview">开始您的知识管理之旅...</div>
+                </div>
+                <div class="page-item" data-page-id="example">
+                    <div class="page-title">示例页面</div>
+                    <div class="page-preview">这是一个示例页面，展示编辑器功能</div>
+                </div>
+            </div>
+        </div>
+        <div class="editor-container">
+            <div class="editor-header">
+                <input type="text" class="page-title-input" placeholder="无标题页面" value="欢迎使用 MingLog">
+            </div>
+            <div class="editor" id="editor">
+                <div class="editor-content" id="editorContent">
+                    <div class="block block-type-h1" data-type="h1">
+                        <textarea class="block-content" placeholder="标题">欢迎使用 MingLog 桌面版</textarea>
+                    </div>
+                    <div class="block block-type-p" data-type="p">
+                        <textarea class="block-content" placeholder="开始写作...">MingLog 是一个现代化的知识管理工具，专注于性能、开发体验和可维护性。</textarea>
+                    </div>
+                    <div class="block block-type-h2" data-type="h2">
+                        <textarea class="block-content" placeholder="子标题">主要特性</textarea>
+                    </div>
+                    <div class="block block-type-p" data-type="p">
+                        <textarea class="block-content" placeholder="开始写作...">• 基于块的编辑器系统
+• 双向链接和块引用
+• 全文搜索功能
+• 现代化的用户界面
+• 跨平台桌面应用</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="status-bar">
+        <div class="status-left">
+            <span id="wordCount">字数: 0</span>
+            <span style="margin-left: 16px;" id="blockCount">块数: 4</span>
+        </div>
+        <div class="status-right">
+            <span id="lastSaved">已保存</span>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>

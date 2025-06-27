@@ -560,6 +560,28 @@ function createMainWindow(): BrowserWindow {
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             border: 1px solid transparent;
+            cursor: grab;
+        }
+
+        .block:active {
+            cursor: grabbing;
+        }
+
+        .block.dragging {
+            opacity: 0.5;
+            transform: rotate(2deg);
+            z-index: 1000;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .block.drag-over {
+            border-top: 3px solid var(--primary-500);
+            margin-top: calc(var(--space-4) + 3px);
+        }
+
+        .block.drag-over-bottom {
+            border-bottom: 3px solid var(--primary-500);
+            margin-bottom: calc(var(--space-4) + 3px);
         }
 
         .block::before {
@@ -575,23 +597,219 @@ function createMainWindow(): BrowserWindow {
             transition: height 0.2s ease;
         }
 
+        /* 拖拽手柄 */
+        .block-drag-handle {
+            position: absolute;
+            left: -24px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            opacity: 0;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--gray-200), var(--gray-300));
+            border-radius: 6px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid var(--gray-300);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .block-drag-handle:hover {
+            background: linear-gradient(135deg, var(--primary-400), var(--primary-500));
+            border-color: var(--primary-500);
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+        }
+
+        .block-drag-handle:active {
+            cursor: grabbing;
+            transform: translateY(-50%) scale(0.95);
+        }
+
+        .block:hover .block-drag-handle {
+            opacity: 1;
+            transform: translateY(-50%) translateX(2px);
+        }
+
+        .block.focused .block-drag-handle {
+            opacity: 1;
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            border-color: var(--primary-600);
+        }
+
+        .block-drag-handle::before {
+            content: '⋮⋮';
+            font-size: 12px;
+            color: var(--gray-600);
+            line-height: 1;
+            letter-spacing: -1px;
+            transition: color 0.2s ease;
+        }
+
+        .block-drag-handle:hover::before,
+        .block.focused .block-drag-handle::before {
+            color: white;
+        }
+
+        /* 缩进线样式 */
+        .indent-line {
+            position: absolute;
+            width: 1px;
+            background: var(--gray-200);
+            z-index: 1;
+            opacity: 0.6;
+        }
+
+        .block:hover .indent-line {
+            background: var(--gray-300);
+            opacity: 1;
+        }
+
+        /* 块级别样式 */
+        .block[data-level="1"] { padding-left: 24px; }
+        .block[data-level="2"] { padding-left: 48px; }
+        .block[data-level="3"] { padding-left: 72px; }
+        .block[data-level="4"] { padding-left: 96px; }
+        .block[data-level="5"] { padding-left: 120px; }
+
+        /* 快速类型切换工具栏 */
+        .block-type-toolbar {
+            position: absolute;
+            top: -45px;
+            left: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
+            padding: var(--space-2);
+            display: none;
+            z-index: 1000;
+            box-shadow:
+                0 8px 25px rgba(0, 0, 0, 0.1),
+                0 4px 10px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(10px);
+            animation: toolbarSlideIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes toolbarSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .block.focused .block-type-toolbar {
+            display: flex;
+            gap: var(--space-1);
+        }
+
+        .type-btn {
+            padding: var(--space-1) var(--space-3);
+            border: 1px solid var(--gray-200);
+            background: linear-gradient(135deg, white, var(--gray-50));
+            border-radius: var(--radius);
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .type-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .type-btn:hover {
+            background: linear-gradient(135deg, var(--gray-50), var(--gray-100));
+            border-color: var(--primary-300);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .type-btn:hover::before {
+            left: 100%;
+        }
+
+        .type-btn.active {
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            color: white;
+            border-color: var(--primary-600);
+            box-shadow:
+                0 4px 12px rgba(99, 102, 241, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .type-btn.active::before {
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        }
+
         .block:hover {
-            background: var(--gray-50);
+            background: linear-gradient(135deg, var(--gray-50) 0%, rgba(255, 255, 255, 0.8) 100%);
             border-color: var(--gray-200);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
         .block:hover::before {
-            height: 30%;
+            height: 40%;
+            background: linear-gradient(180deg, var(--primary-500), var(--primary-600));
         }
 
         .block.focused {
-            background: var(--primary-50);
+            background: linear-gradient(135deg, var(--primary-50) 0%, rgba(99, 102, 241, 0.05) 100%);
             border-color: var(--primary-300);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            box-shadow:
+                0 0 0 3px rgba(99, 102, 241, 0.1),
+                0 4px 12px rgba(99, 102, 241, 0.15);
+            transform: translateY(-2px);
         }
 
         .block.focused::before {
-            height: 80%;
+            height: 90%;
+            background: linear-gradient(180deg, var(--primary-500), var(--primary-700));
+            box-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
+        }
+
+        /* 块内容动画 */
+        .block-content {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .block.focused .block-content {
+            color: var(--gray-900);
+        }
+
+        /* 选中状态的增强视觉效果 */
+        .block.focused {
+            position: relative;
+            z-index: 10;
+        }
+
+        .block.focused::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, var(--primary-400), var(--primary-600));
+            border-radius: calc(var(--radius) + 2px);
+            z-index: -1;
+            opacity: 0.1;
         }
 
         .block-content {
@@ -648,6 +866,217 @@ function createMainWindow(): BrowserWindow {
             background: var(--gray-900);
             border-radius: var(--radius-md);
             padding: var(--space-4);
+        }
+
+        .block-type-code .block-content {
+            color: var(--green-400);
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .block-type-li {
+            position: relative;
+            padding-left: calc(var(--space-4) + 20px);
+        }
+
+        .block-type-li::before {
+            content: '•';
+            position: absolute;
+            left: var(--space-4);
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--primary-500);
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .block-type-li .block-content {
+            color: var(--gray-700);
+            line-height: 1.6;
+        }
+
+        /* 新建块的动画效果 */
+        @keyframes blockSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px) scale(0.98);
+                max-height: 0;
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                max-height: 200px;
+            }
+        }
+
+        .block.new-block {
+            animation: blockSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 删除块的动画效果 */
+        @keyframes blockSlideOut {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                max-height: 200px;
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-10px) scale(0.98);
+                max-height: 0;
+                margin: 0;
+                padding: 0;
+            }
+        }
+
+        .block.removing {
+            animation: blockSlideOut 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 类型切换的动画效果 */
+        .block.type-changing {
+            animation: typeChange 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes typeChange {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        /* 缩进变化的动画效果 */
+        .block.indent-changing {
+            transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 折叠按钮样式 */
+        .collapse-btn {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: var(--gray-500);
+            background: var(--gray-100);
+            border-radius: 3px;
+            transition: all 0.2s ease;
+            border: 1px solid var(--gray-200);
+            opacity: 0.7;
+        }
+
+        .collapse-btn:hover {
+            background: var(--primary-100);
+            color: var(--primary-600);
+            border-color: var(--primary-300);
+            opacity: 1;
+            transform: translateY(-50%) scale(1.1) !important;
+        }
+
+        .block:hover .collapse-btn {
+            opacity: 1;
+        }
+
+        /* 折叠状态的块样式 */
+        .block[data-collapsed="true"] {
+            position: relative;
+        }
+
+        .block[data-collapsed="true"]::after {
+            content: '...';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-400);
+            font-size: 0.875rem;
+            pointer-events: none;
+        }
+
+        /* 被折叠隐藏的块 */
+        .block[data-hidden-by-collapse="true"] {
+            display: none;
+        }
+
+        /* 测试通知动画 */
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* 测试面板样式 */
+        .test-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .test-panel-header {
+            padding: var(--space-3);
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .test-panel-content {
+            padding: var(--space-3);
+        }
+
+        .test-item {
+            padding: var(--space-2);
+            margin: var(--space-1) 0;
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+        }
+
+        .test-item.passed {
+            background: var(--green-50);
+            color: var(--green-700);
+            border: 1px solid var(--green-200);
+        }
+
+        .test-item.failed {
+            background: var(--red-50);
+            color: var(--red-700);
+            border: 1px solid var(--red-200);
+        }
+
+        .test-item.pending {
+            background: var(--yellow-50);
+            color: var(--yellow-700);
+            border: 1px solid var(--yellow-200);
+        }
         }
 
         .block-type-code .block-content {
@@ -756,6 +1185,9 @@ function createMainWindow(): BrowserWindow {
                 <span class="btn-icon">📊</span>
                 性能
             </button>
+            <button type="button" class="btn" id="testBtn" title="测试按钮" style="background: red; color: white;">
+                测试
+            </button>
         </div>
     </div>
     <div class="main">
@@ -818,7 +1250,7 @@ function createMainWindow(): BrowserWindow {
         };
 
         // Electron API 访问
-        const electronAPI = window.electronAPI || {
+        var electronAPI = window.electronAPI || {
             invoke: (channel, ...args) => {
                 console.warn('Electron API not available, using mock data');
                 return Promise.resolve({ success: false, error: 'API not available' });
@@ -855,9 +1287,17 @@ function createMainWindow(): BrowserWindow {
             }, 300);
         }
 
+        // 简单测试函数
+        function testFunction() {
+            alert('测试函数工作正常！');
+            console.log('testFunction called');
+        }
+
         // 创建新页面
         async function createNewPage() {
+            console.log('createNewPage function called');
             var title = prompt('请输入新页面标题:', '新页面');
+            console.log('User input title:', title);
             if (title && title.trim()) {
                 try {
                     setLoading(true);
@@ -1025,14 +1465,79 @@ function createMainWindow(): BrowserWindow {
             blockDiv.className = 'block block-type-' + block.type;
             blockDiv.setAttribute('data-type', block.type);
             blockDiv.setAttribute('data-block-id', block.id);
+            blockDiv.setAttribute('draggable', 'true');
+
+            // 创建拖拽手柄
+            var dragHandle = document.createElement('div');
+            dragHandle.className = 'block-drag-handle';
+            dragHandle.setAttribute('title', '拖拽重排');
+
+            // 创建类型切换工具栏
+            var toolbar = createTypeToolbar(block.type);
 
             var textarea = document.createElement('textarea');
             textarea.className = 'block-content';
             textarea.value = block.content;
             textarea.placeholder = getPlaceholderForType(block.type);
 
+            blockDiv.appendChild(dragHandle);
+            blockDiv.appendChild(toolbar);
             blockDiv.appendChild(textarea);
             return blockDiv;
+        }
+
+        function createTypeToolbar(currentType) {
+            var toolbar = document.createElement('div');
+            toolbar.className = 'block-type-toolbar';
+
+            var types = [
+                { type: 'p', label: '段落', shortcut: '0' },
+                { type: 'h1', label: 'H1', shortcut: '1' },
+                { type: 'h2', label: 'H2', shortcut: '2' },
+                { type: 'h3', label: 'H3', shortcut: '3' },
+                { type: 'quote', label: '引用', shortcut: 'Q' },
+                { type: 'code', label: '代码', shortcut: 'C' },
+                { type: 'li', label: '列表', shortcut: 'L' }
+            ];
+
+            types.forEach(function(typeInfo) {
+                var btn = document.createElement('button');
+                btn.className = 'type-btn';
+                btn.textContent = typeInfo.label;
+                btn.setAttribute('title', 'Ctrl+Alt+' + typeInfo.shortcut);
+
+                if (typeInfo.type === currentType) {
+                    btn.classList.add('active');
+                }
+
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var block = btn.closest('.block');
+                    changeBlockType(block, typeInfo.type);
+                    updateToolbarState(toolbar, typeInfo.type);
+                });
+
+                toolbar.appendChild(btn);
+            });
+
+            return toolbar;
+        }
+
+        function updateToolbarState(toolbar, activeType) {
+            var buttons = toolbar.querySelectorAll('.type-btn');
+            buttons.forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+
+            // 找到对应的按钮并激活
+            var typeLabels = { 'p': '段落', 'h1': 'H1', 'h2': 'H2', 'h3': 'H3', 'quote': '引用', 'code': '代码', 'li': '列表' };
+            var activeLabel = typeLabels[activeType];
+            buttons.forEach(function(btn) {
+                if (btn.textContent === activeLabel) {
+                    btn.classList.add('active');
+                }
+            });
         }
 
         // 获取块类型的占位符
@@ -1743,7 +2248,15 @@ function createMainWindow(): BrowserWindow {
                 // 添加新的事件监听器
                 textarea.addEventListener('input', handleTextareaInput);
                 textarea.addEventListener('keydown', handleTextareaKeydown);
+                textarea.addEventListener('focus', handleTextareaFocus);
+                textarea.addEventListener('blur', handleTextareaBlur);
             });
+
+            // 设置拖拽功能
+            setupDragAndDrop();
+
+            // 初始化所有块的缩进和折叠状态
+            initializeBlockStructure();
         }
 
         // 处理文本区域输入
@@ -1753,22 +2266,842 @@ function createMainWindow(): BrowserWindow {
             updateStatus();
         }
 
+        // 处理文本区域获得焦点
+        function handleTextareaFocus(e) {
+            var block = e.target.closest('.block');
+
+            // 移除其他块的焦点状态
+            document.querySelectorAll('.block.focused').forEach(function(b) {
+                b.classList.remove('focused');
+            });
+
+            // 添加当前块的焦点状态
+            block.classList.add('focused');
+        }
+
+        // 处理文本区域失去焦点
+        function handleTextareaBlur(e) {
+            // 延迟移除焦点状态，允许工具栏点击
+            setTimeout(function() {
+                var block = e.target.closest('.block');
+                if (block && !block.contains(document.activeElement)) {
+                    block.classList.remove('focused');
+                }
+            }, 150);
+        }
+
         // 处理文本区域快捷键
         function handleTextareaKeydown(e) {
+            var textarea = e.target;
+            var block = textarea.closest('.block');
+            var blockId = block.getAttribute('data-block-id');
+
+            // Ctrl+S: 保存页面
             if (e.ctrlKey && e.key === 's') {
                 e.preventDefault();
                 savePage();
+                return;
             }
+
+            // Ctrl+N: 新建页面
             if (e.ctrlKey && e.key === 'n') {
                 e.preventDefault();
                 createNewPage();
+                return;
+            }
+
+            // Enter: 在当前块后创建新块
+            if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+                e.preventDefault();
+                createNewBlockAfter(block);
+                return;
+            }
+
+            // Tab: 缩进块（增加层级）
+            if (e.key === 'Tab' && !e.shiftKey) {
+                e.preventDefault();
+                indentBlock(block);
+                return;
+            }
+
+            // Shift+Tab: 取消缩进（减少层级）
+            if (e.key === 'Tab' && e.shiftKey) {
+                e.preventDefault();
+                outdentBlock(block);
+                return;
+            }
+
+            // Backspace: 如果块为空，删除块或与上一块合并
+            if (e.key === 'Backspace' && textarea.value === '' && textarea.selectionStart === 0) {
+                e.preventDefault();
+                deleteOrMergeBlock(block);
+                return;
+            }
+
+            // Delete: 如果块为空，删除块
+            if (e.key === 'Delete' && textarea.value === '') {
+                e.preventDefault();
+                deleteBlock(block);
+                return;
+            }
+
+            // 上箭头: 移动到上一个块
+            if (e.key === 'ArrowUp' && textarea.selectionStart === 0) {
+                e.preventDefault();
+                focusPreviousBlock(block);
+                return;
+            }
+
+            // 下箭头: 移动到下一个块
+            if (e.key === 'ArrowDown' && textarea.selectionStart === textarea.value.length) {
+                e.preventDefault();
+                focusNextBlock(block);
+                return;
+            }
+
+            // Ctrl+D: 复制当前块
+            if (e.ctrlKey && e.key === 'd') {
+                e.preventDefault();
+                duplicateBlock(block);
+                return;
+            }
+
+            // Ctrl+Shift+Up: 向上移动块
+            if (e.ctrlKey && e.shiftKey && e.key === 'ArrowUp') {
+                e.preventDefault();
+                moveBlockUp(block);
+                return;
+            }
+
+            // Ctrl+Shift+Down: 向下移动块
+            if (e.ctrlKey && e.shiftKey && e.key === 'ArrowDown') {
+                e.preventDefault();
+                moveBlockDown(block);
+                return;
+            }
+
+            // 快速块类型切换
+            // Ctrl+Alt+1: 切换为H1标题
+            if (e.ctrlKey && e.altKey && e.key === '1') {
+                e.preventDefault();
+                changeBlockType(block, 'h1');
+                return;
+            }
+
+            // Ctrl+Alt+2: 切换为H2标题
+            if (e.ctrlKey && e.altKey && e.key === '2') {
+                e.preventDefault();
+                changeBlockType(block, 'h2');
+                return;
+            }
+
+            // Ctrl+Alt+3: 切换为H3标题
+            if (e.ctrlKey && e.altKey && e.key === '3') {
+                e.preventDefault();
+                changeBlockType(block, 'h3');
+                return;
+            }
+
+            // Ctrl+Alt+0: 切换为普通段落
+            if (e.ctrlKey && e.altKey && e.key === '0') {
+                e.preventDefault();
+                changeBlockType(block, 'p');
+                return;
+            }
+
+            // Ctrl+Alt+Q: 切换为引用
+            if (e.ctrlKey && e.altKey && e.key === 'q') {
+                e.preventDefault();
+                changeBlockType(block, 'quote');
+                return;
+            }
+
+            // Ctrl+Alt+C: 切换为代码块
+            if (e.ctrlKey && e.altKey && e.key === 'c') {
+                e.preventDefault();
+                changeBlockType(block, 'code');
+                return;
+            }
+
+            // Ctrl+Alt+L: 切换为列表项
+            if (e.ctrlKey && e.altKey && e.key === 'l') {
+                e.preventDefault();
+                changeBlockType(block, 'li');
+                return;
             }
         }
 
+        // 拖拽功能变量
+        var draggedBlock = null;
+        var dragOverBlock = null;
+
+        // 块操作功能函数
+        function createNewBlockAfter(currentBlock) {
+            var newBlock = {
+                id: 'block_' + Date.now(),
+                type: 'p',
+                content: '',
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            };
+
+            var newBlockElement = createBlockElement(newBlock);
+            newBlockElement.classList.add('new-block');
+
+            currentBlock.insertAdjacentElement('afterend', newBlockElement);
+
+            // 移除动画类
+            setTimeout(function() {
+                newBlockElement.classList.remove('new-block');
+            }, 300);
+
+            // 重新设置事件监听器
+            setupTextareas();
+
+            // 聚焦新块
+            var textarea = newBlockElement.querySelector('.block-content');
+            textarea.focus();
+
+            updateStatus();
+        }
+
+        function indentBlock(block) {
+            var currentLevel = parseInt(block.dataset.level || '0');
+            var newLevel = Math.min(currentLevel + 1, 5); // 最大5级缩进
+
+            if (newLevel !== currentLevel) {
+                block.classList.add('indent-changing');
+                block.dataset.level = newLevel;
+                block.style.paddingLeft = (newLevel * 24) + 'px';
+
+                // 添加缩进视觉指示
+                updateBlockIndentation(block, newLevel);
+
+                // 移除动画类
+                setTimeout(function() {
+                    block.classList.remove('indent-changing');
+                }, 300);
+            }
+        }
+
+        function outdentBlock(block) {
+            var currentLevel = parseInt(block.dataset.level || '0');
+            var newLevel = Math.max(currentLevel - 1, 0); // 最小0级
+
+            if (newLevel !== currentLevel) {
+                block.classList.add('indent-changing');
+                block.dataset.level = newLevel;
+                block.style.paddingLeft = (newLevel * 24) + 'px';
+
+                // 更新缩进视觉指示
+                updateBlockIndentation(block, newLevel);
+
+                // 移除动画类
+                setTimeout(function() {
+                    block.classList.remove('indent-changing');
+                }, 300);
+            }
+        }
+
+        function updateBlockIndentation(block, level) {
+            // 移除现有的缩进线
+            var existingLines = block.querySelectorAll('.indent-line');
+            existingLines.forEach(function(line) {
+                line.remove();
+            });
+
+            // 添加新的缩进线
+            for (var i = 0; i < level; i++) {
+                var line = document.createElement('div');
+                line.className = 'indent-line';
+                line.style.position = 'absolute';
+                line.style.left = (i * 24 + 12) + 'px';
+                line.style.top = '0';
+                line.style.bottom = '0';
+                line.style.width = '1px';
+                line.style.background = 'var(--gray-200)';
+                line.style.zIndex = '1';
+                block.appendChild(line);
+            }
+
+            // 添加折叠/展开按钮（如果有子块）
+            updateCollapseButton(block, level);
+        }
+
+        function updateCollapseButton(block, level) {
+            // 移除现有的折叠按钮
+            var existingBtn = block.querySelector('.collapse-btn');
+            if (existingBtn) {
+                existingBtn.remove();
+            }
+
+            // 检查是否有子块（下一个块的缩进级别更高）
+            var nextBlock = block.nextElementSibling;
+            var hasChildren = false;
+
+            while (nextBlock && nextBlock.classList.contains('block')) {
+                var nextLevel = parseInt(nextBlock.dataset.level || '0');
+                if (nextLevel > level) {
+                    hasChildren = true;
+                    break;
+                } else if (nextLevel <= level) {
+                    break;
+                }
+                nextBlock = nextBlock.nextElementSibling;
+            }
+
+            if (hasChildren) {
+                var collapseBtn = document.createElement('div');
+                collapseBtn.className = 'collapse-btn';
+                collapseBtn.innerHTML = '▼';
+                collapseBtn.style.position = 'absolute';
+                collapseBtn.style.left = (level * 24 - 8) + 'px';
+                collapseBtn.style.top = '50%';
+                collapseBtn.style.transform = 'translateY(-50%)';
+                collapseBtn.style.width = '16px';
+                collapseBtn.style.height = '16px';
+                collapseBtn.style.cursor = 'pointer';
+                collapseBtn.style.display = 'flex';
+                collapseBtn.style.alignItems = 'center';
+                collapseBtn.style.justifyContent = 'center';
+                collapseBtn.style.fontSize = '10px';
+                collapseBtn.style.color = 'var(--gray-500)';
+                collapseBtn.style.background = 'var(--gray-100)';
+                collapseBtn.style.borderRadius = '3px';
+                collapseBtn.style.transition = 'all 0.2s ease';
+
+                collapseBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    toggleBlockCollapse(block);
+                });
+
+                block.appendChild(collapseBtn);
+            }
+        }
+
+        function toggleBlockCollapse(block) {
+            var level = parseInt(block.dataset.level || '0');
+            var isCollapsed = block.dataset.collapsed === 'true';
+            var collapseBtn = block.querySelector('.collapse-btn');
+
+            if (isCollapsed) {
+                // 展开：显示所有子块
+                expandBlock(block, level);
+                block.dataset.collapsed = 'false';
+                if (collapseBtn) {
+                    collapseBtn.innerHTML = '▼';
+                    collapseBtn.style.transform = 'translateY(-50%) rotate(0deg)';
+                }
+            } else {
+                // 折叠：隐藏所有子块
+                collapseBlock(block, level);
+                block.dataset.collapsed = 'true';
+                if (collapseBtn) {
+                    collapseBtn.innerHTML = '▶';
+                    collapseBtn.style.transform = 'translateY(-50%) rotate(0deg)';
+                }
+            }
+        }
+
+        function collapseBlock(parentBlock, parentLevel) {
+            var currentBlock = parentBlock.nextElementSibling;
+
+            while (currentBlock && currentBlock.classList.contains('block')) {
+                var currentLevel = parseInt(currentBlock.dataset.level || '0');
+
+                if (currentLevel > parentLevel) {
+                    // 这是子块，隐藏它
+                    currentBlock.style.display = 'none';
+                    currentBlock.dataset.hiddenByCollapse = 'true';
+                    currentBlock = currentBlock.nextElementSibling;
+                } else {
+                    // 到达同级或更高级别的块，停止
+                    break;
+                }
+            }
+        }
+
+        function expandBlock(parentBlock, parentLevel) {
+            var currentBlock = parentBlock.nextElementSibling;
+
+            while (currentBlock && currentBlock.classList.contains('block')) {
+                var currentLevel = parseInt(currentBlock.dataset.level || '0');
+
+                if (currentLevel > parentLevel) {
+                    // 这是子块
+                    if (currentBlock.dataset.hiddenByCollapse === 'true') {
+                        currentBlock.style.display = '';
+                        currentBlock.dataset.hiddenByCollapse = 'false';
+
+                        // 如果这个块本身是折叠的，不要展开它的子块
+                        if (currentBlock.dataset.collapsed === 'true') {
+                            // 跳过这个折叠块的所有子块
+                            var skipLevel = currentLevel;
+                            currentBlock = currentBlock.nextElementSibling;
+                            while (currentBlock && currentBlock.classList.contains('block')) {
+                                var skipCurrentLevel = parseInt(currentBlock.dataset.level || '0');
+                                if (skipCurrentLevel > skipLevel) {
+                                    currentBlock = currentBlock.nextElementSibling;
+                                } else {
+                                    break;
+                                }
+                            }
+                            continue;
+                        }
+                    }
+                    currentBlock = currentBlock.nextElementSibling;
+                } else {
+                    // 到达同级或更高级别的块，停止
+                    break;
+                }
+            }
+        }
+
+        function deleteOrMergeBlock(block) {
+            var prevBlock = block.previousElementSibling;
+
+            if (prevBlock && prevBlock.classList.contains('block')) {
+                // 合并到上一个块
+                var prevTextarea = prevBlock.querySelector('.block-content');
+                var currentTextarea = block.querySelector('.block-content');
+
+                var cursorPosition = prevTextarea.value.length;
+                prevTextarea.value += currentTextarea.value;
+
+                // 删除当前块
+                block.remove();
+
+                // 聚焦到上一个块的合并位置
+                prevTextarea.focus();
+                prevTextarea.setSelectionRange(cursorPosition, cursorPosition);
+
+                updateStatus();
+            } else {
+                // 如果是第一个块，只有在有其他块时才删除
+                var allBlocks = document.querySelectorAll('.block');
+                if (allBlocks.length > 1) {
+                    deleteBlock(block);
+                }
+            }
+        }
+
+        function deleteBlock(block) {
+            var nextBlock = block.nextElementSibling;
+            var prevBlock = block.previousElementSibling;
+
+            block.remove();
+
+            // 聚焦到下一个或上一个块
+            if (nextBlock && nextBlock.classList.contains('block')) {
+                var textarea = nextBlock.querySelector('.block-content');
+                textarea.focus();
+            } else if (prevBlock && prevBlock.classList.contains('block')) {
+                var textarea = prevBlock.querySelector('.block-content');
+                textarea.focus();
+            }
+
+            updateStatus();
+        }
+
+        function focusPreviousBlock(block) {
+            var prevBlock = block.previousElementSibling;
+            if (prevBlock && prevBlock.classList.contains('block')) {
+                var textarea = prevBlock.querySelector('.block-content');
+                textarea.focus();
+                // 将光标移到末尾
+                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            }
+        }
+
+        function focusNextBlock(block) {
+            var nextBlock = block.nextElementSibling;
+            if (nextBlock && nextBlock.classList.contains('block')) {
+                var textarea = nextBlock.querySelector('.block-content');
+                textarea.focus();
+                // 将光标移到开头
+                textarea.setSelectionRange(0, 0);
+            }
+        }
+
+        function duplicateBlock(block) {
+            var textarea = block.querySelector('.block-content');
+            var newBlock = {
+                id: 'block_' + Date.now(),
+                type: block.dataset.type,
+                content: textarea.value,
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            };
+
+            var newBlockElement = createBlockElement(newBlock);
+
+            // 复制缩进级别
+            var level = parseInt(block.dataset.level || '0');
+            newBlockElement.dataset.level = level;
+            newBlockElement.style.paddingLeft = (level * 24) + 'px';
+            updateBlockIndentation(newBlockElement, level);
+
+            block.insertAdjacentElement('afterend', newBlockElement);
+
+            // 重新设置事件监听器
+            setupTextareas();
+
+            // 聚焦新块
+            var newTextarea = newBlockElement.querySelector('.block-content');
+            newTextarea.focus();
+
+            updateStatus();
+        }
+
+        function moveBlockUp(block) {
+            var prevBlock = block.previousElementSibling;
+            if (prevBlock && prevBlock.classList.contains('block')) {
+                var parent = block.parentNode;
+                parent.insertBefore(block, prevBlock);
+
+                // 保持焦点
+                var textarea = block.querySelector('.block-content');
+                textarea.focus();
+
+                updateStatus();
+            }
+        }
+
+        function moveBlockDown(block) {
+            var nextBlock = block.nextElementSibling;
+            if (nextBlock && nextBlock.classList.contains('block')) {
+                var parent = block.parentNode;
+                parent.insertBefore(nextBlock, block);
+
+                // 保持焦点
+                var textarea = block.querySelector('.block-content');
+                textarea.focus();
+
+                updateStatus();
+            }
+        }
+
+        function changeBlockType(block, newType) {
+            var textarea = block.querySelector('.block-content');
+            var cursorPosition = textarea.selectionStart;
+            var content = textarea.value;
+
+            // 添加类型切换动画
+            block.classList.add('type-changing');
+
+            // 移除旧的类型类
+            block.className = block.className.replace(/block-type-\w+/, '');
+
+            // 添加新的类型类
+            block.classList.add('block-type-' + newType);
+            block.setAttribute('data-type', newType);
+
+            // 更新占位符
+            textarea.placeholder = getPlaceholderForType(newType);
+
+            // 保持内容和光标位置
+            textarea.value = content;
+            textarea.focus();
+            textarea.setSelectionRange(cursorPosition, cursorPosition);
+
+            // 调整高度
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+
+            // 移除动画类
+            setTimeout(function() {
+                block.classList.remove('type-changing');
+            }, 300);
+
+            updateStatus();
+        }
+
+        function getPlaceholderForType(type) {
+            var placeholders = {
+                'h1': '大标题',
+                'h2': '中标题',
+                'h3': '小标题',
+                'p': '开始写作...',
+                'quote': '引用内容',
+                'code': '代码块',
+                'li': '列表项'
+            };
+            return placeholders[type] || '开始写作...';
+        }
+
+        // 初始化块结构
+        function initializeBlockStructure() {
+            var blocks = document.querySelectorAll('.block');
+            blocks.forEach(function(block) {
+                var level = parseInt(block.dataset.level || '0');
+                if (level > 0) {
+                    block.style.paddingLeft = (level * 24) + 'px';
+                    updateBlockIndentation(block, level);
+                }
+            });
+        }
+
+        // 设置拖拽功能
+        function setupDragAndDrop() {
+            var blocks = document.querySelectorAll('.block');
+            blocks.forEach(function(block) {
+                // 移除旧的事件监听器
+                block.removeEventListener('dragstart', handleDragStart);
+                block.removeEventListener('dragover', handleDragOver);
+                block.removeEventListener('dragenter', handleDragEnter);
+                block.removeEventListener('dragleave', handleDragLeave);
+                block.removeEventListener('drop', handleDrop);
+                block.removeEventListener('dragend', handleDragEnd);
+
+                // 添加新的事件监听器
+                block.addEventListener('dragstart', handleDragStart);
+                block.addEventListener('dragover', handleDragOver);
+                block.addEventListener('dragenter', handleDragEnter);
+                block.addEventListener('dragleave', handleDragLeave);
+                block.addEventListener('drop', handleDrop);
+                block.addEventListener('dragend', handleDragEnd);
+            });
+        }
+
+        // 拖拽事件处理函数
+        function handleDragStart(e) {
+            draggedBlock = e.target;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.target.outerHTML);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            if (e.target !== draggedBlock) {
+                var rect = e.target.getBoundingClientRect();
+                var midY = rect.top + rect.height / 2;
+
+                // 清除所有拖拽样式
+                document.querySelectorAll('.drag-over, .drag-over-bottom').forEach(function(el) {
+                    el.classList.remove('drag-over', 'drag-over-bottom');
+                });
+
+                if (e.clientY < midY) {
+                    e.target.classList.add('drag-over');
+                } else {
+                    e.target.classList.add('drag-over-bottom');
+                }
+            }
+        }
+
+        function handleDragEnter(e) {
+            e.preventDefault();
+        }
+
+        function handleDragLeave(e) {
+            // 只有当鼠标真正离开元素时才移除样式
+            if (!e.target.contains(e.relatedTarget)) {
+                e.target.classList.remove('drag-over', 'drag-over-bottom');
+            }
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+
+            if (e.target !== draggedBlock && draggedBlock) {
+                var rect = e.target.getBoundingClientRect();
+                var midY = rect.top + rect.height / 2;
+                var editorContent = document.getElementById('editorContent');
+
+                if (e.clientY < midY) {
+                    // 插入到目标元素之前
+                    editorContent.insertBefore(draggedBlock, e.target);
+                } else {
+                    // 插入到目标元素之后
+                    editorContent.insertBefore(draggedBlock, e.target.nextSibling);
+                }
+
+                // 保存页面状态
+                savePage();
+            }
+
+            // 清除所有拖拽样式
+            document.querySelectorAll('.drag-over, .drag-over-bottom').forEach(function(el) {
+                el.classList.remove('drag-over', 'drag-over-bottom');
+            });
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            draggedBlock = null;
+
+            // 清除所有拖拽样式
+            document.querySelectorAll('.drag-over, .drag-over-bottom').forEach(function(el) {
+                el.classList.remove('drag-over', 'drag-over-bottom');
+            });
+        }
+
+        // 测试和监测系统
+        var TestingSystem = {
+            logs: [],
+            errors: [],
+            featureTests: {},
+
+            log: function(message, type = 'info', feature = null) {
+                var timestamp = new Date().toISOString();
+                var logEntry = {
+                    timestamp: timestamp,
+                    type: type,
+                    message: message,
+                    feature: feature
+                };
+
+                this.logs.push(logEntry);
+                console.log(`[${type.toUpperCase()}] ${timestamp} - ${message}${feature ? ` (${feature})` : ''}`);
+
+                // 显示用户友好的提示
+                if (type === 'error') {
+                    this.showUserNotification('错误: ' + message, 'error');
+                } else if (type === 'success') {
+                    this.showUserNotification('成功: ' + message, 'success');
+                }
+            },
+
+            error: function(message, error = null, feature = null) {
+                var errorEntry = {
+                    timestamp: new Date().toISOString(),
+                    message: message,
+                    error: error ? error.toString() : null,
+                    stack: error ? error.stack : null,
+                    feature: feature
+                };
+
+                this.errors.push(errorEntry);
+                this.log(message, 'error', feature);
+
+                // 发送错误报告
+                this.reportError(errorEntry);
+            },
+
+            testFeature: function(featureName, testFunction, description) {
+                this.log(`开始测试功能: ${featureName} - ${description}`, 'info', featureName);
+
+                try {
+                    var result = testFunction();
+                    this.featureTests[featureName] = {
+                        status: 'passed',
+                        description: description,
+                        timestamp: new Date().toISOString(),
+                        result: result
+                    };
+                    this.log(`功能测试通过: ${featureName}`, 'success', featureName);
+                    return true;
+                } catch (error) {
+                    this.featureTests[featureName] = {
+                        status: 'failed',
+                        description: description,
+                        timestamp: new Date().toISOString(),
+                        error: error.toString()
+                    };
+                    this.error(`功能测试失败: ${featureName} - ${error.message}`, error, featureName);
+                    return false;
+                }
+            },
+
+            showUserNotification: function(message, type = 'info') {
+                // 创建通知元素
+                var notification = document.createElement('div');
+                notification.className = `test-notification test-notification-${type}`;
+                notification.textContent = message;
+
+                // 添加样式
+                notification.style.position = 'fixed';
+                notification.style.top = '20px';
+                notification.style.right = '20px';
+                notification.style.padding = '12px 16px';
+                notification.style.borderRadius = '6px';
+                notification.style.zIndex = '10000';
+                notification.style.maxWidth = '300px';
+                notification.style.fontSize = '14px';
+                notification.style.fontWeight = '500';
+                notification.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                notification.style.animation = 'slideInRight 0.3s ease';
+
+                if (type === 'error') {
+                    notification.style.background = '#fee2e2';
+                    notification.style.color = '#dc2626';
+                    notification.style.border = '1px solid #fecaca';
+                } else if (type === 'success') {
+                    notification.style.background = '#dcfce7';
+                    notification.style.color = '#16a34a';
+                    notification.style.border = '1px solid #bbf7d0';
+                } else {
+                    notification.style.background = '#dbeafe';
+                    notification.style.color = '#2563eb';
+                    notification.style.border = '1px solid #bfdbfe';
+                }
+
+                document.body.appendChild(notification);
+
+                // 自动移除
+                setTimeout(function() {
+                    if (notification.parentNode) {
+                        notification.style.animation = 'slideOutRight 0.3s ease';
+                        setTimeout(function() {
+                            if (notification.parentNode) {
+                                notification.parentNode.removeChild(notification);
+                            }
+                        }, 300);
+                    }
+                }, 3000);
+            },
+
+            reportError: function(errorEntry) {
+                // 这里可以发送错误报告到服务器
+                console.error('Error Report:', errorEntry);
+            },
+
+            generateReport: function() {
+                return {
+                    timestamp: new Date().toISOString(),
+                    logs: this.logs,
+                    errors: this.errors,
+                    featureTests: this.featureTests,
+                    summary: {
+                        totalLogs: this.logs.length,
+                        totalErrors: this.errors.length,
+                        passedTests: Object.values(this.featureTests).filter(t => t.status === 'passed').length,
+                        failedTests: Object.values(this.featureTests).filter(t => t.status === 'failed').length
+                    }
+                };
+            }
+        };
+
+        // 全局错误处理
+        window.addEventListener('error', function(event) {
+            TestingSystem.error('JavaScript错误', event.error, 'global');
+        });
+
+        window.addEventListener('unhandledrejection', function(event) {
+            TestingSystem.error('未处理的Promise拒绝', event.reason, 'global');
+        });
+
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded event fired');
+
+            // 测试按钮是否存在
+            var newPageBtn = document.getElementById('newPageBtn');
+            console.log('newPageBtn element:', newPageBtn);
+
+            if (!newPageBtn) {
+                console.error('newPageBtn element not found!');
+                return;
+            }
+
             // 绑定按钮事件
-            document.getElementById('newPageBtn').addEventListener('click', createNewPage);
+            newPageBtn.addEventListener('click', function() {
+                console.log('newPageBtn clicked!');
+                createNewPage();
+            });
             document.getElementById('saveBtn').addEventListener('click', savePage);
             document.getElementById('importBtn').addEventListener('click', importMarkdown);
             document.getElementById('exportBtn').addEventListener('click', showExportMenu);
@@ -1776,6 +3109,18 @@ function createMainWindow(): BrowserWindow {
             document.getElementById('themeBtn').addEventListener('click', toggleTheme);
             document.getElementById('settingsBtn').addEventListener('click', showSettings);
             document.getElementById('performanceBtn').addEventListener('click', showPerformance);
+
+            // 绑定测试按钮
+            var testBtn = document.getElementById('testBtn');
+            if (testBtn) {
+                testBtn.addEventListener('click', function() {
+                    console.log('Test button clicked!');
+                    testFunction();
+                });
+                console.log('Test button event bound successfully');
+            } else {
+                console.error('Test button not found!');
+            }
 
             // 绑定页面列表点击事件
             document.getElementById('pageList').addEventListener('click', function(e) {
@@ -1821,13 +3166,137 @@ function createMainWindow(): BrowserWindow {
             // 初始化工作空间
             initializeWorkspace();
 
+            // 启动测试系统
+            initializeTestingSystem();
+
             // 定期更新状态
             setInterval(updateStatus, 1000);
         });
+
+        // 测试系统初始化
+        function initializeTestingSystem() {
+            TestingSystem.log('测试系统启动', 'info', 'system');
+
+            // 创建测试面板
+            createTestPanel();
+
+            // 运行功能测试
+            runFeatureTests();
+
+            // 添加测试快捷键
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+Shift+T: 显示/隐藏测试面板
+                if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+                    e.preventDefault();
+                    toggleTestPanel();
+                }
+
+                // Ctrl+Shift+R: 重新运行测试
+                if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+                    e.preventDefault();
+                    runFeatureTests();
+                }
+            });
+        }
+
+        function createTestPanel() {
+            var panel = document.createElement('div');
+            panel.id = 'testPanel';
+            panel.className = 'test-panel';
+            panel.style.display = 'none';
+
+            var header = document.createElement('div');
+            header.className = 'test-panel-header';
+            header.innerHTML = '<span>功能测试面板</span><button onclick="toggleTestPanel()" style="background: none; border: none; cursor: pointer;">✕</button>';
+
+            var content = document.createElement('div');
+            content.id = 'testPanelContent';
+            content.className = 'test-panel-content';
+
+            panel.appendChild(header);
+            panel.appendChild(content);
+            document.body.appendChild(panel);
+        }
+
+        function toggleTestPanel() {
+            var panel = document.getElementById('testPanel');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                updateTestPanel();
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+
+        function updateTestPanel() {
+            var content = document.getElementById('testPanelContent');
+            if (!content) return;
+
+            var html = '<h4>测试结果</h4>';
+
+            // 显示测试统计
+            var report = TestingSystem.generateReport();
+            html += '<div style="margin-bottom: 12px; font-size: 0.875rem;">';
+            html += '<div>总日志: ' + report.summary.totalLogs + '</div>';
+            html += '<div>错误数: ' + report.summary.totalErrors + '</div>';
+            html += '<div>通过测试: ' + report.summary.passedTests + '</div>';
+            html += '<div>失败测试: ' + report.summary.failedTests + '</div>';
+            html += '</div>';
+
+            // 显示功能测试结果
+            Object.entries(TestingSystem.featureTests).forEach(function([name, test]) {
+                var statusClass = test.status === 'passed' ? 'passed' : 'failed';
+                html += '<div class="test-item ' + statusClass + '">';
+                html += '<strong>' + name + '</strong><br>';
+                html += test.description + '<br>';
+                html += '<small>状态: ' + test.status + '</small>';
+                html += '</div>';
+            });
+
+            content.innerHTML = html;
+        }
+
+        function runFeatureTests() {
+            TestingSystem.log('开始运行功能测试', 'info', 'testing');
+
+            // 测试1: 拖拽手柄显示
+            TestingSystem.testFeature('dragHandle', function() {
+                var blocks = document.querySelectorAll('.block');
+                if (blocks.length === 0) throw new Error('没有找到块元素');
+
+                var firstBlock = blocks[0];
+                var dragHandle = firstBlock.querySelector('.block-drag-handle');
+                if (!dragHandle) throw new Error('没有找到拖拽手柄');
+
+                return '拖拽手柄存在';
+            }, '检查块是否包含拖拽手柄');
+
+            // 测试2: 类型工具栏
+            TestingSystem.testFeature('typeToolbar', function() {
+                var blocks = document.querySelectorAll('.block');
+                if (blocks.length === 0) throw new Error('没有找到块元素');
+
+                var firstBlock = blocks[0];
+                var toolbar = firstBlock.querySelector('.block-type-toolbar');
+                if (!toolbar) throw new Error('没有找到类型工具栏');
+
+                var buttons = toolbar.querySelectorAll('.type-btn');
+                if (buttons.length === 0) throw new Error('工具栏中没有按钮');
+
+                return '工具栏包含 ' + buttons.length + ' 个按钮';
+            }, '检查块是否包含类型切换工具栏');
+
+            // 更新测试面板
+            setTimeout(updateTestPanel, 100);
+
+            TestingSystem.log('功能测试完成', 'success', 'testing');
+        }
     </script>
 </body>
 </html>`;
     mainWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(editorHTML));
+    // 临时启用开发者工具进行调试
+    mainWindow.webContents.openDevTools();
   }
 
   // 窗口加载完成后显示

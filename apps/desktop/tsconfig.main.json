@@ -14,7 +14,7 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "noEmit": false,
-    "types": ["node", "electron"]
+    "types": ["node"]
   },
   "include": [
     "src/main.ts"
