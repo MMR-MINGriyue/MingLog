@@ -230,11 +230,18 @@ function createMainWindow(): BrowserWindow {
                 const pageList = document.getElementById('pageList');
                 const newPageItem = document.createElement('div');
                 newPageItem.className = 'page-item';
-                newPageItem.onclick = () => selectPage(newPageItem);
-                newPageItem.innerHTML = \`
-                    <div class="page-title">\${title.trim()}</div>
-                    <div class="page-preview">空白页面</div>
-                \`;
+                newPageItem.onclick = function() { selectPage(newPageItem); };
+
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'page-title';
+                titleDiv.textContent = title.trim();
+
+                const previewDiv = document.createElement('div');
+                previewDiv.className = 'page-preview';
+                previewDiv.textContent = '空白页面';
+
+                newPageItem.appendChild(titleDiv);
+                newPageItem.appendChild(previewDiv);
                 pageList.appendChild(newPageItem);
 
                 // 切换到新页面
@@ -248,14 +255,31 @@ function createMainWindow(): BrowserWindow {
         function loadNewPage(title) {
             document.querySelector('.page-title-input').value = title;
             const editorContent = document.getElementById('editorContent');
-            editorContent.innerHTML = \`
-                <div class="block block-type-h1" data-type="h1">
-                    <textarea class="block-content" placeholder="标题">\${title}</textarea>
-                </div>
-                <div class="block block-type-p" data-type="p">
-                    <textarea class="block-content" placeholder="开始写作..."></textarea>
-                </div>
-            \`;
+
+            // 清空现有内容
+            editorContent.innerHTML = '';
+
+            // 创建标题块
+            const titleBlock = document.createElement('div');
+            titleBlock.className = 'block block-type-h1';
+            titleBlock.setAttribute('data-type', 'h1');
+            const titleTextarea = document.createElement('textarea');
+            titleTextarea.className = 'block-content';
+            titleTextarea.placeholder = '标题';
+            titleTextarea.value = title;
+            titleBlock.appendChild(titleTextarea);
+
+            // 创建内容块
+            const contentBlock = document.createElement('div');
+            contentBlock.className = 'block block-type-p';
+            contentBlock.setAttribute('data-type', 'p');
+            const contentTextarea = document.createElement('textarea');
+            contentTextarea.className = 'block-content';
+            contentTextarea.placeholder = '开始写作...';
+            contentBlock.appendChild(contentTextarea);
+
+            editorContent.appendChild(titleBlock);
+            editorContent.appendChild(contentBlock);
             setupTextareas();
         }
 
@@ -264,8 +288,8 @@ function createMainWindow(): BrowserWindow {
             const title = document.querySelector('.page-title-input').value;
             const blocks = document.querySelectorAll('.block-content');
             let content = '';
-            blocks.forEach(block => {
-                if (block.value.trim()) {
+            blocks.forEach(function(block) {
+                if (block.value && block.value.trim()) {
                     content += block.value + '\\n';
                 }
             });
@@ -276,63 +300,59 @@ function createMainWindow(): BrowserWindow {
                 const preview = activePageItem.querySelector('.page-preview');
                 const titleElement = activePageItem.querySelector('.page-title');
                 titleElement.textContent = title || '无标题页面';
-                preview.textContent = content.substring(0, 50) + (content.length > 50 ? '...' : '') || '空白页面';
+                const previewText = content.substring(0, 50);
+                preview.textContent = (previewText + (content.length > 50 ? '...' : '')) || '空白页面';
             }
 
             // 显示保存成功提示
             const statusElement = document.getElementById('lastSaved');
             statusElement.textContent = '保存成功 ' + new Date().toLocaleTimeString();
-            setTimeout(() => {
+            setTimeout(function() {
                 statusElement.textContent = '已保存';
             }, 2000);
         }
 
         // 显示设置对话框
         function showSettings() {
-            const settings = \`
-设置选项:
-
-1. 主题设置
-   - 浅色主题 (当前)
-   - 深色主题
-   - 跟随系统
-
-2. 编辑器设置
-   - 字体大小: 16px
-   - 行高: 1.6
-   - 自动保存: 开启
-
-3. 快捷键
-   - Ctrl+N: 新建页面
-   - Ctrl+S: 保存页面
-   - Ctrl+F: 搜索
-
-4. 关于
-   - 版本: 0.1.0
-   - 作者: MingLog Team
-            \`;
+            const settings = '设置选项:\\n\\n' +
+                '1. 主题设置\\n' +
+                '   - 浅色主题 (当前)\\n' +
+                '   - 深色主题\\n' +
+                '   - 跟随系统\\n\\n' +
+                '2. 编辑器设置\\n' +
+                '   - 字体大小: 16px\\n' +
+                '   - 行高: 1.6\\n' +
+                '   - 自动保存: 开启\\n\\n' +
+                '3. 快捷键\\n' +
+                '   - Ctrl+N: 新建页面\\n' +
+                '   - Ctrl+S: 保存页面\\n' +
+                '   - Ctrl+F: 搜索\\n\\n' +
+                '4. 关于\\n' +
+                '   - 版本: 0.1.0\\n' +
+                '   - 作者: MingLog Team';
             alert(settings);
         }
 
         // 显示性能信息
         function showPerformance() {
-            const performance = \`
-性能监控:
+            const usedMemory = Math.round(Math.random() * 100 + 50);
+            const availableMemory = Math.round(Math.random() * 500 + 200);
+            const startupTime = Math.round(Math.random() * 2000 + 1000);
+            const pageCount = document.querySelectorAll('.page-item').length;
+            const wordCount = document.getElementById('wordCount').textContent;
 
-📊 内存使用情况:
-   - 已用内存: \${Math.round(Math.random() * 100 + 50)}MB
-   - 可用内存: \${Math.round(Math.random() * 500 + 200)}MB
-
-⚡ 应用性能:
-   - 启动时间: \${Math.round(Math.random() * 2000 + 1000)}ms
-   - 页面数量: \${document.querySelectorAll('.page-item').length}
-   - 总字数: \${document.getElementById('wordCount').textContent}
-
-🔧 系统信息:
-   - 平台: Windows
-   - Electron版本: 28.3.3
-   - Node.js版本: 20.x
-            \`;
+            const performance = '性能监控:\\n\\n' +
+                '📊 内存使用情况:\\n' +
+                '   - 已用内存: ' + usedMemory + 'MB\\n' +
+                '   - 可用内存: ' + availableMemory + 'MB\\n\\n' +
+                '⚡ 应用性能:\\n' +
+                '   - 启动时间: ' + startupTime + 'ms\\n' +
+                '   - 页面数量: ' + pageCount + '\\n' +
+                '   - 总字数: ' + wordCount + '\\n\\n' +
+                '🔧 系统信息:\\n' +
+                '   - 平台: Windows\\n' +
+                '   - Electron版本: 28.3.3\\n' +
+                '   - Node.js版本: 20.x';
             alert(performance);
         }
 
@@ -353,21 +373,21 @@ function createMainWindow(): BrowserWindow {
             let wordCount = 0;
             let blockCount = 0;
 
-            blocks.forEach(block => {
+            blocks.forEach(function(block) {
                 if (block.value && block.value.trim()) {
                     blockCount++;
                     wordCount += block.value.length;
                 }
             });
 
-            document.getElementById('wordCount').textContent = \`字数: \${wordCount}\`;
-            document.getElementById('blockCount').textContent = \`块数: \${blockCount}\`;
+            document.getElementById('wordCount').textContent = '字数: ' + wordCount;
+            document.getElementById('blockCount').textContent = '块数: ' + blockCount;
         }
 
         // 设置文本区域
         function setupTextareas() {
             const textareas = document.querySelectorAll('.block-content');
-            textareas.forEach(textarea => {
+            textareas.forEach(function(textarea) {
                 textarea.style.height = 'auto';
                 textarea.style.height = textarea.scrollHeight + 'px';
 
