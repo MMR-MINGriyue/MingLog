@@ -1,7 +1,5 @@
 import { app, BrowserWindow, Menu, shell, dialog, ipcMain, screen, nativeTheme } from 'electron';
-import { autoUpdater } from 'electron-updater';
 import * as path from 'path';
-import * as fs from 'fs';
 
 // 应用配置
 const APP_CONFIG = {
@@ -33,13 +31,8 @@ function createSplashWindow(): BrowserWindow {
     }
   });
 
-  const splashPath = path.join(__dirname, '../assets/splash.html');
-  if (fs.existsSync(splashPath)) {
-    splashWindow.loadFile(splashPath);
-  } else {
-    // 如果没有启动画面文件，直接显示加载信息
-    splashWindow.loadURL('data:text/html,<html><body style="margin:0;padding:50px;text-align:center;font-family:Arial;background:#f0f0f0;"><h2>MingLog</h2><p>正在启动...</p></body></html>');
-  }
+  // 直接显示加载信息，避免文件系统依赖
+  splashWindow.loadURL('data:text/html,<html><body style="margin:0;padding:50px;text-align:center;font-family:Arial;background:#f0f0f0;"><h2>MingLog</h2><p>正在启动...</p></body></html>');
 
   return splashWindow;
 }
@@ -297,33 +290,5 @@ ipcMain.handle('show-save-dialog', async (event, options) => {
   return { canceled: true, filePath: '' };
 });
 
-// 自动更新处理（生产环境）
-if (process.env.NODE_ENV === 'production') {
-  autoUpdater.checkForUpdatesAndNotify();
-  
-  autoUpdater.on('update-available', () => {
-    if (mainWindow) {
-      dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        title: '更新可用',
-        message: '发现新版本，正在后台下载...',
-        buttons: ['确定']
-      });
-    }
-  });
-
-  autoUpdater.on('update-downloaded', () => {
-    if (mainWindow) {
-      dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        title: '更新就绪',
-        message: '更新已下载完成，重启应用以应用更新。',
-        buttons: ['立即重启', '稍后重启']
-      }).then((result) => {
-        if (result.response === 0) {
-          autoUpdater.quitAndInstall();
-        }
-      });
-    }
-  });
-}
+// 自动更新功能暂时禁用，避免依赖问题
+// TODO: 在解决依赖问题后重新启用自动更新
