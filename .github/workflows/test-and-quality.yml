@@ -1,0 +1,281 @@
+name: Test and Quality Check
+
+on:
+  push:
+    branches: [ main, develop, fix/* ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.12.0
+          
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+          
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+            
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: Run type checking
+        run: pnpm type-check
+        
+      - name: Run linting
+        run: pnpm lint
+        
+      - name: Run tests
+        run: pnpm test:run
+        
+      - name: Run test coverage
+        run: pnpm test:coverage
+        
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./packages/*/coverage/lcov.info
+          fail_ci_if_error: false
+          verbose: true
+
+  quality-check:
+    name: Quality Check
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.12.0
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: Run quality check
+        run: node scripts/quality-check.js
+        
+      - name: Check build
+        run: pnpm build:packages
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.12.0
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: Run security audit
+        run: pnpm audit --audit-level moderate
+        continue-on-error: true
+        
+      - name: Run dependency check
+        uses: ossf/scorecard-action@v2.3.1
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: results.sarif
+
+  performance:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.12.0
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: Run performance tests
+        run: pnpm --filter ui test:run src/test/performance.test.tsx
+        
+      - name: Build packages for size check
+        run: pnpm build:packages
+        
+      - name: Check bundle size
+        run: |
+          echo "=== Package Sizes ==="
+          find packages/*/dist -name "*.js" -exec ls -lh {} \; | head -20
+          echo "=== Total Size ==="
+          du -sh packages/*/dist
+
+  compatibility:
+    name: Browser Compatibility
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.12.0
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: Install Playwright
+        run: pnpm --filter ui exec playwright install
+        
+      - name: Run browser tests
+        run: pnpm --filter ui test:run --reporter=verbose
+        env:
+          CI: true
+
+  documentation:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Check required documentation
+        run: |
+          echo "=== Checking documentation files ==="
+          
+          required_files=(
+            "README.md"
+            "CHANGELOG.md" 
+            "PROJECT_STATUS.md"
+            "packages/ui/README.md"
+            "packages/editor/README.md"
+            "packages/core/README.md"
+          )
+          
+          missing_files=()
+          
+          for file in "${required_files[@]}"; do
+            if [[ -f "$file" ]]; then
+              echo "✅ $file exists"
+            else
+              echo "❌ $file missing"
+              missing_files+=("$file")
+            fi
+          done
+          
+          if [[ ${#missing_files[@]} -gt 0 ]]; then
+            echo "Missing documentation files: ${missing_files[*]}"
+            exit 1
+          fi
+          
+          echo "✅ All required documentation files exist"
+        
+      - name: Check documentation quality
+        run: |
+          echo "=== Checking documentation quality ==="
+          
+          # Check README.md has required sections
+          if grep -q "## Installation" README.md && \
+             grep -q "## Usage" README.md && \
+             grep -q "## Development" README.md; then
+            echo "✅ README.md has required sections"
+          else
+            echo "❌ README.md missing required sections"
+            exit 1
+          fi
+          
+          # Check CHANGELOG.md format
+          if grep -q "## \[" CHANGELOG.md; then
+            echo "✅ CHANGELOG.md has proper format"
+          else
+            echo "❌ CHANGELOG.md format needs improvement"
+            exit 1
+          fi
+
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [test, quality-check, security, performance, compatibility, documentation]
+    if: always()
+    
+    steps:
+      - name: Check all jobs status
+        run: |
+          echo "=== Test and Quality Check Summary ==="
+          echo "Test: ${{ needs.test.result }}"
+          echo "Quality Check: ${{ needs.quality-check.result }}"
+          echo "Security: ${{ needs.security.result }}"
+          echo "Performance: ${{ needs.performance.result }}"
+          echo "Compatibility: ${{ needs.compatibility.result }}"
+          echo "Documentation: ${{ needs.documentation.result }}"
+          
+          if [[ "${{ needs.test.result }}" == "success" && \
+                "${{ needs.quality-check.result }}" == "success" && \
+                "${{ needs.documentation.result }}" == "success" ]]; then
+            echo "✅ All critical checks passed!"
+          else
+            echo "❌ Some critical checks failed"
+            exit 1
+          fi

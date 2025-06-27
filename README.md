@@ -205,6 +205,36 @@ pnpm db:studio        # 打开Prisma Studio
 - **E2E测试**: Playwright自动化测试
 - **性能测试**: Lighthouse + 自定义指标
 
+### 🔧 **开发命令**
+
+```bash
+# 开发模式
+pnpm dev                    # 启动所有包的开发模式
+pnpm web:dev               # 启动 Web 应用
+pnpm desktop:dev           # 启动桌面应用
+
+# 构建
+pnpm build                 # 构建所有包
+pnpm build:packages        # 只构建包
+pnpm web:build            # 构建 Web 应用
+pnpm desktop:build        # 构建桌面应用
+
+# 测试
+pnpm test                  # 运行所有测试
+pnpm test:run             # 运行测试（单次）
+pnpm test:coverage        # 生成覆盖率报告
+pnpm test:ui              # 测试交互界面
+pnpm test:watch           # 监听模式测试
+
+# 代码质量
+pnpm lint                 # 代码检查
+pnpm type-check          # 类型检查
+node scripts/quality-check.js  # 完整质量检查
+
+# 清理
+pnpm clean               # 清理构建文件
+```
+
 ## 🤝 贡献指南
 
 ### 🔄 **开发流程**
