@@ -76,18 +76,39 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      - name: Verify dependencies
+        run: |
+          echo "=== Checking pnpm version ==="
+          pnpm --version
+          echo "=== Checking Node.js version ==="
+          node --version
+          echo "=== Checking workspace structure ==="
+          pnpm list --depth=0
+
       - name: Build packages
-        run: pnpm run build:packages
+        run: |
+          echo "=== Building packages ==="
+          pnpm run build:packages
+          echo "=== Packages built successfully ==="
 
       - name: Build web app
-        run: pnpm run web:build
+        run: |
+          echo "=== Building web app ==="
+          pnpm run web:build
+          echo "=== Web app built successfully ==="
 
       - name: Install desktop dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: |
+          echo "=== Installing desktop dependencies ==="
+          pnpm install --no-frozen-lockfile
+          echo "=== Desktop dependencies installed ==="
         working-directory: apps/desktop
 
       - name: Build desktop app
-        run: pnpm run build
+        run: |
+          echo "=== Building desktop app ==="
+          pnpm run build
+          echo "=== Desktop app built successfully ==="
         working-directory: apps/desktop
 
       - name: Debug - List files after build
@@ -103,14 +124,20 @@ jobs:
 
       - name: Build Electron app (Windows)
         if: matrix.os == 'windows-latest'
-        run: pnpm run dist:win
+        run: |
+          echo "=== Building Electron app for Windows ==="
+          pnpm run dist:win
+          echo "=== Windows build completed ==="
         working-directory: apps/desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Electron app (macOS)
         if: matrix.os == 'macos-latest'
-        run: pnpm run dist:mac
+        run: |
+          echo "=== Building Electron app for macOS ==="
+          pnpm run dist:mac
+          echo "=== macOS build completed ==="
         working-directory: apps/desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -118,7 +145,10 @@ jobs:
 
       - name: Build Electron app (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: pnpm run dist:linux
+        run: |
+          echo "=== Building Electron app for Linux ==="
+          pnpm run dist:linux
+          echo "=== Linux build completed ==="
         working-directory: apps/desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

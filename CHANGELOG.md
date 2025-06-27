@@ -5,21 +5,58 @@ All notable changes to MingLog will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] - 2025-06-27
 
 ### Added
-- Desktop application support with Electron
-- Cross-platform builds (Windows, macOS, Linux)
-- Automatic updates for desktop app
-- GitHub Actions CI/CD pipeline
-- Beta release workflow
+
+#### 🎨 Mubu-style Editor
+- Added `MubuStyleEditor` component with Mubu-like editing experience
+- Added `MubuStyleBlockTree` component with hierarchical structure display
+- Improved visual design with connection lines, indentation, and hover effects
+- Complete keyboard shortcut support
+
+#### 🌐 Complete Chinese Localization
+- Complete Chinese interface text (zh-CN)
+- Support for dynamic Chinese-English switching
+- Localized date and time formats
+- File size and number formatting
+- Language selector component
+
+#### 📊 Enhanced Data Management
+- Added GraphSelector component
+- Added CreateGraphModal component
+- Added PageManager component
+- Added DataManager component
+- Resolved graph selection issues with clear graph switching interface
+
+#### 🔗 Knowledge Graph Visualization
+- Added GraphVisualization component
+- Added GraphSettings panel
+- Added GraphPage component
+- Support for page graphs, block graphs, and mixed graph display
+- Implemented force-directed layout algorithm
 
 ### Changed
-- Improved build process for monorepo structure
-- Enhanced error handling in desktop app
+
+#### 📱 User Interface Optimization
+- More intuitive block operation interface
+- Improved hover effects and focus states
+- Optimized keyboard shortcut support
+- Better visual feedback
+- Responsive design and dark theme support
+
+#### 🎯 Visualization Features
+- Interactive graph display with zoom and pan support
+- Node type differentiation (pages, blocks, tags)
+- Link type differentiation (reference, parent, tag)
+- Configurable node size and link distance
+- Show/hide orphan nodes option
 
 ### Fixed
-- Various bug fixes and improvements
+- Fixed graph selection related UI issues
+- Improved build process stability
+- Optimized performance and memory usage
+- Fixed various minor UI issues
 
 ## [0.1.0-beta.1] - 2025-06-26
 
