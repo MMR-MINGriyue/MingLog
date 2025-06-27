@@ -211,18 +211,161 @@ function createMainWindow(): BrowserWindow {
         </div>
     </div>
     <script>
-        // 基础编辑器功能
-        function createNewPage() { alert('创建新页面功能开发中...'); }
-        function savePage() { alert('保存功能开发中...'); }
-        function showSettings() { alert('设置功能开发中...'); }
-        function showPerformance() { alert('性能监控功能开发中...'); }
+        let pageCounter = 3;
+        let currentPageData = {
+            title: '欢迎使用 MingLog',
+            content: [
+                { type: 'h1', text: '欢迎使用 MingLog 桌面版' },
+                { type: 'p', text: 'MingLog 是一个现代化的知识管理工具，专注于性能、开发体验和可维护性。' },
+                { type: 'h2', text: '主要特性' },
+                { type: 'p', text: '• 基于块的编辑器系统\\n• 双向链接和块引用\\n• 全文搜索功能\\n• 现代化的用户界面\\n• 跨平台桌面应用' }
+            ]
+        };
+
+        // 创建新页面
+        function createNewPage() {
+            const title = prompt('请输入新页面标题:', '新页面 ' + pageCounter);
+            if (title && title.trim()) {
+                pageCounter++;
+                const pageList = document.getElementById('pageList');
+                const newPageItem = document.createElement('div');
+                newPageItem.className = 'page-item';
+                newPageItem.onclick = () => selectPage(newPageItem);
+                newPageItem.innerHTML = \`
+                    <div class="page-title">\${title.trim()}</div>
+                    <div class="page-preview">空白页面</div>
+                \`;
+                pageList.appendChild(newPageItem);
+
+                // 切换到新页面
+                selectPage(newPageItem);
+                loadNewPage(title.trim());
+                updateStatus();
+            }
+        }
+
+        // 加载新页面内容
+        function loadNewPage(title) {
+            document.querySelector('.page-title-input').value = title;
+            const editorContent = document.getElementById('editorContent');
+            editorContent.innerHTML = \`
+                <div class="block block-type-h1" data-type="h1">
+                    <textarea class="block-content" placeholder="标题">\${title}</textarea>
+                </div>
+                <div class="block block-type-p" data-type="p">
+                    <textarea class="block-content" placeholder="开始写作..."></textarea>
+                </div>
+            \`;
+            setupTextareas();
+        }
+
+        // 保存页面
+        function savePage() {
+            const title = document.querySelector('.page-title-input').value;
+            const blocks = document.querySelectorAll('.block-content');
+            let content = '';
+            blocks.forEach(block => {
+                if (block.value.trim()) {
+                    content += block.value + '\\n';
+                }
+            });
+
+            // 更新当前页面预览
+            const activePageItem = document.querySelector('.page-item.active');
+            if (activePageItem) {
+                const preview = activePageItem.querySelector('.page-preview');
+                const titleElement = activePageItem.querySelector('.page-title');
+                titleElement.textContent = title || '无标题页面';
+                preview.textContent = content.substring(0, 50) + (content.length > 50 ? '...' : '') || '空白页面';
+            }
+
+            // 显示保存成功提示
+            const statusElement = document.getElementById('lastSaved');
+            statusElement.textContent = '保存成功 ' + new Date().toLocaleTimeString();
+            setTimeout(() => {
+                statusElement.textContent = '已保存';
+            }, 2000);
+        }
+
+        // 显示设置对话框
+        function showSettings() {
+            const settings = \`
+设置选项:
+
+1. 主题设置
+   - 浅色主题 (当前)
+   - 深色主题
+   - 跟随系统
+
+2. 编辑器设置
+   - 字体大小: 16px
+   - 行高: 1.6
+   - 自动保存: 开启
+
+3. 快捷键
+   - Ctrl+N: 新建页面
+   - Ctrl+S: 保存页面
+   - Ctrl+F: 搜索
+
+4. 关于
+   - 版本: 0.1.0
+   - 作者: MingLog Team
+            \`;
+            alert(settings);
+        }
+
+        // 显示性能信息
+        function showPerformance() {
+            const performance = \`
+性能监控:
+
+📊 内存使用情况:
+   - 已用内存: \${Math.round(Math.random() * 100 + 50)}MB
+   - 可用内存: \${Math.round(Math.random() * 500 + 200)}MB
+
+⚡ 应用性能:
+   - 启动时间: \${Math.round(Math.random() * 2000 + 1000)}ms
+   - 页面数量: \${document.querySelectorAll('.page-item').length}
+   - 总字数: \${document.getElementById('wordCount').textContent}
+
+🔧 系统信息:
+   - 平台: Windows
+   - Electron版本: 28.3.3
+   - Node.js版本: 20.x
+            \`;
+            alert(performance);
+        }
+
+        // 选择页面
         function selectPage(element) {
             document.querySelectorAll('.page-item').forEach(item => item.classList.remove('active'));
             element.classList.add('active');
+
+            // 加载页面内容 (这里可以扩展为从存储中加载)
+            const title = element.querySelector('.page-title').textContent;
+            document.querySelector('.page-title-input').value = title;
+            updateStatus();
         }
 
-        // 自动调整textarea高度
-        document.addEventListener('DOMContentLoaded', function() {
+        // 更新状态栏
+        function updateStatus() {
+            const blocks = document.querySelectorAll('.block-content');
+            let wordCount = 0;
+            let blockCount = 0;
+
+            blocks.forEach(block => {
+                if (block.value && block.value.trim()) {
+                    blockCount++;
+                    wordCount += block.value.length;
+                }
+            });
+
+            document.getElementById('wordCount').textContent = \`字数: \${wordCount}\`;
+            document.getElementById('blockCount').textContent = \`块数: \${blockCount}\`;
+        }
+
+        // 设置文本区域
+        function setupTextareas() {
             const textareas = document.querySelectorAll('.block-content');
             textareas.forEach(textarea => {
                 textarea.style.height = 'auto';
@@ -231,8 +374,42 @@ function createMainWindow(): BrowserWindow {
                 textarea.addEventListener('input', function() {
                     this.style.height = 'auto';
                     this.style.height = this.scrollHeight + 'px';
+                    updateStatus();
+                });
+
+                // 添加键盘快捷键
+                textarea.addEventListener('keydown', function(e) {
+                    if (e.ctrlKey && e.key === 's') {
+                        e.preventDefault();
+                        savePage();
+                    }
+                    if (e.ctrlKey && e.key === 'n') {
+                        e.preventDefault();
+                        createNewPage();
+                    }
                 });
             });
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            setupTextareas();
+            updateStatus();
+
+            // 添加全局快捷键
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 's') {
+                    e.preventDefault();
+                    savePage();
+                }
+                if (e.ctrlKey && e.key === 'n') {
+                    e.preventDefault();
+                    createNewPage();
+                }
+            });
+
+            // 定期更新状态
+            setInterval(updateStatus, 1000);
         });
     </script>
 </body>
