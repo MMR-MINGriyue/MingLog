@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, shell, dialog, ipcMain, screen, nativeTheme } from 'electron';
 import * as path from 'path';
+import { storageManager, Workspace, Page, Block } from './storage';
 
 // 应用配置
 const APP_CONFIG = {
@@ -213,75 +214,153 @@ function createMainWindow(): BrowserWindow {
     <script>
         // 应用状态
         var appState = {
-            pageCounter: 3,
             currentPageId: 'welcome',
-            pages: {
-                'welcome': {
-                    id: 'welcome',
-                    title: '欢迎使用 MingLog',
-                    blocks: [
-                        { id: 'b1', type: 'h1', content: '欢迎使用 MingLog 桌面版' },
-                        { id: 'b2', type: 'p', content: 'MingLog 是一个现代化的知识管理工具，专注于性能、开发体验和可维护性。' },
-                        { id: 'b3', type: 'h2', content: '主要特性' },
-                        { id: 'b4', type: 'p', content: '• 基于块的编辑器系统\\n• 双向链接和块引用\\n• 全文搜索功能\\n• 现代化的用户界面\\n• 跨平台桌面应用' }
-                    ]
-                },
-                'example': {
-                    id: 'example',
-                    title: '示例页面',
-                    blocks: [
-                        { id: 'e1', type: 'h1', content: '这是一个示例页面' },
-                        { id: 'e2', type: 'p', content: '您可以在这里编辑内容，添加新的块，或者创建新的页面。' }
-                    ]
-                }
+            workspace: null,
+            isLoading: false,
+            isDirty: false
+        };
+
+        // Electron API 访问
+        const electronAPI = window.electronAPI || {
+            invoke: (channel, ...args) => {
+                console.warn('Electron API not available, using mock data');
+                return Promise.resolve({ success: false, error: 'API not available' });
             }
         };
 
         // 创建新页面
-        function createNewPage() {
-            var title = prompt('请输入新页面标题:', '新页面 ' + appState.pageCounter);
+        async function createNewPage() {
+            var title = prompt('请输入新页面标题:', '新页面');
             if (title && title.trim()) {
-                var pageId = 'page_' + Date.now();
-                appState.pageCounter++;
+                try {
+                    setLoading(true);
+                    var result = await electronAPI.invoke('storage:createPage', title.trim());
 
-                // 创建新页面数据
-                appState.pages[pageId] = {
-                    id: pageId,
-                    title: title.trim(),
-                    blocks: [
-                        { id: 'b_' + Date.now(), type: 'h1', content: title.trim() },
-                        { id: 'b_' + (Date.now() + 1), type: 'p', content: '' }
-                    ]
-                };
+                    if (result.success) {
+                        var page = result.data;
+                        addPageToList(page);
+                        selectPage(page.id);
+                        showMessage('页面创建成功');
+                    } else {
+                        showMessage('创建页面失败: ' + result.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('创建页面失败:', error);
+                    showMessage('创建页面失败', 'error');
+                } finally {
+                    setLoading(false);
+                }
+            }
+        }
 
-                // 添加到页面列表
-                var pageList = document.getElementById('pageList');
-                var newPageItem = document.createElement('div');
-                newPageItem.className = 'page-item';
-                newPageItem.setAttribute('data-page-id', pageId);
+        // 添加页面到列表
+        function addPageToList(page) {
+            var pageList = document.getElementById('pageList');
+            var newPageItem = document.createElement('div');
+            newPageItem.className = 'page-item';
+            newPageItem.setAttribute('data-page-id', page.id);
 
-                var titleDiv = document.createElement('div');
-                titleDiv.className = 'page-title';
-                titleDiv.textContent = title.trim();
+            var titleDiv = document.createElement('div');
+            titleDiv.className = 'page-title';
+            titleDiv.textContent = page.title;
 
-                var previewDiv = document.createElement('div');
-                previewDiv.className = 'page-preview';
-                previewDiv.textContent = '空白页面';
+            var previewDiv = document.createElement('div');
+            previewDiv.className = 'page-preview';
+            previewDiv.textContent = getPagePreview(page);
 
-                newPageItem.appendChild(titleDiv);
-                newPageItem.appendChild(previewDiv);
-                pageList.appendChild(newPageItem);
+            newPageItem.appendChild(titleDiv);
+            newPageItem.appendChild(previewDiv);
+            pageList.appendChild(newPageItem);
+        }
 
-                // 切换到新页面
-                selectPage(pageId);
-                updateStatus();
+        // 获取页面预览
+        function getPagePreview(page) {
+            if (!page.blocks || page.blocks.length === 0) return '空白页面';
+
+            var content = '';
+            page.blocks.forEach(function(block) {
+                if (block.content && block.content.trim()) {
+                    content += block.content + ' ';
+                }
+            });
+
+            var preview = content.substring(0, 50);
+            return (preview + (content.length > 50 ? '...' : '')) || '空白页面';
+        }
+
+        // 设置加载状态
+        function setLoading(loading) {
+            appState.isLoading = loading;
+            var buttons = document.querySelectorAll('.btn');
+            buttons.forEach(function(btn) {
+                btn.disabled = loading;
+                if (loading) {
+                    btn.style.opacity = '0.6';
+                } else {
+                    btn.style.opacity = '1';
+                }
+            });
+        }
+
+        // 显示消息
+        function showMessage(message, type) {
+            var statusElement = document.getElementById('lastSaved');
+            statusElement.textContent = message;
+            statusElement.style.color = type === 'error' ? '#dc3545' : '#28a745';
+
+            setTimeout(function() {
+                statusElement.textContent = '已保存';
+                statusElement.style.color = '';
+            }, 3000);
+        }
+
+        // 初始化工作空间
+        async function initializeWorkspace() {
+            try {
+                setLoading(true);
+                var result = await electronAPI.invoke('storage:loadWorkspace');
+
+                if (result.success) {
+                    appState.workspace = result.data;
+                    renderPageList();
+                    if (appState.workspace.pages['welcome']) {
+                        selectPage('welcome');
+                    } else {
+                        var firstPageId = Object.keys(appState.workspace.pages)[0];
+                        if (firstPageId) {
+                            selectPage(firstPageId);
+                        }
+                    }
+                    showMessage('工作空间加载成功');
+                } else {
+                    showMessage('加载工作空间失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('初始化工作空间失败:', error);
+                showMessage('初始化失败', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 渲染页面列表
+        function renderPageList() {
+            var pageList = document.getElementById('pageList');
+            pageList.innerHTML = '';
+
+            if (appState.workspace && appState.workspace.pages) {
+                Object.values(appState.workspace.pages).forEach(function(page) {
+                    addPageToList(page);
+                });
             }
         }
 
         // 加载页面内容
         function loadPage(pageId) {
-            var page = appState.pages[pageId];
-            if (!page) return;
+            if (!appState.workspace || !appState.workspace.pages[pageId]) return;
+
+            var page = appState.workspace.pages[pageId];
+            appState.currentPageId = pageId;
 
             // 更新页面标题
             document.querySelector('.page-title-input').value = page.title;
@@ -291,12 +370,26 @@ function createMainWindow(): BrowserWindow {
             editorContent.innerHTML = '';
 
             // 渲染所有块
-            page.blocks.forEach(function(block) {
-                var blockElement = createBlockElement(block);
+            if (page.blocks && page.blocks.length > 0) {
+                page.blocks.forEach(function(block) {
+                    var blockElement = createBlockElement(block);
+                    editorContent.appendChild(blockElement);
+                });
+            } else {
+                // 如果没有块，创建一个默认的段落块
+                var defaultBlock = {
+                    id: 'block_' + Date.now(),
+                    type: 'p',
+                    content: '',
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                };
+                var blockElement = createBlockElement(defaultBlock);
                 editorContent.appendChild(blockElement);
-            });
+            }
 
             setupTextareas();
+            updateStatus();
         }
 
         // 创建块元素
@@ -347,56 +440,75 @@ function createMainWindow(): BrowserWindow {
         }
 
         // 保存页面
-        function savePage() {
-            var currentPage = appState.pages[appState.currentPageId];
-            if (!currentPage) return;
+        async function savePage() {
+            if (!appState.workspace || !appState.currentPageId) return;
 
-            // 更新页面标题
-            var title = document.querySelector('.page-title-input').value;
-            currentPage.title = title || '无标题页面';
+            try {
+                setLoading(true);
 
-            // 更新所有块的内容
-            var blockElements = document.querySelectorAll('.block');
-            var updatedBlocks = [];
-            var previewContent = '';
+                // 收集页面数据
+                var title = document.querySelector('.page-title-input').value;
+                var blockElements = document.querySelectorAll('.block');
+                var updatedBlocks = [];
 
-            blockElements.forEach(function(blockElement) {
-                var textarea = blockElement.querySelector('.block-content');
-                var blockId = blockElement.getAttribute('data-block-id');
-                var blockType = blockElement.getAttribute('data-type');
-                var content = textarea.value;
+                blockElements.forEach(function(blockElement) {
+                    var textarea = blockElement.querySelector('.block-content');
+                    var blockId = blockElement.getAttribute('data-block-id');
+                    var blockType = blockElement.getAttribute('data-type');
+                    var content = textarea.value;
 
-                updatedBlocks.push({
-                    id: blockId,
-                    type: blockType,
-                    content: content
+                    updatedBlocks.push({
+                        id: blockId,
+                        type: blockType,
+                        content: content,
+                        createdAt: Date.now(),
+                        updatedAt: Date.now()
+                    });
                 });
 
-                if (content.trim()) {
-                    previewContent += content + ' ';
+                // 准备更新数据
+                var updates = {
+                    title: title || '无标题页面',
+                    blocks: updatedBlocks,
+                    updatedAt: Date.now()
+                };
+
+                // 调用存储API
+                var result = await electronAPI.invoke('storage:updatePage', appState.currentPageId, updates);
+
+                if (result.success) {
+                    // 更新本地状态
+                    Object.assign(appState.workspace.pages[appState.currentPageId], updates);
+
+                    // 更新页面列表中的预览
+                    updatePageListItem(appState.currentPageId);
+
+                    showMessage('保存成功');
+                    appState.isDirty = false;
+                } else {
+                    showMessage('保存失败: ' + result.error, 'error');
                 }
-            });
-
-            currentPage.blocks = updatedBlocks;
-
-            // 更新页面列表中的预览
-            var activePageItem = document.querySelector('.page-item.active');
-            if (activePageItem) {
-                var titleElement = activePageItem.querySelector('.page-title');
-                var previewElement = activePageItem.querySelector('.page-preview');
-                titleElement.textContent = currentPage.title;
-                var preview = previewContent.substring(0, 50);
-                previewElement.textContent = (preview + (previewContent.length > 50 ? '...' : '')) || '空白页面';
+            } catch (error) {
+                console.error('保存页面失败:', error);
+                showMessage('保存失败', 'error');
+            } finally {
+                setLoading(false);
+                updateStatus();
             }
+        }
 
-            // 显示保存成功提示
-            var statusElement = document.getElementById('lastSaved');
-            statusElement.textContent = '保存成功 ' + new Date().toLocaleTimeString();
-            setTimeout(function() {
-                statusElement.textContent = '已保存';
-            }, 2000);
+        // 更新页面列表项
+        function updatePageListItem(pageId) {
+            var page = appState.workspace.pages[pageId];
+            if (!page) return;
 
-            updateStatus();
+            var pageItem = document.querySelector('[data-page-id="' + pageId + '"]');
+            if (pageItem) {
+                var titleElement = pageItem.querySelector('.page-title');
+                var previewElement = pageItem.querySelector('.page-preview');
+                titleElement.textContent = page.title;
+                previewElement.textContent = getPagePreview(page);
+            }
         }
 
         // 显示设置对话框
@@ -493,10 +605,13 @@ function createMainWindow(): BrowserWindow {
                 }
             });
 
-            // 初始化
-            setupTextareas();
-            loadPage('welcome');
-            updateStatus();
+            // 监听页面标题变化
+            document.querySelector('.page-title-input').addEventListener('input', function() {
+                appState.isDirty = true;
+            });
+
+            // 初始化工作空间
+            initializeWorkspace();
 
             // 定期更新状态
             setInterval(updateStatus, 1000);
@@ -653,10 +768,13 @@ function createMenu(): void {
 }
 
 // 应用程序事件处理
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // 初始化存储系统
+  setupStorageIPC();
+
   // 创建启动画面
   createSplashWindow();
-  
+
   // 延迟创建主窗口，给启动画面一些显示时间
   setTimeout(() => {
     createMainWindow();
@@ -676,6 +794,11 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// 应用退出前清理
+app.on('before-quit', () => {
+  storageManager.destroy();
 });
 
 // 安全设置
@@ -721,3 +844,144 @@ ipcMain.handle('show-save-dialog', async (event, options) => {
 
 // 自动更新功能暂时禁用，避免依赖问题
 // TODO: 在解决依赖问题后重新启用自动更新
+
+// 错误处理辅助函数
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+// 存储相关的IPC处理器
+function setupStorageIPC() {
+  // 加载工作空间
+  ipcMain.handle('storage:loadWorkspace', async () => {
+    try {
+      const workspace = await storageManager.loadWorkspace();
+      return { success: true, data: workspace };
+    } catch (error) {
+      console.error('加载工作空间失败:', error);
+      return { success: false, error: getErrorMessage(error) };
+    }
+  });
+
+  // 保存工作空间
+  ipcMain.handle('storage:saveWorkspace', async () => {
+    try {
+      await storageManager.saveWorkspace();
+      return { success: true };
+    } catch (error) {
+      console.error('保存工作空间失败:', error);
+      return { success: false, error: getErrorMessage(error) };
+    }
+  });
+
+  // 创建新页面
+  ipcMain.handle('storage:createPage', async (event, title: string) => {
+    try {
+      const page = storageManager.createPage(title);
+      return { success: true, data: page };
+    } catch (error) {
+      console.error('创建页面失败:', error);
+      return { success: false, error: getErrorMessage(error) };
+    }
+  });
+
+  // 更新页面
+  ipcMain.handle('storage:updatePage', async (event, pageId: string, updates: Partial<Page>) => {
+    try {
+      storageManager.updatePage(pageId, updates);
+      return { success: true };
+    } catch (error) {
+      console.error('更新页面失败:', error);
+      return { success: false, error: getErrorMessage(error) };
+    }
+  });
+
+  // 删除页面
+  ipcMain.handle('storage:deletePage', async (event, pageId: string) => {
+    try {
+      storageManager.deletePage(pageId);
+      return { success: true };
+    } catch (error) {
+      console.error('删除页面失败:', error);
+      return { success: false, error: getErrorMessage(error) };
+    }
+  });
+
+  // 创建备份
+  ipcMain.handle('storage:createBackup', async () => {
+    try {
+      const backupPath = await storageManager.createBackup();
+      return { success: true, data: backupPath };
+    } catch (error) {
+      console.error('创建备份失败:', error);
+      return { success: false, error: getErrorMessage(error) };
+    }
+  });
+
+  // 获取备份列表
+  ipcMain.handle('storage:getBackupList', async () => {
+    try {
+      const backups = storageManager.getBackupList();
+      return { success: true, data: backups };
+    } catch (error) {
+      console.error('获取备份列表失败:', error);
+      return { success: false, error: getErrorMessage(error) };
+    }
+  });
+
+  // 恢复备份
+  ipcMain.handle('storage:restoreBackup', async (event, backupPath: string) => {
+    try {
+      await storageManager.restoreBackup(backupPath);
+      return { success: true };
+    } catch (error) {
+      console.error('恢复备份失败:', error);
+      return { success: false, error: getErrorMessage(error) };
+    }
+  });
+
+  // 导出为Markdown
+  ipcMain.handle('storage:exportMarkdown', async (event, pageId?: string) => {
+    try {
+      const markdown = storageManager.exportToMarkdown(pageId);
+      return { success: true, data: markdown };
+    } catch (error) {
+      console.error('导出Markdown失败:', error);
+      return { success: false, error: getErrorMessage(error) };
+    }
+  });
+
+  // 从Markdown导入
+  ipcMain.handle('storage:importMarkdown', async (event, markdown: string, title?: string) => {
+    try {
+      const page = storageManager.importFromMarkdown(markdown, title);
+      return { success: true, data: page };
+    } catch (error) {
+      console.error('导入Markdown失败:', error);
+      return { success: false, error: getErrorMessage(error) };
+    }
+  });
+
+  // 获取存储元数据
+  ipcMain.handle('storage:getMetadata', async () => {
+    try {
+      const metadata = storageManager.getMetadata();
+      return { success: true, data: metadata };
+    } catch (error) {
+      console.error('获取元数据失败:', error);
+      return { success: false, error: getErrorMessage(error) };
+    }
+  });
+
+  // 选择文件对话框
+  ipcMain.handle('dialog:showOpenDialog', async (event, options) => {
+    const result = await dialog.showOpenDialog(mainWindow!, options);
+    return result;
+  });
+
+  // 保存文件对话框
+  ipcMain.handle('dialog:showSaveDialog', async (event, options) => {
+    const result = await dialog.showSaveDialog(mainWindow!, options);
+    return result;
+  });
+}
