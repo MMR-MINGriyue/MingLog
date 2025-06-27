@@ -45,6 +45,8 @@ export { GraphSelector, GraphStatus } from './components/GraphSelector';
 export { CreateGraphModal } from './components/CreateGraphModal';
 export { PageManager } from './components/PageManager';
 export { DataManager } from './components/DataManager';
+export { GraphVisualization, GraphSettings } from './components/GraphVisualization';
+export { GraphPage } from './components/GraphPage';
 
 // Types
 export type { ButtonProps } from './components/Button';

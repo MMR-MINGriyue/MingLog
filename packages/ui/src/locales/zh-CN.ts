@@ -246,6 +246,21 @@ export const zhCN = {
       tip2: '图谱路径用于存储数据，创建后不可修改',
       tip3: '每个图谱都是独立的知识空间，可以包含页面和块',
     },
+    // 图谱可视化
+    mixedGraph: '混合图谱',
+    noData: '暂无数据',
+    noDataDescription: '创建一些页面和块后，图谱将显示它们之间的关系',
+    displaySettings: '显示设置',
+    layoutSettings: '布局设置',
+    exportAsPNG: '导出为PNG',
+    exportAsSVG: '导出为SVG',
+    exportAsJSON: '导出为JSON',
+    stats: '节点: {{nodes}}, 连接: {{links}}',
+    nodeType: {
+      page: '页面',
+      block: '块',
+      tag: '标签',
+    },
   },
 
   // 主题和外观

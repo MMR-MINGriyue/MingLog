@@ -11,6 +11,7 @@ import {
   CreateGraphModal,
   PageManager,
   DataManager,
+  GraphPage,
   LanguageToggle,
   ThemeToggle,
   LocaleProvider,
@@ -42,7 +43,7 @@ const MainLayoutContent: React.FC<MainLayoutProps> = ({ className }) => {
   const [blocks, setBlocks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<'pages' | 'data'>('pages');
+  const [activeTab, setActiveTab] = useState<'pages' | 'data' | 'graph'>('pages');
   
   // 模态框状态
   const [showCreateGraphModal, setShowCreateGraphModal] = useState(false);
@@ -333,6 +334,7 @@ const MainLayoutContent: React.FC<MainLayoutProps> = ({ className }) => {
             {/* 标签页 */}
             <div className="flex border-b border-gray-200 dark:border-gray-700">
               <button
+                type="button"
                 onClick={() => setActiveTab('pages')}
                 className={clsx(
                   'flex-1 px-4 py-2 text-sm font-medium transition-colors',
@@ -344,6 +346,19 @@ const MainLayoutContent: React.FC<MainLayoutProps> = ({ className }) => {
                 {t('pages.title')}
               </button>
               <button
+                type="button"
+                onClick={() => setActiveTab('graph')}
+                className={clsx(
+                  'flex-1 px-4 py-2 text-sm font-medium transition-colors',
+                  activeTab === 'graph'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                )}
+              >
+                {t('graph.title')}
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveTab('data')}
                 className={clsx(
                   'flex-1 px-4 py-2 text-sm font-medium transition-colors',
@@ -369,6 +384,28 @@ const MainLayoutContent: React.FC<MainLayoutProps> = ({ className }) => {
                   onUpdatePage={handleUpdatePage}
                   loading={loading}
                 />
+              ) : activeTab === 'graph' ? (
+                <div className="h-full">
+                  <GraphPage
+                    pages={pages}
+                    blocks={blocks}
+                    onNodeClick={(node) => {
+                      // 处理节点点击，例如跳转到对应的页面或块
+                      if (node.type === 'page') {
+                        const pageId = node.id.replace('page-', '');
+                        const page = pages.find(p => p.id === pageId);
+                        if (page) {
+                          setCurrentPage(page);
+                          setActiveTab('pages');
+                        }
+                      }
+                    }}
+                    onExportGraph={(format) => {
+                      console.log('Export graph as:', format);
+                      // 实现图谱导出功能
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="p-4 overflow-y-auto h-full">
                   <DataManager
