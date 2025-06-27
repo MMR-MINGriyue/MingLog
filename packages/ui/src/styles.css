@@ -32,6 +32,61 @@
 }
 
 /* Mubu-style outline structure */
+.mubu-block-tree {
+  @apply font-sans;
+  line-height: 1.6;
+}
+
+.mubu-block-item {
+  @apply relative transition-all duration-200;
+}
+
+.mubu-block-item:hover {
+  @apply bg-gray-50/50 dark:bg-gray-800/30;
+}
+
+.mubu-block-item.focused {
+  @apply bg-blue-50/30 dark:bg-blue-900/10;
+}
+
+/* Mubu editor content */
+.mubu-editor-content {
+  @apply text-gray-900 dark:text-gray-100;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.mubu-editor-content p {
+  @apply m-0;
+}
+
+.mubu-editor-content strong {
+  @apply font-semibold text-gray-900 dark:text-gray-100;
+}
+
+.mubu-editor-content em {
+  @apply italic text-gray-800 dark:text-gray-200;
+}
+
+.mubu-editor-content code {
+  @apply bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1 py-0.5 rounded text-sm font-mono border border-blue-200 dark:border-blue-700;
+}
+
+.mubu-editor-content a {
+  @apply text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline decoration-blue-300 dark:decoration-blue-600 hover:decoration-blue-500 dark:hover:decoration-blue-400;
+}
+
+/* Mubu children container */
+.mubu-children {
+  @apply relative;
+}
+
+/* Mubu empty state */
+.mubu-empty-state {
+  @apply min-h-[200px] flex items-center justify-center;
+}
+
+/* Block tree legacy styles */
 .block-tree {
   @apply space-y-1;
 }
@@ -41,7 +96,7 @@
 }
 
 .block-item:hover {
-  @apply bg-gray-50 rounded-md;
+  @apply bg-gray-50 dark:bg-gray-800/50 rounded-md;
 }
 
 .block-content {
