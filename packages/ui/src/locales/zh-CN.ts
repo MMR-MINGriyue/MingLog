@@ -111,6 +111,7 @@ export const zhCN = {
     recentPages: '最近页面',
     favoritPages: '收藏页面',
     createPage: '创建页面',
+    createFirstPage: '创建第一个页面',
     newPage: '新页面',
     untitledPage: '无标题页面',
     deletePage: '删除页面',
@@ -122,6 +123,8 @@ export const zhCN = {
     importPage: '导入页面',
     pageNotFound: '页面未找到',
     emptyPage: '空白页面',
+    noPages: '暂无页面',
+    noSearchResults: '没有找到匹配的页面',
     pageCount: '页面数量',
     lastModified: '最后修改',
     createdAt: '创建时间',
@@ -133,6 +136,26 @@ export const zhCN = {
     dailyNote: '每日笔记',
     weeklyNote: '每周笔记',
     monthlyNote: '每月笔记',
+    searchPlaceholder: '搜索页面、标签或内容...',
+    // 排序选项
+    sortBy: {
+      title: '排序',
+      name: '名称',
+      updated: '更新时间',
+      created: '创建时间',
+    },
+    // 过滤选项
+    filterBy: {
+      title: '筛选',
+      all: '全部',
+      regular: '普通页面',
+      journal: '日记页面',
+    },
+    // 视图模式
+    viewMode: {
+      list: '列表视图',
+      grid: '网格视图',
+    },
   },
 
   // 搜索
@@ -189,6 +212,40 @@ export const zhCN = {
     centerGraph: '居中图谱',
     exportGraph: '导出图谱',
     graphSettings: '图谱设置',
+    // 图谱管理
+    selectGraph: '选择图谱',
+    createGraph: '创建图谱',
+    deleteGraph: '删除图谱',
+    renameGraph: '重命名图谱',
+    duplicateGraph: '复制图谱',
+    noGraphs: '暂无图谱',
+    noGraphSelected: '未选择图谱',
+    selectGraphFirst: '请先选择一个图谱',
+    currentGraph: '当前图谱',
+    switchGraph: '切换图谱',
+    name: '图谱名称',
+    path: '图谱路径',
+    namePlaceholder: '请输入图谱名称',
+    pathPlaceholder: '请输入图谱路径',
+    pathHint: '路径只能包含字母、数字、中文和连字符',
+    // 错误信息
+    errors: {
+      nameRequired: '图谱名称不能为空',
+      nameTooShort: '图谱名称至少需要2个字符',
+      pathRequired: '图谱路径不能为空',
+      pathInvalid: '图谱路径格式无效',
+      pathExists: '图谱路径已存在',
+      createFailed: '创建图谱失败',
+      deleteFailed: '删除图谱失败',
+      switchFailed: '切换图谱失败',
+    },
+    // 创建提示
+    createTips: {
+      title: '创建提示',
+      tip1: '图谱名称将显示在界面中，建议使用有意义的名称',
+      tip2: '图谱路径用于存储数据，创建后不可修改',
+      tip3: '每个图谱都是独立的知识空间，可以包含页面和块',
+    },
   },
 
   // 主题和外观
@@ -453,6 +510,39 @@ export const zhCN = {
     average: '平均',
     maximum: '最大',
     minimum: '最小',
+  },
+
+  // 数据管理
+  data: {
+    title: '数据管理',
+    import: '导入',
+    export: '导出',
+    backup: '备份',
+    restore: '恢复',
+    importExport: '导入导出',
+    backupRestore: '备份恢复',
+    importDescription: '从外部文件导入数据到当前图谱',
+    exportDescription: '将当前图谱的数据导出为文件',
+    backupDescription: '创建完整的数据备份，包含所有图谱',
+    restoreDescription: '从备份文件恢复数据',
+    selectFormat: '选择格式',
+    selectFile: '选择文件',
+    createBackup: '创建备份',
+    restoreFromBackup: '从备份恢复',
+    processing: '处理中...',
+    importSuccess: '导入成功',
+    exportSuccess: '导出成功',
+    backupSuccess: '备份成功',
+    restoreSuccess: '恢复成功',
+    importFailed: '导入失败',
+    exportFailed: '导出失败',
+    backupFailed: '备份失败',
+    restoreFailed: '恢复失败',
+    invalidFile: '无效的文件格式',
+    fileTooBig: '文件过大',
+    noDataToExport: '没有数据可导出',
+    confirmRestore: '恢复操作将覆盖现有数据，确定继续吗？',
+    confirmImport: '导入操作可能会覆盖现有数据，确定继续吗？',
   },
 } as const;
 

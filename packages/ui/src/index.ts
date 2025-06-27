@@ -41,6 +41,10 @@ export {
   LanguageToggle,
   LanguageSettings
 } from './components/LanguageSelector';
+export { GraphSelector, GraphStatus } from './components/GraphSelector';
+export { CreateGraphModal } from './components/CreateGraphModal';
+export { PageManager } from './components/PageManager';
+export { DataManager } from './components/DataManager';
 
 // Types
 export type { ButtonProps } from './components/Button';
