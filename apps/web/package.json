@@ -5,8 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+<<<<<<< HEAD
     "build": "echo 'Web app build skipped for now'",
     "build:check": "tsc && vite build",
+=======
+    "build": "vite build",
+>>>>>>> c58be023006b5fbf54a414bc9766eb5463a22469
     "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "playwright test",
@@ -19,6 +23,7 @@
     "@minglog/core": "workspace:*",
     "@minglog/database": "workspace:*",
     "@minglog/editor": "workspace:*",
+    "@minglog/graph": "workspace:*",
     "@minglog/ui": "workspace:*",
     "@tanstack/react-query": "^5.8.4",
     "react": "^18.2.0",

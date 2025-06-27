@@ -33,7 +33,11 @@
   "build": {
     "appId": "com.minglog.desktop",
     "productName": "MingLog",
+<<<<<<< HEAD
     "copyright": "Copyright © 2025 MingLog Team",
+=======
+    "asar": false,
+>>>>>>> c58be023006b5fbf54a414bc9766eb5463a22469
     "directories": {
       "output": "build",
       "buildResources": "assets"
@@ -44,23 +48,27 @@
     "files": [
       "dist/**/*",
       "assets/**/*",
+<<<<<<< HEAD
       "node_modules/**/*",
       "package.json"
     ],
     "extraResources": [],
+=======
+      "package.json",
+      "node_modules/electron-updater/**/*",
+      "node_modules/electron-store/**/*"
+    ],
+
+>>>>>>> c58be023006b5fbf54a414bc9766eb5463a22469
     "win": {
       "target": [
-        {
-          "target": "nsis",
-          "arch": ["x64", "ia32"]
-        },
         {
           "target": "portable",
           "arch": ["x64", "ia32"]
         }
       ],
-      "icon": "assets/icon.ico",
-      "publisherName": "MingLog Team"
+      "forceCodeSigning": false,
+      "signAndEditExecutable": false
     },
     "mac": {
       "target": [
@@ -73,7 +81,7 @@
           "arch": ["x64", "arm64"]
         }
       ],
-      "icon": "assets/icon.icns",
+
       "category": "public.app-category.productivity"
     },
     "linux": {
@@ -87,7 +95,7 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "assets/icon.png",
+
       "category": "Office"
     },
     "nsis": {
@@ -111,6 +119,7 @@
     "typescript": "^5.3.0"
   },
   "dependencies": {
-    "electron-updater": "^6.1.7"
+    "electron-updater": "^6.1.7",
+    "electron-store": "^8.1.0"
   }
 }

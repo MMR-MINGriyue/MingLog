@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Page } from '@minglog/core';
 import { core } from '../stores/logseq-store';
 import { useApiStore } from '../stores/api-store';
-import { ApiClient } from '../services/api';
+import { apiClient } from '../services/api';
 
 interface PageListProps {
   onPageSelect: (page: Page) => void;

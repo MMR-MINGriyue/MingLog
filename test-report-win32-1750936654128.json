@@ -1,0 +1,68 @@
+{
+  "platform": "win32",
+  "arch": "x64",
+  "nodeVersion": "v22.15.1",
+  "osInfo": "Windows_NT 10.0.26100",
+  "tests": [
+    {
+      "name": "Node.js and npm versions",
+      "status": "FAIL",
+      "error": "Node.js version v22.15.1 may not be compatible. Recommended: v18 or v20"
+    },
+    {
+      "name": "Project structure",
+      "status": "PASS",
+      "result": {
+        "requiredPaths": 5,
+        "missing": 0
+      }
+    },
+    {
+      "name": "Dependencies installation",
+      "status": "PASS",
+      "result": {
+        "root": true,
+        "desktop": false,
+        "web": true
+      }
+    },
+    {
+      "name": "Platform-specific features",
+      "status": "PASS",
+      "result": {
+        "appUserModelId": true,
+        "nsis": true,
+        "autoUpdater": true
+      }
+    },
+    {
+      "name": "Build configuration",
+      "status": "PASS",
+      "result": {
+        "hasConfig": true,
+        "targets": 2
+      }
+    },
+    {
+      "name": "Icon files",
+      "status": "PASS",
+      "result": {
+        "required": 2,
+        "missing": 2
+      }
+    },
+    {
+      "name": "TypeScript compilation",
+      "status": "FAIL",
+      "error": "TypeScript compilation failed"
+    },
+    {
+      "name": "Electron availability",
+      "status": "FAIL",
+      "error": "Electron not available or not installed"
+    }
+  ],
+  "passed": 5,
+  "failed": 3,
+  "timestamp": "2025-06-26T11:17:13.258Z"
+}

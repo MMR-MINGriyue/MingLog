@@ -8,6 +8,7 @@ import { SimpleHome } from './pages/SimpleHome';
 import { PagesPage } from './pages/PagesPage';
 import { JournalsPage } from './pages/JournalsPage';
 import { SearchPage } from './pages/SearchPage';
+import { GraphPage } from './pages/GraphPage';
 import { TestPage } from './pages/TestPage';
 import { SimpleTest } from './pages/SimpleTest';
 import '@minglog/ui/styles';
@@ -36,7 +37,7 @@ function App() {
               <Route path="search" element={<SearchPage />} />
               <Route path="test" element={<TestPage />} />
               <Route path="simple" element={<SimpleTest />} />
-              <Route path="graph" element={<div>Graph View (Coming Soon)</div>} />
+              <Route path="graph" element={<GraphPage />} />
               <Route path="settings" element={<div>Settings (Coming Soon)</div>} />
             </Route>
           </Routes>

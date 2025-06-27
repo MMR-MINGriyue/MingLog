@@ -1,0 +1,445 @@
+/**
+ * Layout CSS for MingLog
+ * CSS variables and layout-specific styles
+ */
+
+/* Layout CSS Variables */
+:root {
+  /* Sidebar variables */
+  --sidebar-width: 280px;
+  --sidebar-min-width: 200px;
+  --sidebar-max-width: 500px;
+  --sidebar-collapsed-width: 48px;
+  
+  /* Panel variables */
+  --panel-width: 300px;
+  --panel-height: 200px;
+  --panel-min-width: 200px;
+  --panel-max-width: 600px;
+  --panel-min-height: 150px;
+  --panel-max-height: 400px;
+  
+  /* Toolbar variables */
+  --toolbar-height: 40px;
+  --toolbar-min-height: 30px;
+  --toolbar-max-height: 80px;
+  
+  /* Status bar */
+  --status-bar-height: 24px;
+  
+  /* Activity bar */
+  --activity-bar-width: 48px;
+  
+  /* Breadcrumb */
+  --breadcrumb-height: 32px;
+  
+  /* Layout transitions */
+  --layout-transition-duration: 200ms;
+  --layout-transition-timing: ease-in-out;
+  
+  /* Z-index layers */
+  --z-layout-base: 0;
+  --z-layout-sidebar: 10;
+  --z-layout-panel: 20;
+  --z-layout-toolbar: 30;
+  --z-layout-modal: 1000;
+}
+
+/* Base Layout Container */
+.layout-container {
+  display: grid;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Default Grid Template (Left Sidebar) */
+.layout-sidebar-left {
+  grid-template-areas: 
+    "activity-bar sidebar toolbar toolbar"
+    "activity-bar sidebar main panel"
+    "activity-bar sidebar main panel"
+    "status-bar status-bar status-bar status-bar";
+  grid-template-columns: 
+    var(--activity-bar-width) 
+    var(--sidebar-width) 
+    1fr 
+    var(--panel-width);
+  grid-template-rows: 
+    var(--toolbar-height) 
+    1fr 
+    auto 
+    var(--status-bar-height);
+}
+
+/* Right Sidebar Layout */
+.layout-sidebar-right {
+  grid-template-areas: 
+    "activity-bar toolbar toolbar sidebar"
+    "activity-bar panel main sidebar"
+    "activity-bar panel main sidebar"
+    "status-bar status-bar status-bar status-bar";
+  grid-template-columns: 
+    var(--activity-bar-width) 
+    var(--panel-width) 
+    1fr 
+    var(--sidebar-width);
+  grid-template-rows: 
+    var(--toolbar-height) 
+    1fr 
+    auto 
+    var(--status-bar-height);
+}
+
+/* Collapsed Sidebar */
+.sidebar-collapsed.layout-sidebar-left {
+  grid-template-columns: 
+    var(--activity-bar-width) 
+    var(--sidebar-collapsed-width) 
+    1fr 
+    var(--panel-width);
+}
+
+.sidebar-collapsed.layout-sidebar-right {
+  grid-template-columns: 
+    var(--activity-bar-width) 
+    var(--panel-width) 
+    1fr 
+    var(--sidebar-collapsed-width);
+}
+
+/* Hidden Panel */
+.panel-hidden.layout-sidebar-left {
+  grid-template-columns: 
+    var(--activity-bar-width) 
+    var(--sidebar-width) 
+    1fr 
+    0;
+}
+
+.panel-hidden.layout-sidebar-right {
+  grid-template-columns: 
+    var(--activity-bar-width) 
+    0 
+    1fr 
+    var(--sidebar-width);
+}
+
+.panel-hidden.sidebar-collapsed.layout-sidebar-left {
+  grid-template-columns: 
+    var(--activity-bar-width) 
+    var(--sidebar-collapsed-width) 
+    1fr 
+    0;
+}
+
+.panel-hidden.sidebar-collapsed.layout-sidebar-right {
+  grid-template-columns: 
+    var(--activity-bar-width) 
+    0 
+    1fr 
+    var(--sidebar-collapsed-width);
+}
+
+/* Bottom Panel Layout */
+.layout-panel-bottom {
+  grid-template-areas: 
+    "activity-bar sidebar toolbar toolbar"
+    "activity-bar sidebar main main"
+    "activity-bar sidebar panel panel"
+    "status-bar status-bar status-bar status-bar";
+  grid-template-rows: 
+    var(--toolbar-height) 
+    1fr 
+    var(--panel-height) 
+    var(--status-bar-height);
+}
+
+.layout-panel-bottom.panel-hidden {
+  grid-template-areas: 
+    "activity-bar sidebar toolbar toolbar"
+    "activity-bar sidebar main main"
+    "activity-bar sidebar main main"
+    "status-bar status-bar status-bar status-bar";
+  grid-template-rows: 
+    var(--toolbar-height) 
+    1fr 
+    0 
+    var(--status-bar-height);
+}
+
+/* Hidden Toolbar */
+.layout-toolbar-hidden {
+  grid-template-rows: 
+    0 
+    1fr 
+    auto 
+    var(--status-bar-height);
+}
+
+.layout-toolbar-hidden.layout-panel-bottom {
+  grid-template-rows: 
+    0 
+    1fr 
+    var(--panel-height) 
+    var(--status-bar-height);
+}
+
+/* Layout Components */
+.layout-activity-bar {
+  grid-area: activity-bar;
+  background: var(--color-surface-secondary);
+  border-right: 1px solid var(--color-border-primary);
+  z-index: var(--z-layout-sidebar);
+  transition: transform var(--layout-transition-duration) var(--layout-transition-timing);
+}
+
+.layout-sidebar {
+  grid-area: sidebar;
+  background: var(--color-surface-primary);
+  border-right: 1px solid var(--color-border-primary);
+  z-index: var(--z-layout-sidebar);
+  transition: width var(--layout-transition-duration) var(--layout-transition-timing);
+  overflow: hidden;
+}
+
+.layout-sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
+}
+
+.layout-toolbar {
+  grid-area: toolbar;
+  background: var(--color-surface-secondary);
+  border-bottom: 1px solid var(--color-border-primary);
+  z-index: var(--z-layout-toolbar);
+  transition: height var(--layout-transition-duration) var(--layout-transition-timing);
+}
+
+.layout-main {
+  grid-area: main;
+  background: var(--color-background-primary);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-panel {
+  grid-area: panel;
+  background: var(--color-surface-secondary);
+  border-left: 1px solid var(--color-border-primary);
+  z-index: var(--z-layout-panel);
+  transition: width var(--layout-transition-duration) var(--layout-transition-timing),
+              height var(--layout-transition-duration) var(--layout-transition-timing);
+  overflow: hidden;
+}
+
+.layout-panel.bottom {
+  border-left: none;
+  border-top: 1px solid var(--color-border-primary);
+}
+
+.layout-status-bar {
+  grid-area: status-bar;
+  background: var(--color-surface-tertiary);
+  border-top: 1px solid var(--color-border-primary);
+  z-index: var(--z-layout-base);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+/* Resizable Handles */
+.layout-resize-handle {
+  position: absolute;
+  z-index: 100;
+  background: transparent;
+  transition: background-color 150ms ease;
+}
+
+.layout-resize-handle:hover {
+  background-color: var(--color-interactive-primary);
+}
+
+.layout-resize-handle.vertical {
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  right: -2px;
+  top: 0;
+}
+
+.layout-resize-handle.horizontal {
+  width: 100%;
+  height: 4px;
+  cursor: row-resize;
+  bottom: -2px;
+  left: 0;
+}
+
+/* Fullscreen Mode */
+.fullscreen-mode {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+}
+
+.fullscreen-mode .layout-activity-bar,
+.fullscreen-mode .layout-sidebar,
+.fullscreen-mode .layout-panel,
+.fullscreen-mode .layout-toolbar,
+.fullscreen-mode .layout-status-bar {
+  display: none;
+}
+
+.fullscreen-mode .layout-main {
+  grid-area: 1 / 1 / -1 / -1;
+}
+
+/* Zen Mode */
+.zen-mode {
+  background: var(--color-background-primary);
+}
+
+.zen-mode .layout-activity-bar,
+.zen-mode .layout-sidebar,
+.zen-mode .layout-panel,
+.zen-mode .layout-toolbar,
+.zen-mode .layout-status-bar {
+  display: none;
+}
+
+.zen-mode .layout-main {
+  grid-area: 1 / 1 / -1 / -1;
+  padding: 2rem;
+}
+
+/* Floating Panel */
+.layout-panel.floating {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: var(--panel-width);
+  height: var(--panel-height);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-layout-modal);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .layout-container {
+    grid-template-areas: 
+      "toolbar"
+      "main"
+      "status-bar";
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--toolbar-height) 1fr var(--status-bar-height);
+  }
+  
+  .layout-sidebar,
+  .layout-panel,
+  .layout-activity-bar {
+    display: none;
+  }
+  
+  .layout-main {
+    grid-area: main;
+  }
+}
+
+@media (max-width: 480px) {
+  .layout-toolbar {
+    --toolbar-height: 48px;
+  }
+  
+  .layout-status-bar {
+    display: none;
+  }
+  
+  .layout-container {
+    grid-template-areas: 
+      "toolbar"
+      "main";
+    grid-template-rows: var(--toolbar-height) 1fr;
+  }
+}
+
+/* Animation Classes */
+.layout-slide-in-left {
+  animation: slideInLeft var(--layout-transition-duration) var(--layout-transition-timing);
+}
+
+.layout-slide-out-left {
+  animation: slideOutLeft var(--layout-transition-duration) var(--layout-transition-timing);
+}
+
+.layout-slide-in-right {
+  animation: slideInRight var(--layout-transition-duration) var(--layout-transition-timing);
+}
+
+.layout-slide-out-right {
+  animation: slideOutRight var(--layout-transition-duration) var(--layout-transition-timing);
+}
+
+.layout-fade-in {
+  animation: fadeIn var(--layout-transition-duration) var(--layout-transition-timing);
+}
+
+.layout-fade-out {
+  animation: fadeOut var(--layout-transition-duration) var(--layout-transition-timing);
+}
+
+/* Keyframes */
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideOutLeft {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideOutRight {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Utility Classes */
+.layout-hidden {
+  display: none !important;
+}
+
+.layout-collapsed {
+  width: var(--sidebar-collapsed-width) !important;
+}
+
+.layout-expanded {
+  width: var(--sidebar-width) !important;
+}
+
+.layout-no-transition {
+  transition: none !important;
+}

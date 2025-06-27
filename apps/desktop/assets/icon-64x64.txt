@@ -1,0 +1,3 @@
+# Placeholder for icon-64x64.png
+# Size: 64x64
+# Generate from icon.svg
