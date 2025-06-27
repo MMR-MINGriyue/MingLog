@@ -23,7 +23,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
       'storage:importMarkdown',
       'storage:getMetadata',
       'dialog:showOpenDialog',
-      'dialog:showSaveDialog'
+      'dialog:showSaveDialog',
+      'fs:readFile',
+      'fs:writeFile',
+      'path:getTempDir'
     ];
 
     if (validChannels.includes(channel)) {

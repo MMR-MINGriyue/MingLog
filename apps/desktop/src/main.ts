@@ -158,6 +158,9 @@ function createMainWindow(): BrowserWindow {
         <div class="toolbar">
             <button type="button" class="btn" id="newPageBtn" title="创建新页面 (Ctrl+N)">新建页面</button>
             <button type="button" class="btn" id="saveBtn" title="保存页面 (Ctrl+S)">保存</button>
+            <button type="button" class="btn" id="importBtn" title="导入Markdown文件">导入</button>
+            <button type="button" class="btn" id="exportBtn" title="导出当前页面">导出</button>
+            <button type="button" class="btn" id="backupBtn" title="创建备份">备份</button>
             <button type="button" class="btn" id="settingsBtn" title="打开设置">设置</button>
             <button type="button" class="btn primary" id="performanceBtn" title="查看性能信息">性能</button>
         </div>
@@ -511,14 +514,576 @@ function createMainWindow(): BrowserWindow {
             }
         }
 
+        // 导入文件
+        async function importMarkdown() {
+            var choice = prompt('选择导入方式:\\n\\n1 - 导入单个Markdown文件\\n2 - 批量导入Markdown文件\\n3 - 导入工作空间数据 (JSON)\\n\\n请输入选项编号 (1-3):');
+
+            switch(choice) {
+                case '1':
+                    await importSingleFile();
+                    break;
+                case '2':
+                    await importMultipleFiles();
+                    break;
+                case '3':
+                    await importWorkspaceData();
+                    break;
+                default:
+                    if (choice !== null) {
+                        alert('无效的选项');
+                    }
+                    break;
+            }
+        }
+
+        // 导入工作空间数据
+        async function importWorkspaceData() {
+            try {
+                setLoading(true);
+
+                var confirmImport = confirm('⚠️ 警告: 导入工作空间数据将覆盖当前所有数据！\\n\\n确定要继续吗？');
+                if (!confirmImport) {
+                    return;
+                }
+
+                // 打开文件选择对话框
+                var result = await electronAPI.invoke('dialog:showOpenDialog', {
+                    title: '选择工作空间数据文件',
+                    filters: [
+                        { name: 'JSON文件', extensions: ['json'] },
+                        { name: '所有文件', extensions: ['*'] }
+                    ],
+                    properties: ['openFile']
+                });
+
+                if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+                    return;
+                }
+
+                var filePath = result.filePaths[0];
+
+                // 读取文件内容
+                var fileResult = await electronAPI.invoke('fs:readFile', filePath);
+                if (!fileResult.success) {
+                    showMessage('读取文件失败: ' + fileResult.error, 'error');
+                    return;
+                }
+
+                // 解析JSON数据
+                var importData;
+                try {
+                    importData = JSON.parse(fileResult.data);
+                } catch (error) {
+                    showMessage('文件格式错误，不是有效的JSON文件', 'error');
+                    return;
+                }
+
+                // 验证数据格式
+                if (!importData.workspace || !importData.workspace.pages) {
+                    showMessage('文件格式错误，不是有效的工作空间数据', 'error');
+                    return;
+                }
+
+                // 使用备份恢复功能来导入数据
+                // 首先获取临时文件路径
+                var tempPathResult = await electronAPI.invoke('path:getTempDir');
+                if (!tempPathResult.success) {
+                    showMessage('获取临时路径失败: ' + tempPathResult.error, 'error');
+                    return;
+                }
+
+                var tempBackupPath = tempPathResult.data;
+                var writeResult = await electronAPI.invoke('fs:writeFile', tempBackupPath, JSON.stringify(importData.workspace, null, 2));
+
+                if (!writeResult.success) {
+                    showMessage('创建临时文件失败: ' + writeResult.error, 'error');
+                    return;
+                }
+
+                // 恢复数据
+                await restoreBackup(tempBackupPath);
+
+                showMessage('工作空间数据导入成功');
+
+            } catch (error) {
+                console.error('导入工作空间数据失败:', error);
+                showMessage('导入失败', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 导入单个文件
+        async function importSingleFile() {
+            try {
+                setLoading(true);
+
+                // 打开文件选择对话框
+                var result = await electronAPI.invoke('dialog:showOpenDialog', {
+                    title: '选择Markdown文件',
+                    filters: [
+                        { name: 'Markdown文件', extensions: ['md', 'markdown', 'txt'] },
+                        { name: '所有文件', extensions: ['*'] }
+                    ],
+                    properties: ['openFile']
+                });
+
+                if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+                    return;
+                }
+
+                var filePath = result.filePaths[0];
+
+                // 读取文件内容
+                var fileResult = await electronAPI.invoke('fs:readFile', filePath);
+                if (!fileResult.success) {
+                    showMessage('读取文件失败: ' + fileResult.error, 'error');
+                    return;
+                }
+                var content = fileResult.data;
+
+                // 从文件名提取标题
+                var fileName = filePath.split('\\\\').pop().split('/').pop();
+                var title = fileName.replace(/\\.(md|markdown|txt)$/i, '');
+
+                // 导入为新页面
+                var importResult = await electronAPI.invoke('storage:importMarkdown', content, title);
+
+                if (importResult.success) {
+                    var page = importResult.data;
+
+                    // 重新加载工作空间以获取最新数据
+                    await initializeWorkspace();
+
+                    // 切换到新导入的页面
+                    selectPage(page.id);
+
+                    showMessage('导入成功: ' + page.title);
+                } else {
+                    showMessage('导入失败: ' + importResult.error, 'error');
+                }
+            } catch (error) {
+                console.error('导入文件失败:', error);
+                showMessage('导入失败', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 批量导入多个文件
+        async function importMultipleFiles() {
+            try {
+                setLoading(true);
+
+                // 打开文件选择对话框（多选）
+                var result = await electronAPI.invoke('dialog:showOpenDialog', {
+                    title: '选择多个Markdown文件',
+                    filters: [
+                        { name: 'Markdown文件', extensions: ['md', 'markdown', 'txt'] },
+                        { name: '所有文件', extensions: ['*'] }
+                    ],
+                    properties: ['openFile', 'multiSelections']
+                });
+
+                if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+                    return;
+                }
+
+                var successCount = 0;
+                var errorCount = 0;
+                var lastImportedPageId = null;
+
+                // 逐个导入文件
+                for (var i = 0; i < result.filePaths.length; i++) {
+                    try {
+                        var filePath = result.filePaths[i];
+
+                        // 读取文件内容
+                        var fileResult = await electronAPI.invoke('fs:readFile', filePath);
+                        if (!fileResult.success) {
+                            console.error('读取文件失败:', filePath, fileResult.error);
+                            errorCount++;
+                            continue;
+                        }
+
+                        var content = fileResult.data;
+
+                        // 从文件名提取标题
+                        var fileName = filePath.split('\\\\').pop().split('/').pop();
+                        var title = fileName.replace(/\\.(md|markdown|txt)$/i, '');
+
+                        // 导入为新页面
+                        var importResult = await electronAPI.invoke('storage:importMarkdown', content, title);
+
+                        if (importResult.success) {
+                            successCount++;
+                            lastImportedPageId = importResult.data.id;
+                        } else {
+                            console.error('导入页面失败:', title, importResult.error);
+                            errorCount++;
+                        }
+                    } catch (error) {
+                        console.error('处理文件失败:', filePath, error);
+                        errorCount++;
+                    }
+                }
+
+                // 重新加载工作空间
+                await initializeWorkspace();
+
+                // 切换到最后导入的页面
+                if (lastImportedPageId) {
+                    selectPage(lastImportedPageId);
+                }
+
+                // 显示导入结果
+                var message = '批量导入完成\\n\\n';
+                message += '成功: ' + successCount + ' 个文件\\n';
+                if (errorCount > 0) {
+                    message += '失败: ' + errorCount + ' 个文件';
+                }
+                showMessage(message);
+
+            } catch (error) {
+                console.error('批量导入失败:', error);
+                showMessage('批量导入失败', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 导出当前页面为Markdown
+        async function exportCurrentPage() {
+            if (!appState.currentPageId) {
+                showMessage('请先选择一个页面', 'error');
+                return;
+            }
+
+            try {
+                setLoading(true);
+
+                var page = appState.workspace.pages[appState.currentPageId];
+                if (!page) {
+                    showMessage('页面不存在', 'error');
+                    return;
+                }
+
+                // 获取Markdown内容
+                var result = await electronAPI.invoke('storage:exportMarkdown', appState.currentPageId);
+
+                if (!result.success) {
+                    showMessage('导出失败: ' + result.error, 'error');
+                    return;
+                }
+
+                var markdown = result.data;
+
+                // 打开保存对话框
+                var saveResult = await electronAPI.invoke('dialog:showSaveDialog', {
+                    title: '保存Markdown文件',
+                    defaultPath: page.title + '.md',
+                    filters: [
+                        { name: 'Markdown文件', extensions: ['md'] },
+                        { name: '文本文件', extensions: ['txt'] },
+                        { name: '所有文件', extensions: ['*'] }
+                    ]
+                });
+
+                if (saveResult.canceled || !saveResult.filePath) {
+                    return;
+                }
+
+                // 保存文件
+                var writeResult = await electronAPI.invoke('fs:writeFile', saveResult.filePath, markdown);
+                if (!writeResult.success) {
+                    showMessage('保存文件失败: ' + writeResult.error, 'error');
+                    return;
+                }
+
+                showMessage('导出成功: ' + saveResult.filePath);
+            } catch (error) {
+                console.error('导出文件失败:', error);
+                showMessage('导出失败', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 导出所有页面
+        async function exportAllPages() {
+            try {
+                setLoading(true);
+
+                // 获取所有页面的Markdown内容
+                var result = await electronAPI.invoke('storage:exportMarkdown');
+
+                if (!result.success) {
+                    showMessage('导出失败: ' + result.error, 'error');
+                    return;
+                }
+
+                var markdown = result.data;
+
+                // 打开保存对话框
+                var saveResult = await electronAPI.invoke('dialog:showSaveDialog', {
+                    title: '保存所有页面',
+                    defaultPath: 'MingLog导出_' + new Date().toISOString().split('T')[0] + '.md',
+                    filters: [
+                        { name: 'Markdown文件', extensions: ['md'] },
+                        { name: '文本文件', extensions: ['txt'] }
+                    ]
+                });
+
+                if (saveResult.canceled || !saveResult.filePath) {
+                    return;
+                }
+
+                // 保存文件
+                var writeResult = await electronAPI.invoke('fs:writeFile', saveResult.filePath, markdown);
+                if (!writeResult.success) {
+                    showMessage('保存文件失败: ' + writeResult.error, 'error');
+                    return;
+                }
+
+                showMessage('导出成功: ' + saveResult.filePath);
+            } catch (error) {
+                console.error('导出所有页面失败:', error);
+                showMessage('导出失败', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 创建备份
+        async function createBackup() {
+            try {
+                setLoading(true);
+
+                var result = await electronAPI.invoke('storage:createBackup');
+
+                if (result.success) {
+                    showMessage('备份创建成功');
+                } else {
+                    showMessage('备份失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('创建备份失败:', error);
+                showMessage('备份失败', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 显示备份管理
+        async function showBackupManager() {
+            try {
+                setLoading(true);
+
+                var result = await electronAPI.invoke('storage:getBackupList');
+
+                if (!result.success) {
+                    showMessage('获取备份列表失败: ' + result.error, 'error');
+                    return;
+                }
+
+                var backups = result.data;
+
+                if (backups.length === 0) {
+                    var createFirst = confirm('没有找到备份文件\\n\\n是否创建第一个备份？');
+                    if (createFirst) {
+                        await createBackup();
+                    }
+                    return;
+                }
+
+                // 显示备份列表并让用户选择操作
+                await showBackupList(backups);
+
+            } catch (error) {
+                console.error('显示备份管理失败:', error);
+                showMessage('备份管理失败', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 显示备份列表
+        async function showBackupList(backups) {
+            var message = '📦 备份管理 (' + backups.length + ' 个备份)\\n\\n';
+
+            backups.forEach(function(backup, index) {
+                var date = new Date(backup.date).toLocaleString();
+                var size = Math.round(backup.size / 1024) + 'KB';
+                message += '📄 ' + (index + 1) + '. ' + backup.name + '\\n';
+                message += '   📅 ' + date + '\\n';
+                message += '   💾 ' + size + '\\n\\n';
+            });
+
+            message += '选择操作:\\n';
+            message += '✅ 确定 - 创建新备份\\n';
+            message += '❌ 取消 - 恢复备份';
+
+            var choice = confirm(message);
+            if (choice) {
+                await createBackup();
+            } else {
+                await showRestoreOptions(backups);
+            }
+        }
+
+        // 显示恢复选项
+        async function showRestoreOptions(backups) {
+            if (backups.length === 0) {
+                alert('没有可恢复的备份');
+                return;
+            }
+
+            var message = '🔄 选择要恢复的备份\\n\\n';
+            message += '⚠️ 警告: 恢复备份将覆盖当前所有数据！\\n\\n';
+
+            backups.forEach(function(backup, index) {
+                var date = new Date(backup.date).toLocaleString();
+                message += (index + 1) + '. ' + date + '\\n';
+            });
+
+            var choice = prompt(message + '\\n请输入备份编号 (1-' + backups.length + ')，或输入0取消:');
+
+            if (!choice || choice === '0') {
+                return;
+            }
+
+            var index = parseInt(choice) - 1;
+            if (index < 0 || index >= backups.length) {
+                alert('无效的备份编号');
+                return;
+            }
+
+            var selectedBackup = backups[index];
+            var confirmRestore = confirm('确定要恢复以下备份吗？\\n\\n' +
+                '📄 ' + selectedBackup.name + '\\n' +
+                '📅 ' + new Date(selectedBackup.date).toLocaleString() + '\\n\\n' +
+                '⚠️ 这将覆盖当前所有数据！');
+
+            if (confirmRestore) {
+                await restoreBackup(selectedBackup.path);
+            }
+        }
+
+        // 恢复备份
+        async function restoreBackup(backupPath) {
+            try {
+                setLoading(true);
+                showMessage('正在恢复备份...');
+
+                var result = await electronAPI.invoke('storage:restoreBackup', backupPath);
+
+                if (result.success) {
+                    showMessage('备份恢复成功，正在重新加载...');
+
+                    // 重新初始化工作空间
+                    setTimeout(async function() {
+                        await initializeWorkspace();
+                        showMessage('备份恢复完成');
+                    }, 1000);
+                } else {
+                    showMessage('恢复备份失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('恢复备份失败:', error);
+                showMessage('恢复备份失败', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 显示导出菜单
+        function showExportMenu() {
+            var choice = prompt('选择导出选项:\\n\\n1 - 导出当前页面 (Markdown)\\n2 - 导出所有页面 (Markdown)\\n3 - 导出完整数据 (JSON)\\n\\n请输入选项编号 (1-3):');
+
+            switch(choice) {
+                case '1':
+                    exportCurrentPage();
+                    break;
+                case '2':
+                    exportAllPages();
+                    break;
+                case '3':
+                    exportWorkspaceData();
+                    break;
+                default:
+                    if (choice !== null) {
+                        alert('无效的选项');
+                    }
+                    break;
+            }
+        }
+
+        // 导出工作空间数据 (JSON格式)
+        async function exportWorkspaceData() {
+            try {
+                setLoading(true);
+
+                if (!appState.workspace) {
+                    showMessage('工作空间未加载', 'error');
+                    return;
+                }
+
+                // 打开保存对话框
+                var saveResult = await electronAPI.invoke('dialog:showSaveDialog', {
+                    title: '导出工作空间数据',
+                    defaultPath: 'MingLog_工作空间_' + new Date().toISOString().split('T')[0] + '.json',
+                    filters: [
+                        { name: 'JSON文件', extensions: ['json'] },
+                        { name: '所有文件', extensions: ['*'] }
+                    ]
+                });
+
+                if (saveResult.canceled || !saveResult.filePath) {
+                    return;
+                }
+
+                // 准备导出数据
+                var exportData = {
+                    exportInfo: {
+                        version: '1.0.0',
+                        exportDate: new Date().toISOString(),
+                        source: 'MingLog Desktop',
+                        description: '完整的工作空间数据导出'
+                    },
+                    workspace: appState.workspace
+                };
+
+                var jsonData = JSON.stringify(exportData, null, 2);
+
+                // 保存文件
+                var writeResult = await electronAPI.invoke('fs:writeFile', saveResult.filePath, jsonData);
+                if (!writeResult.success) {
+                    showMessage('保存文件失败: ' + writeResult.error, 'error');
+                    return;
+                }
+
+                showMessage('工作空间数据导出成功: ' + saveResult.filePath);
+            } catch (error) {
+                console.error('导出工作空间数据失败:', error);
+                showMessage('导出失败', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
         // 显示设置对话框
         function showSettings() {
-            alert('设置功能\\n\\n版本: 0.1.0\\n作者: MingLog Team\\n\\n快捷键:\\nCtrl+N: 新建页面\\nCtrl+S: 保存页面');
+            alert('设置功能\\n\\n版本: 0.1.0\\n作者: MingLog Team\\n\\n快捷键:\\nCtrl+N: 新建页面\\nCtrl+S: 保存页面\\nCtrl+I: 导入文件\\nCtrl+E: 导出页面');
         }
 
         // 显示性能信息
         function showPerformance() {
-            var pageCount = Object.keys(appState.pages).length;
+            if (!appState.workspace) {
+                alert('工作空间未加载');
+                return;
+            }
+
+            var pageCount = Object.keys(appState.workspace.pages).length;
             var wordCount = document.getElementById('wordCount').textContent;
             alert('性能信息\\n\\n页面数量: ' + pageCount + '\\n' + wordCount + '\\n\\n平台: Windows\\nElectron版本: 28.3.3');
         }
@@ -581,6 +1146,9 @@ function createMainWindow(): BrowserWindow {
             // 绑定按钮事件
             document.getElementById('newPageBtn').addEventListener('click', createNewPage);
             document.getElementById('saveBtn').addEventListener('click', savePage);
+            document.getElementById('importBtn').addEventListener('click', importMarkdown);
+            document.getElementById('exportBtn').addEventListener('click', showExportMenu);
+            document.getElementById('backupBtn').addEventListener('click', showBackupManager);
             document.getElementById('settingsBtn').addEventListener('click', showSettings);
             document.getElementById('performanceBtn').addEventListener('click', showPerformance);
 
@@ -602,6 +1170,18 @@ function createMainWindow(): BrowserWindow {
                 if (e.ctrlKey && e.key === 'n') {
                     e.preventDefault();
                     createNewPage();
+                }
+                if (e.ctrlKey && e.key === 'i') {
+                    e.preventDefault();
+                    importMarkdown();
+                }
+                if (e.ctrlKey && e.key === 'e') {
+                    e.preventDefault();
+                    showExportMenu();
+                }
+                if (e.ctrlKey && e.key === 'b') {
+                    e.preventDefault();
+                    showBackupManager();
                 }
             });
 
@@ -983,5 +1563,43 @@ function setupStorageIPC() {
   ipcMain.handle('dialog:showSaveDialog', async (event, options) => {
     const result = await dialog.showSaveDialog(mainWindow!, options);
     return result;
+  });
+
+  // 读取文件
+  ipcMain.handle('fs:readFile', async (event, filePath: string) => {
+    try {
+      const fs = require('fs');
+      const content = fs.readFileSync(filePath, 'utf-8');
+      return { success: true, data: content };
+    } catch (error) {
+      console.error('读取文件失败:', error);
+      return { success: false, error: getErrorMessage(error) };
+    }
+  });
+
+  // 写入文件
+  ipcMain.handle('fs:writeFile', async (event, filePath: string, content: string) => {
+    try {
+      const fs = require('fs');
+      fs.writeFileSync(filePath, content, 'utf-8');
+      return { success: true };
+    } catch (error) {
+      console.error('写入文件失败:', error);
+      return { success: false, error: getErrorMessage(error) };
+    }
+  });
+
+  // 获取临时目录路径
+  ipcMain.handle('path:getTempDir', async () => {
+    try {
+      const os = require('os');
+      const path = require('path');
+      const tempDir = os.tmpdir();
+      const tempPath = path.join(tempDir, 'minglog_import_' + Date.now() + '.json');
+      return { success: true, data: tempPath };
+    } catch (error) {
+      console.error('获取临时目录失败:', error);
+      return { success: false, error: getErrorMessage(error) };
+    }
   });
 }
