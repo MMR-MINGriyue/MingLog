@@ -5,7 +5,18 @@ All notable changes to MingLog will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-06-27
+## [Unreleased]
+
+### Added
+- Future features will be listed here
+
+### Changed
+- Future changes will be listed here
+
+### Fixed
+- Future fixes will be listed here
+
+## [v0.1.0] - 2025-06-27
 
 ### Added
 

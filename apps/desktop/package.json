@@ -1,6 +1,6 @@
 {
   "name": "minglog-desktop",
-  "version": "0.1.0-beta.32",
+  "version": "0.1.0",
   "description": "MingLog - 现代化知识管理工具桌面版",
   "main": "dist/main.js",
   "homepage": "https://github.com/MMR-MINGriyue/MingLog",
