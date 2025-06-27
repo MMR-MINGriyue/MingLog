@@ -75,7 +75,169 @@ function createMainWindow(): BrowserWindow {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../editor.html'));
+    // 在生产环境中，直接加载内嵌的HTML内容
+    const editorHTML = `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MingLog 编辑器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa; color: #333; height: 100vh; display: flex; flex-direction: column;
+        }
+        .header {
+            background: white; border-bottom: 1px solid #e9ecef; padding: 12px 20px;
+            display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .logo { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #667eea; }
+        .logo-icon {
+            width: 24px; height: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 6px; display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: bold; font-size: 14px;
+        }
+        .toolbar { display: flex; gap: 8px; }
+        .btn {
+            padding: 6px 12px; border: 1px solid #dee2e6; background: white; border-radius: 6px;
+            cursor: pointer; font-size: 14px; transition: all 0.2s ease;
+        }
+        .btn:hover { background: #f8f9fa; border-color: #667eea; }
+        .btn.primary { background: #667eea; color: white; border-color: #667eea; }
+        .btn.primary:hover { background: #5a6fd8; }
+        .main { flex: 1; display: flex; overflow: hidden; }
+        .sidebar {
+            width: 250px; background: white; border-right: 1px solid #e9ecef;
+            display: flex; flex-direction: column;
+        }
+        .sidebar-header { padding: 16px; border-bottom: 1px solid #e9ecef; font-weight: 600; color: #495057; }
+        .page-list { flex: 1; overflow-y: auto; }
+        .page-item {
+            padding: 12px 16px; border-bottom: 1px solid #f8f9fa; cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .page-item:hover { background: #f8f9fa; }
+        .page-item.active { background: #e3f2fd; border-right: 3px solid #667eea; }
+        .page-title { font-weight: 500; margin-bottom: 4px; }
+        .page-preview { font-size: 12px; color: #6c757d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .editor-container { flex: 1; display: flex; flex-direction: column; background: white; }
+        .editor-header { padding: 16px 20px; border-bottom: 1px solid #e9ecef; }
+        .page-title-input {
+            font-size: 24px; font-weight: 600; border: none; outline: none; width: 100%;
+            background: transparent; color: #212529;
+        }
+        .page-title-input::placeholder { color: #adb5bd; }
+        .editor { flex: 1; padding: 20px; overflow-y: auto; }
+        .editor-content { min-height: 100%; outline: none; font-size: 16px; line-height: 1.6; color: #495057; }
+        .editor-content:empty::before { content: "开始写作..."; color: #adb5bd; }
+        .status-bar {
+            background: #f8f9fa; border-top: 1px solid #e9ecef; padding: 8px 20px; font-size: 12px;
+            color: #6c757d; display: flex; justify-content: space-between; align-items: center;
+        }
+        .block { margin: 8px 0; padding: 8px; border-radius: 4px; transition: background 0.2s ease; }
+        .block:hover { background: #f8f9fa; }
+        .block.focused { background: #e3f2fd; outline: 2px solid #667eea; }
+        .block-content {
+            outline: none; width: 100%; border: none; background: transparent;
+            font-size: inherit; line-height: inherit; color: inherit; resize: none; overflow: hidden;
+        }
+        .block-type-h1 .block-content { font-size: 28px; font-weight: 600; color: #212529; }
+        .block-type-h2 .block-content { font-size: 24px; font-weight: 600; color: #212529; }
+        .block-type-h3 .block-content { font-size: 20px; font-weight: 600; color: #212529; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">M</div>
+            <span>MingLog</span>
+        </div>
+        <div class="toolbar">
+            <button type="button" class="btn" onclick="createNewPage()" title="创建新页面 (Ctrl+N)">新建页面</button>
+            <button type="button" class="btn" onclick="savePage()" title="保存页面 (Ctrl+S)">保存</button>
+            <button type="button" class="btn" onclick="showSettings()" title="打开设置">设置</button>
+            <button type="button" class="btn primary" onclick="showPerformance()" title="查看性能信息">性能</button>
+        </div>
+    </div>
+    <div class="main">
+        <div class="sidebar">
+            <div class="sidebar-header">页面列表</div>
+            <div class="page-list" id="pageList">
+                <div class="page-item active" onclick="selectPage(this)">
+                    <div class="page-title">欢迎使用 MingLog</div>
+                    <div class="page-preview">开始您的知识管理之旅...</div>
+                </div>
+                <div class="page-item" onclick="selectPage(this)">
+                    <div class="page-title">示例页面</div>
+                    <div class="page-preview">这是一个示例页面，展示编辑器功能</div>
+                </div>
+            </div>
+        </div>
+        <div class="editor-container">
+            <div class="editor-header">
+                <input type="text" class="page-title-input" placeholder="无标题页面" value="欢迎使用 MingLog">
+            </div>
+            <div class="editor" id="editor">
+                <div class="editor-content" id="editorContent">
+                    <div class="block block-type-h1" data-type="h1">
+                        <textarea class="block-content" placeholder="标题">欢迎使用 MingLog 桌面版</textarea>
+                    </div>
+                    <div class="block block-type-p" data-type="p">
+                        <textarea class="block-content" placeholder="开始写作...">MingLog 是一个现代化的知识管理工具，专注于性能、开发体验和可维护性。</textarea>
+                    </div>
+                    <div class="block block-type-h2" data-type="h2">
+                        <textarea class="block-content" placeholder="子标题">主要特性</textarea>
+                    </div>
+                    <div class="block block-type-p" data-type="p">
+                        <textarea class="block-content" placeholder="开始写作...">• 基于块的编辑器系统
+• 双向链接和块引用
+• 全文搜索功能
+• 现代化的用户界面
+• 跨平台桌面应用</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="status-bar">
+        <div class="status-left">
+            <span id="wordCount">字数: 0</span>
+            <span style="margin-left: 16px;" id="blockCount">块数: 4</span>
+        </div>
+        <div class="status-right">
+            <span id="lastSaved">已保存</span>
+        </div>
+    </div>
+    <script>
+        // 基础编辑器功能
+        function createNewPage() { alert('创建新页面功能开发中...'); }
+        function savePage() { alert('保存功能开发中...'); }
+        function showSettings() { alert('设置功能开发中...'); }
+        function showPerformance() { alert('性能监控功能开发中...'); }
+        function selectPage(element) {
+            document.querySelectorAll('.page-item').forEach(item => item.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        // 自动调整textarea高度
+        document.addEventListener('DOMContentLoaded', function() {
+            const textareas = document.querySelectorAll('.block-content');
+            textareas.forEach(textarea => {
+                textarea.style.height = 'auto';
+                textarea.style.height = textarea.scrollHeight + 'px';
+
+                textarea.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = this.scrollHeight + 'px';
+                });
+            });
+        });
+    </script>
+</body>
+</html>`;
+    mainWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(editorHTML));
   }
 
   // 窗口加载完成后显示

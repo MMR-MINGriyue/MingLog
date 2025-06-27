@@ -45,6 +45,8 @@
     "files": [
       "dist/**/*",
       "assets/**/*",
+      "src/editor.html",
+      "src/editor.js",
       "package.json",
       "node_modules/electron-updater/**/*",
       "node_modules/electron-store/**/*"
@@ -110,6 +112,7 @@
   },
   "dependencies": {
     "electron-updater": "^6.1.7",
-    "electron-store": "^8.1.0"
+    "electron-store": "^8.1.0",
+    "fs-extra": "^11.2.0"
   }
 }
