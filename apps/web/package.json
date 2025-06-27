@@ -5,12 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-<<<<<<< HEAD
-    "build": "echo 'Web app build skipped for now'",
-    "build:check": "tsc && vite build",
-=======
     "build": "vite build",
->>>>>>> c58be023006b5fbf54a414bc9766eb5463a22469
+    "build:check": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "playwright test",
