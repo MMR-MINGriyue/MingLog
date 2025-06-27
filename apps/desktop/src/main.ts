@@ -155,21 +155,21 @@ function createMainWindow(): BrowserWindow {
             <span>MingLog</span>
         </div>
         <div class="toolbar">
-            <button type="button" class="btn" onclick="createNewPage()" title="创建新页面 (Ctrl+N)">新建页面</button>
-            <button type="button" class="btn" onclick="savePage()" title="保存页面 (Ctrl+S)">保存</button>
-            <button type="button" class="btn" onclick="showSettings()" title="打开设置">设置</button>
-            <button type="button" class="btn primary" onclick="showPerformance()" title="查看性能信息">性能</button>
+            <button type="button" class="btn" id="newPageBtn" title="创建新页面 (Ctrl+N)">新建页面</button>
+            <button type="button" class="btn" id="saveBtn" title="保存页面 (Ctrl+S)">保存</button>
+            <button type="button" class="btn" id="settingsBtn" title="打开设置">设置</button>
+            <button type="button" class="btn primary" id="performanceBtn" title="查看性能信息">性能</button>
         </div>
     </div>
     <div class="main">
         <div class="sidebar">
             <div class="sidebar-header">页面列表</div>
             <div class="page-list" id="pageList">
-                <div class="page-item active" onclick="selectPage(this)">
+                <div class="page-item active" data-page-id="welcome">
                     <div class="page-title">欢迎使用 MingLog</div>
                     <div class="page-preview">开始您的知识管理之旅...</div>
                 </div>
-                <div class="page-item" onclick="selectPage(this)">
+                <div class="page-item" data-page-id="example">
                     <div class="page-title">示例页面</div>
                     <div class="page-preview">这是一个示例页面，展示编辑器功能</div>
                 </div>
@@ -211,32 +211,60 @@ function createMainWindow(): BrowserWindow {
         </div>
     </div>
     <script>
-        var pageCounter = 3;
-        var currentPageData = {
-            title: '欢迎使用 MingLog',
-            content: [
-                { type: 'h1', text: '欢迎使用 MingLog 桌面版' },
-                { type: 'p', text: 'MingLog 是一个现代化的知识管理工具，专注于性能、开发体验和可维护性。' },
-                { type: 'h2', text: '主要特性' },
-                { type: 'p', text: '• 基于块的编辑器系统\\n• 双向链接和块引用\\n• 全文搜索功能\\n• 现代化的用户界面\\n• 跨平台桌面应用' }
-            ]
+        // 应用状态
+        var appState = {
+            pageCounter: 3,
+            currentPageId: 'welcome',
+            pages: {
+                'welcome': {
+                    id: 'welcome',
+                    title: '欢迎使用 MingLog',
+                    blocks: [
+                        { id: 'b1', type: 'h1', content: '欢迎使用 MingLog 桌面版' },
+                        { id: 'b2', type: 'p', content: 'MingLog 是一个现代化的知识管理工具，专注于性能、开发体验和可维护性。' },
+                        { id: 'b3', type: 'h2', content: '主要特性' },
+                        { id: 'b4', type: 'p', content: '• 基于块的编辑器系统\\n• 双向链接和块引用\\n• 全文搜索功能\\n• 现代化的用户界面\\n• 跨平台桌面应用' }
+                    ]
+                },
+                'example': {
+                    id: 'example',
+                    title: '示例页面',
+                    blocks: [
+                        { id: 'e1', type: 'h1', content: '这是一个示例页面' },
+                        { id: 'e2', type: 'p', content: '您可以在这里编辑内容，添加新的块，或者创建新的页面。' }
+                    ]
+                }
+            }
         };
 
-        // 创建新页面 - 确保是全局函数
-        window.createNewPage = function() {
-            const title = prompt('请输入新页面标题:', '新页面 ' + pageCounter);
+        // 创建新页面
+        function createNewPage() {
+            var title = prompt('请输入新页面标题:', '新页面 ' + appState.pageCounter);
             if (title && title.trim()) {
-                pageCounter++;
-                const pageList = document.getElementById('pageList');
-                const newPageItem = document.createElement('div');
-                newPageItem.className = 'page-item';
-                newPageItem.onclick = function() { selectPage(newPageItem); };
+                var pageId = 'page_' + Date.now();
+                appState.pageCounter++;
 
-                const titleDiv = document.createElement('div');
+                // 创建新页面数据
+                appState.pages[pageId] = {
+                    id: pageId,
+                    title: title.trim(),
+                    blocks: [
+                        { id: 'b_' + Date.now(), type: 'h1', content: title.trim() },
+                        { id: 'b_' + (Date.now() + 1), type: 'p', content: '' }
+                    ]
+                };
+
+                // 添加到页面列表
+                var pageList = document.getElementById('pageList');
+                var newPageItem = document.createElement('div');
+                newPageItem.className = 'page-item';
+                newPageItem.setAttribute('data-page-id', pageId);
+
+                var titleDiv = document.createElement('div');
                 titleDiv.className = 'page-title';
                 titleDiv.textContent = title.trim();
 
-                const previewDiv = document.createElement('div');
+                var previewDiv = document.createElement('div');
                 previewDiv.className = 'page-preview';
                 previewDiv.textContent = '空白页面';
 
@@ -245,133 +273,149 @@ function createMainWindow(): BrowserWindow {
                 pageList.appendChild(newPageItem);
 
                 // 切换到新页面
-                window.selectPage(newPageItem);
-                window.loadNewPage(title.trim());
-                window.updateStatus();
+                selectPage(pageId);
+                updateStatus();
             }
-        };
+        }
 
-        // 加载新页面内容
-        window.loadNewPage = function(title) {
-            document.querySelector('.page-title-input').value = title;
-            const editorContent = document.getElementById('editorContent');
+        // 加载页面内容
+        function loadPage(pageId) {
+            var page = appState.pages[pageId];
+            if (!page) return;
 
-            // 清空现有内容
+            // 更新页面标题
+            document.querySelector('.page-title-input').value = page.title;
+
+            // 清空编辑器
+            var editorContent = document.getElementById('editorContent');
             editorContent.innerHTML = '';
 
-            // 创建标题块
-            const titleBlock = document.createElement('div');
-            titleBlock.className = 'block block-type-h1';
-            titleBlock.setAttribute('data-type', 'h1');
-            const titleTextarea = document.createElement('textarea');
-            titleTextarea.className = 'block-content';
-            titleTextarea.placeholder = '标题';
-            titleTextarea.value = title;
-            titleBlock.appendChild(titleTextarea);
+            // 渲染所有块
+            page.blocks.forEach(function(block) {
+                var blockElement = createBlockElement(block);
+                editorContent.appendChild(blockElement);
+            });
 
-            // 创建内容块
-            const contentBlock = document.createElement('div');
-            contentBlock.className = 'block block-type-p';
-            contentBlock.setAttribute('data-type', 'p');
-            const contentTextarea = document.createElement('textarea');
-            contentTextarea.className = 'block-content';
-            contentTextarea.placeholder = '开始写作...';
-            contentBlock.appendChild(contentTextarea);
+            setupTextareas();
+        }
 
-            editorContent.appendChild(titleBlock);
-            editorContent.appendChild(contentBlock);
-            window.setupTextareas();
-        };
+        // 创建块元素
+        function createBlockElement(block) {
+            var blockDiv = document.createElement('div');
+            blockDiv.className = 'block block-type-' + block.type;
+            blockDiv.setAttribute('data-type', block.type);
+            blockDiv.setAttribute('data-block-id', block.id);
 
-        // 保存页面
-        window.savePage = function() {
-            const title = document.querySelector('.page-title-input').value;
-            const blocks = document.querySelectorAll('.block-content');
-            let content = '';
-            blocks.forEach(function(block) {
-                if (block.value && block.value.trim()) {
-                    content += block.value + '\\n';
+            var textarea = document.createElement('textarea');
+            textarea.className = 'block-content';
+            textarea.value = block.content;
+            textarea.placeholder = getPlaceholderForType(block.type);
+
+            blockDiv.appendChild(textarea);
+            return blockDiv;
+        }
+
+        // 获取块类型的占位符
+        function getPlaceholderForType(type) {
+            switch(type) {
+                case 'h1': return '标题';
+                case 'h2': return '子标题';
+                case 'h3': return '小标题';
+                case 'quote': return '引用内容';
+                case 'code': return '代码';
+                default: return '开始写作...';
+            }
+        }
+
+        // 选择页面
+        function selectPage(pageId) {
+            // 更新UI状态
+            var pageItems = document.querySelectorAll('.page-item');
+            pageItems.forEach(function(item) {
+                item.classList.remove('active');
+                if (item.getAttribute('data-page-id') === pageId) {
+                    item.classList.add('active');
                 }
             });
 
-            // 更新当前页面预览
-            const activePageItem = document.querySelector('.page-item.active');
+            // 更新当前页面ID
+            appState.currentPageId = pageId;
+
+            // 加载页面内容
+            loadPage(pageId);
+            updateStatus();
+        }
+
+        // 保存页面
+        function savePage() {
+            var currentPage = appState.pages[appState.currentPageId];
+            if (!currentPage) return;
+
+            // 更新页面标题
+            var title = document.querySelector('.page-title-input').value;
+            currentPage.title = title || '无标题页面';
+
+            // 更新所有块的内容
+            var blockElements = document.querySelectorAll('.block');
+            var updatedBlocks = [];
+            var previewContent = '';
+
+            blockElements.forEach(function(blockElement) {
+                var textarea = blockElement.querySelector('.block-content');
+                var blockId = blockElement.getAttribute('data-block-id');
+                var blockType = blockElement.getAttribute('data-type');
+                var content = textarea.value;
+
+                updatedBlocks.push({
+                    id: blockId,
+                    type: blockType,
+                    content: content
+                });
+
+                if (content.trim()) {
+                    previewContent += content + ' ';
+                }
+            });
+
+            currentPage.blocks = updatedBlocks;
+
+            // 更新页面列表中的预览
+            var activePageItem = document.querySelector('.page-item.active');
             if (activePageItem) {
-                const preview = activePageItem.querySelector('.page-preview');
-                const titleElement = activePageItem.querySelector('.page-title');
-                titleElement.textContent = title || '无标题页面';
-                const previewText = content.substring(0, 50);
-                preview.textContent = (previewText + (content.length > 50 ? '...' : '')) || '空白页面';
+                var titleElement = activePageItem.querySelector('.page-title');
+                var previewElement = activePageItem.querySelector('.page-preview');
+                titleElement.textContent = currentPage.title;
+                var preview = previewContent.substring(0, 50);
+                previewElement.textContent = (preview + (previewContent.length > 50 ? '...' : '')) || '空白页面';
             }
 
             // 显示保存成功提示
-            const statusElement = document.getElementById('lastSaved');
+            var statusElement = document.getElementById('lastSaved');
             statusElement.textContent = '保存成功 ' + new Date().toLocaleTimeString();
             setTimeout(function() {
                 statusElement.textContent = '已保存';
             }, 2000);
-        };
+
+            updateStatus();
+        }
 
         // 显示设置对话框
-        window.showSettings = function() {
-            const settings = '设置选项:\\n\\n' +
-                '1. 主题设置\\n' +
-                '   - 浅色主题 (当前)\\n' +
-                '   - 深色主题\\n' +
-                '   - 跟随系统\\n\\n' +
-                '2. 编辑器设置\\n' +
-                '   - 字体大小: 16px\\n' +
-                '   - 行高: 1.6\\n' +
-                '   - 自动保存: 开启\\n\\n' +
-                '3. 快捷键\\n' +
-                '   - Ctrl+N: 新建页面\\n' +
-                '   - Ctrl+S: 保存页面\\n' +
-                '   - Ctrl+F: 搜索\\n\\n' +
-                '4. 关于\\n' +
-                '   - 版本: 0.1.0\\n' +
-                '   - 作者: MingLog Team';
-            alert(settings);
-        };
+        function showSettings() {
+            alert('设置功能\\n\\n版本: 0.1.0\\n作者: MingLog Team\\n\\n快捷键:\\nCtrl+N: 新建页面\\nCtrl+S: 保存页面');
+        }
 
         // 显示性能信息
-        window.showPerformance = function() {
-            const usedMemory = Math.round(Math.random() * 100 + 50);
-            const availableMemory = Math.round(Math.random() * 500 + 200);
-            const startupTime = Math.round(Math.random() * 2000 + 1000);
-            const pageCount = document.querySelectorAll('.page-item').length;
-            const wordCount = document.getElementById('wordCount').textContent;
-
-            const performance = '性能监控:\\n\\n' +
-                '📊 内存使用情况:\\n' +
-                '   - 已用内存: ' + usedMemory + 'MB\\n' +
-                '   - 可用内存: ' + availableMemory + 'MB\\n\\n' +
-                '⚡ 应用性能:\\n' +
-                '   - 启动时间: ' + startupTime + 'ms\\n' +
-                '   - 页面数量: ' + pageCount + '\\n' +
-                '   - 总字数: ' + wordCount + '\\n\\n' +
-                '🔧 系统信息:\\n' +
-                '   - 平台: Windows\\n' +
-                '   - Electron版本: 28.3.3\\n' +
-                '   - Node.js版本: 20.x';
-            alert(performance);
-        };
-
-        // 选择页面
-        window.selectPage = function(element) {
-            document.querySelectorAll('.page-item').forEach(item => item.classList.remove('active'));
-            element.classList.add('active');
-
-            // 加载页面内容 (这里可以扩展为从存储中加载)
-            var title = element.querySelector('.page-title').textContent;
-            document.querySelector('.page-title-input').value = title;
-            window.updateStatus();
-        };
+        function showPerformance() {
+            var pageCount = Object.keys(appState.pages).length;
+            var wordCount = document.getElementById('wordCount').textContent;
+            alert('性能信息\\n\\n页面数量: ' + pageCount + '\\n' + wordCount + '\\n\\n平台: Windows\\nElectron版本: 28.3.3');
+        }
 
         // 更新状态栏
-        window.updateStatus = function() {
-            const blocks = document.querySelectorAll('.block-content');
-            let wordCount = 0;
-            let blockCount = 0;
+        function updateStatus() {
+            var blocks = document.querySelectorAll('.block-content');
+            var wordCount = 0;
+            var blockCount = 0;
 
             blocks.forEach(function(block) {
                 if (block.value && block.value.trim()) {
@@ -382,54 +426,80 @@ function createMainWindow(): BrowserWindow {
 
             document.getElementById('wordCount').textContent = '字数: ' + wordCount;
             document.getElementById('blockCount').textContent = '块数: ' + blockCount;
-        };
+        }
 
         // 设置文本区域
-        window.setupTextareas = function() {
-            const textareas = document.querySelectorAll('.block-content');
+        function setupTextareas() {
+            var textareas = document.querySelectorAll('.block-content');
             textareas.forEach(function(textarea) {
                 textarea.style.height = 'auto';
                 textarea.style.height = textarea.scrollHeight + 'px';
 
-                textarea.addEventListener('input', function() {
-                    this.style.height = 'auto';
-                    this.style.height = this.scrollHeight + 'px';
-                    window.updateStatus();
-                });
+                // 移除旧的事件监听器
+                textarea.removeEventListener('input', handleTextareaInput);
+                textarea.removeEventListener('keydown', handleTextareaKeydown);
 
-                // 添加键盘快捷键
-                textarea.addEventListener('keydown', function(e) {
-                    if (e.ctrlKey && e.key === 's') {
-                        e.preventDefault();
-                        window.savePage();
-                    }
-                    if (e.ctrlKey && e.key === 'n') {
-                        e.preventDefault();
-                        window.createNewPage();
-                    }
-                });
+                // 添加新的事件监听器
+                textarea.addEventListener('input', handleTextareaInput);
+                textarea.addEventListener('keydown', handleTextareaKeydown);
             });
-        };
+        }
+
+        // 处理文本区域输入
+        function handleTextareaInput(e) {
+            e.target.style.height = 'auto';
+            e.target.style.height = e.target.scrollHeight + 'px';
+            updateStatus();
+        }
+
+        // 处理文本区域快捷键
+        function handleTextareaKeydown(e) {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                savePage();
+            }
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                createNewPage();
+            }
+        }
 
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
-            window.setupTextareas();
-            window.updateStatus();
+            // 绑定按钮事件
+            document.getElementById('newPageBtn').addEventListener('click', createNewPage);
+            document.getElementById('saveBtn').addEventListener('click', savePage);
+            document.getElementById('settingsBtn').addEventListener('click', showSettings);
+            document.getElementById('performanceBtn').addEventListener('click', showPerformance);
+
+            // 绑定页面列表点击事件
+            document.getElementById('pageList').addEventListener('click', function(e) {
+                var pageItem = e.target.closest('.page-item');
+                if (pageItem) {
+                    var pageId = pageItem.getAttribute('data-page-id');
+                    selectPage(pageId);
+                }
+            });
 
             // 添加全局快捷键
             document.addEventListener('keydown', function(e) {
                 if (e.ctrlKey && e.key === 's') {
                     e.preventDefault();
-                    window.savePage();
+                    savePage();
                 }
                 if (e.ctrlKey && e.key === 'n') {
                     e.preventDefault();
-                    window.createNewPage();
+                    createNewPage();
                 }
             });
 
+            // 初始化
+            setupTextareas();
+            loadPage('welcome');
+            updateStatus();
+
             // 定期更新状态
-            setInterval(window.updateStatus, 1000);
+            setInterval(updateStatus, 1000);
         });
     </script>
 </body>
