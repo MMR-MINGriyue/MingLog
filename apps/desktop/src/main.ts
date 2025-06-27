@@ -211,8 +211,8 @@ function createMainWindow(): BrowserWindow {
         </div>
     </div>
     <script>
-        let pageCounter = 3;
-        let currentPageData = {
+        var pageCounter = 3;
+        var currentPageData = {
             title: '欢迎使用 MingLog',
             content: [
                 { type: 'h1', text: '欢迎使用 MingLog 桌面版' },
@@ -222,8 +222,8 @@ function createMainWindow(): BrowserWindow {
             ]
         };
 
-        // 创建新页面
-        function createNewPage() {
+        // 创建新页面 - 确保是全局函数
+        window.createNewPage = function() {
             const title = prompt('请输入新页面标题:', '新页面 ' + pageCounter);
             if (title && title.trim()) {
                 pageCounter++;
@@ -245,14 +245,14 @@ function createMainWindow(): BrowserWindow {
                 pageList.appendChild(newPageItem);
 
                 // 切换到新页面
-                selectPage(newPageItem);
-                loadNewPage(title.trim());
-                updateStatus();
+                window.selectPage(newPageItem);
+                window.loadNewPage(title.trim());
+                window.updateStatus();
             }
-        }
+        };
 
         // 加载新页面内容
-        function loadNewPage(title) {
+        window.loadNewPage = function(title) {
             document.querySelector('.page-title-input').value = title;
             const editorContent = document.getElementById('editorContent');
 
@@ -280,11 +280,11 @@ function createMainWindow(): BrowserWindow {
 
             editorContent.appendChild(titleBlock);
             editorContent.appendChild(contentBlock);
-            setupTextareas();
-        }
+            window.setupTextareas();
+        };
 
         // 保存页面
-        function savePage() {
+        window.savePage = function() {
             const title = document.querySelector('.page-title-input').value;
             const blocks = document.querySelectorAll('.block-content');
             let content = '';
@@ -310,10 +310,10 @@ function createMainWindow(): BrowserWindow {
             setTimeout(function() {
                 statusElement.textContent = '已保存';
             }, 2000);
-        }
+        };
 
         // 显示设置对话框
-        function showSettings() {
+        window.showSettings = function() {
             const settings = '设置选项:\\n\\n' +
                 '1. 主题设置\\n' +
                 '   - 浅色主题 (当前)\\n' +
@@ -331,10 +331,10 @@ function createMainWindow(): BrowserWindow {
                 '   - 版本: 0.1.0\\n' +
                 '   - 作者: MingLog Team';
             alert(settings);
-        }
+        };
 
         // 显示性能信息
-        function showPerformance() {
+        window.showPerformance = function() {
             const usedMemory = Math.round(Math.random() * 100 + 50);
             const availableMemory = Math.round(Math.random() * 500 + 200);
             const startupTime = Math.round(Math.random() * 2000 + 1000);
@@ -354,21 +354,21 @@ function createMainWindow(): BrowserWindow {
                 '   - Electron版本: 28.3.3\\n' +
                 '   - Node.js版本: 20.x';
             alert(performance);
-        }
+        };
 
         // 选择页面
-        function selectPage(element) {
+        window.selectPage = function(element) {
             document.querySelectorAll('.page-item').forEach(item => item.classList.remove('active'));
             element.classList.add('active');
 
             // 加载页面内容 (这里可以扩展为从存储中加载)
-            const title = element.querySelector('.page-title').textContent;
+            var title = element.querySelector('.page-title').textContent;
             document.querySelector('.page-title-input').value = title;
-            updateStatus();
-        }
+            window.updateStatus();
+        };
 
         // 更新状态栏
-        function updateStatus() {
+        window.updateStatus = function() {
             const blocks = document.querySelectorAll('.block-content');
             let wordCount = 0;
             let blockCount = 0;
@@ -382,10 +382,10 @@ function createMainWindow(): BrowserWindow {
 
             document.getElementById('wordCount').textContent = '字数: ' + wordCount;
             document.getElementById('blockCount').textContent = '块数: ' + blockCount;
-        }
+        };
 
         // 设置文本区域
-        function setupTextareas() {
+        window.setupTextareas = function() {
             const textareas = document.querySelectorAll('.block-content');
             textareas.forEach(function(textarea) {
                 textarea.style.height = 'auto';
@@ -394,42 +394,42 @@ function createMainWindow(): BrowserWindow {
                 textarea.addEventListener('input', function() {
                     this.style.height = 'auto';
                     this.style.height = this.scrollHeight + 'px';
-                    updateStatus();
+                    window.updateStatus();
                 });
 
                 // 添加键盘快捷键
                 textarea.addEventListener('keydown', function(e) {
                     if (e.ctrlKey && e.key === 's') {
                         e.preventDefault();
-                        savePage();
+                        window.savePage();
                     }
                     if (e.ctrlKey && e.key === 'n') {
                         e.preventDefault();
-                        createNewPage();
+                        window.createNewPage();
                     }
                 });
             });
-        }
+        };
 
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
-            setupTextareas();
-            updateStatus();
+            window.setupTextareas();
+            window.updateStatus();
 
             // 添加全局快捷键
             document.addEventListener('keydown', function(e) {
                 if (e.ctrlKey && e.key === 's') {
                     e.preventDefault();
-                    savePage();
+                    window.savePage();
                 }
                 if (e.ctrlKey && e.key === 'n') {
                     e.preventDefault();
-                    createNewPage();
+                    window.createNewPage();
                 }
             });
 
             // 定期更新状态
-            setInterval(updateStatus, 1000);
+            setInterval(window.updateStatus, 1000);
         });
     </script>
 </body>
