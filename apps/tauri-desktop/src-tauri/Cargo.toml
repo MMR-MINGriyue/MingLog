@@ -33,6 +33,9 @@ env_logger = "0.10"
 anyhow = "1.0"
 thiserror = "1.0"
 
+# UUID generation
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
 [features]
 # This feature is used for production builds or when `devPath` points to the filesystem
 # DO NOT REMOVE!!

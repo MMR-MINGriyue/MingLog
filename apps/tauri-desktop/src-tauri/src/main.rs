@@ -2,7 +2,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::Manager;
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 mod commands;
@@ -11,18 +10,10 @@ mod file_system;
 
 use commands::*;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AppState {
-    pub database_path: String,
-}
-
 fn main() {
     env_logger::init();
 
     tauri::Builder::default()
-        .manage(AppState {
-            database_path: String::new(),
-        })
         .invoke_handler(tauri::generate_handler![
             // File system commands
             read_file_content,
@@ -40,9 +31,12 @@ fn main() {
             init_database,
             execute_query,
             get_all_pages,
+            get_page_by_id,
             create_page,
             update_page,
             delete_page,
+            search_pages,
+            get_recent_pages,
             
             // System commands
             get_app_version,
@@ -56,28 +50,15 @@ fn main() {
             close_window,
         ])
         .setup(|app| {
-            // Initialize the database on startup
-            let app_handle = app.handle();
+            // Log application startup
+            log::info!("MingLog Tauri application starting...");
+
             let app_dir = app.path_resolver()
                 .app_data_dir()
                 .expect("Failed to get app data directory");
-            
-            // Create app data directory if it doesn't exist
-            if !app_dir.exists() {
-                std::fs::create_dir_all(&app_dir)
-                    .expect("Failed to create app data directory");
-            }
-            
-            let db_path = app_dir.join("minglog.db");
-            let db_path_str = db_path.to_string_lossy().to_string();
-            
-            // Update app state with database path
-            let state: tauri::State<AppState> = app.state();
-            let mut state_guard = state.inner().clone();
-            state_guard.database_path = db_path_str.clone();
-            
-            log::info!("Database path: {}", db_path_str);
-            
+
+            log::info!("App data directory: {}", app_dir.display());
+
             Ok(())
         })
         .run(tauri::generate_context!())

@@ -13,30 +13,57 @@ interface Page {
 
 export const HomePage: React.FC = () => {
   const [pages, setPages] = useState<Page[]>([]);
+  const [allPages, setAllPages] = useState<Page[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     loadPages();
   }, []);
 
+  useEffect(() => {
+    const searchPages = async () => {
+      if (searchQuery.trim() === '') {
+        setPages(allPages);
+        return;
+      }
+
+      try {
+        setIsSearching(true);
+        const searchResults = await invoke('search_pages', { query: searchQuery }) as string;
+        const parsedResults = JSON.parse(searchResults) as Page[];
+        setPages(parsedResults);
+      } catch (error) {
+        console.error('Failed to search pages:', error);
+        setPages([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const timeoutId = setTimeout(searchPages, 300); // Debounce search
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, allPages]);
+
   const loadPages = async () => {
     try {
       setIsLoading(true);
-      const pagesData = await invoke('get_all_pages') as string;
+      const pagesData = await invoke('get_recent_pages', { limit: 50 }) as string;
       const parsedPages = JSON.parse(pagesData) as Page[];
+      setAllPages(parsedPages);
       setPages(parsedPages);
     } catch (error) {
       console.error('Failed to load pages:', error);
+      // Set empty array on error to prevent UI issues
+      setAllPages([]);
+      setPages([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filteredPages = pages.filter(page =>
-    page.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    page.content.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Pages are already filtered by the backend search
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleDateString('en-US', {
@@ -82,25 +109,30 @@ export const HomePage: React.FC = () => {
             placeholder="Search pages..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
+          {isSearching && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 p-6">
-        {filteredPages.length === 0 ? (
+        {pages.length === 0 ? (
           <div className="text-center py-12">
             <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {pages.length === 0 ? 'No pages yet' : 'No pages found'}
+              {allPages.length === 0 ? 'No pages yet' : 'No pages found'}
             </h3>
             <p className="text-gray-600 mb-6">
-              {pages.length === 0
+              {allPages.length === 0
                 ? 'Create your first page to get started with MingLog.'
                 : 'Try adjusting your search query.'}
             </p>
-            {pages.length === 0 && (
+            {allPages.length === 0 && (
               <Link
                 to="/editor"
                 className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -112,7 +144,7 @@ export const HomePage: React.FC = () => {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredPages.map((page) => (
+            {pages.map((page) => (
               <Link
                 key={page.id}
                 to={`/editor/${page.id}`}

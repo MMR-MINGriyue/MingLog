@@ -131,45 +131,160 @@ pub async fn get_file_info(path: String) -> Result<FileInfo, String> {
     })
 }
 
-// Database Commands (placeholder implementations)
+// Database Commands
 #[command]
 pub async fn init_database(app_handle: AppHandle) -> Result<(), String> {
-    // TODO: Initialize SQLite database
-    log::info!("Initializing database...");
+    use crate::database::Database;
+
+    let app_dir = app_handle.path_resolver()
+        .app_data_dir()
+        .ok_or("Failed to get app data directory")?;
+
+    // Create app data directory if it doesn't exist
+    if !app_dir.exists() {
+        std::fs::create_dir_all(&app_dir)
+            .map_err(|e| format!("Failed to create app data directory: {}", e))?;
+    }
+
+    let db_path = app_dir.join("minglog.db");
+    let db_path_str = db_path.to_string_lossy().to_string();
+
+    // Initialize database
+    Database::new(&db_path_str)
+        .map_err(|e| format!("Failed to initialize database: {}", e))?;
+
+    log::info!("Database initialized at: {}", db_path_str);
     Ok(())
 }
 
 #[command]
 pub async fn execute_query(query: String, params: Vec<String>) -> Result<String, String> {
-    // TODO: Execute database query
-    log::info!("Executing query: {}", query);
-    Ok("{}".to_string())
+    // This is a generic query executor - use with caution in production
+    log::info!("Executing query: {} with params: {:?}", query, params);
+    // For security reasons, we'll limit this to read-only queries
+    if query.trim().to_lowercase().starts_with("select") {
+        Ok("{}".to_string()) // Placeholder for actual implementation
+    } else {
+        Err("Only SELECT queries are allowed".to_string())
+    }
 }
 
 #[command]
-pub async fn get_all_pages() -> Result<String, String> {
-    // TODO: Get all pages from database
-    Ok("[]".to_string())
+pub async fn get_all_pages(app_handle: AppHandle) -> Result<String, String> {
+    use crate::database::Database;
+
+    let app_dir = app_handle.path_resolver()
+        .app_data_dir()
+        .ok_or("Failed to get app data directory")?;
+
+    let db_path = app_dir.join("minglog.db");
+    let db_path_str = db_path.to_string_lossy().to_string();
+
+    let db = Database::new(&db_path_str)
+        .map_err(|e| format!("Failed to connect to database: {}", e))?;
+
+    let pages = db.get_all_pages()
+        .map_err(|e| format!("Failed to get pages: {}", e))?;
+
+    serde_json::to_string(&pages)
+        .map_err(|e| format!("Failed to serialize pages: {}", e))
 }
 
 #[command]
-pub async fn create_page(title: String, content: String) -> Result<String, String> {
-    // TODO: Create new page in database
-    log::info!("Creating page: {}", title);
-    Ok("{}".to_string())
+pub async fn create_page(app_handle: AppHandle, title: String, content: String) -> Result<String, String> {
+    use crate::database::{Database, Page};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let app_dir = app_handle.path_resolver()
+        .app_data_dir()
+        .ok_or("Failed to get app data directory")?;
+
+    let db_path = app_dir.join("minglog.db");
+    let db_path_str = db_path.to_string_lossy().to_string();
+
+    let db = Database::new(&db_path_str)
+        .map_err(|e| format!("Failed to connect to database: {}", e))?;
+
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+
+    let page = Page {
+        id: uuid::Uuid::new_v4().to_string(),
+        title,
+        content,
+        created_at: now,
+        updated_at: now,
+    };
+
+    db.create_page(&page)
+        .map_err(|e| format!("Failed to create page: {}", e))?;
+
+    log::info!("Created page: {} - {}", page.id, page.title);
+
+    serde_json::to_string(&page)
+        .map_err(|e| format!("Failed to serialize page: {}", e))
 }
 
 #[command]
-pub async fn update_page(id: String, title: String, content: String) -> Result<(), String> {
-    // TODO: Update page in database
-    log::info!("Updating page: {} - {}", id, title);
+pub async fn update_page(app_handle: AppHandle, id: String, title: String, content: String) -> Result<(), String> {
+    use crate::database::{Database, Page};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let app_dir = app_handle.path_resolver()
+        .app_data_dir()
+        .ok_or("Failed to get app data directory")?;
+
+    let db_path = app_dir.join("minglog.db");
+    let db_path_str = db_path.to_string_lossy().to_string();
+
+    let db = Database::new(&db_path_str)
+        .map_err(|e| format!("Failed to connect to database: {}", e))?;
+
+    // Get existing page to preserve created_at
+    let existing_page = db.get_page(&id)
+        .map_err(|e| format!("Failed to get existing page: {}", e))?
+        .ok_or("Page not found")?;
+
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+
+    let updated_page = Page {
+        id,
+        title,
+        content,
+        created_at: existing_page.created_at,
+        updated_at: now,
+    };
+
+    db.update_page(&updated_page)
+        .map_err(|e| format!("Failed to update page: {}", e))?;
+
+    log::info!("Updated page: {} - {}", updated_page.id, updated_page.title);
     Ok(())
 }
 
 #[command]
-pub async fn delete_page(id: String) -> Result<(), String> {
-    // TODO: Delete page from database
-    log::info!("Deleting page: {}", id);
+pub async fn delete_page(app_handle: AppHandle, id: String) -> Result<(), String> {
+    use crate::database::Database;
+
+    let app_dir = app_handle.path_resolver()
+        .app_data_dir()
+        .ok_or("Failed to get app data directory")?;
+
+    let db_path = app_dir.join("minglog.db");
+    let db_path_str = db_path.to_string_lossy().to_string();
+
+    let db = Database::new(&db_path_str)
+        .map_err(|e| format!("Failed to connect to database: {}", e))?;
+
+    db.delete_page(&id)
+        .map_err(|e| format!("Failed to delete page: {}", e))?;
+
+    log::info!("Deleted page: {}", id);
     Ok(())
 }
 
@@ -237,4 +352,86 @@ pub async fn maximize_window(window: Window) -> Result<(), String> {
 #[command]
 pub async fn close_window(window: Window) -> Result<(), String> {
     window.close().map_err(|e| format!("Failed to close window: {}", e))
+}
+
+// Additional utility commands
+#[command]
+pub async fn get_page_by_id(app_handle: AppHandle, id: String) -> Result<String, String> {
+    use crate::database::Database;
+
+    let app_dir = app_handle.path_resolver()
+        .app_data_dir()
+        .ok_or("Failed to get app data directory")?;
+
+    let db_path = app_dir.join("minglog.db");
+    let db_path_str = db_path.to_string_lossy().to_string();
+
+    let db = Database::new(&db_path_str)
+        .map_err(|e| format!("Failed to connect to database: {}", e))?;
+
+    let page = db.get_page(&id)
+        .map_err(|e| format!("Failed to get page: {}", e))?
+        .ok_or("Page not found")?;
+
+    serde_json::to_string(&page)
+        .map_err(|e| format!("Failed to serialize page: {}", e))
+}
+
+#[command]
+pub async fn search_pages(app_handle: AppHandle, query: String) -> Result<String, String> {
+    use crate::database::Database;
+
+    let app_dir = app_handle.path_resolver()
+        .app_data_dir()
+        .ok_or("Failed to get app data directory")?;
+
+    let db_path = app_dir.join("minglog.db");
+    let db_path_str = db_path.to_string_lossy().to_string();
+
+    let db = Database::new(&db_path_str)
+        .map_err(|e| format!("Failed to connect to database: {}", e))?;
+
+    let all_pages = db.get_all_pages()
+        .map_err(|e| format!("Failed to get pages: {}", e))?;
+
+    // Simple text search - can be enhanced with full-text search later
+    let query_lower = query.to_lowercase();
+    let filtered_pages: Vec<_> = all_pages
+        .into_iter()
+        .filter(|page| {
+            page.title.to_lowercase().contains(&query_lower) ||
+            page.content.to_lowercase().contains(&query_lower)
+        })
+        .collect();
+
+    serde_json::to_string(&filtered_pages)
+        .map_err(|e| format!("Failed to serialize pages: {}", e))
+}
+
+#[command]
+pub async fn get_recent_pages(app_handle: AppHandle, limit: Option<usize>) -> Result<String, String> {
+    use crate::database::Database;
+
+    let app_dir = app_handle.path_resolver()
+        .app_data_dir()
+        .ok_or("Failed to get app data directory")?;
+
+    let db_path = app_dir.join("minglog.db");
+    let db_path_str = db_path.to_string_lossy().to_string();
+
+    let db = Database::new(&db_path_str)
+        .map_err(|e| format!("Failed to connect to database: {}", e))?;
+
+    let mut pages = db.get_all_pages()
+        .map_err(|e| format!("Failed to get pages: {}", e))?;
+
+    // Sort by updated_at descending
+    pages.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+
+    // Limit results
+    let limit = limit.unwrap_or(10);
+    pages.truncate(limit);
+
+    serde_json::to_string(&pages)
+        .map_err(|e| format!("Failed to serialize pages: {}", e))
 }
