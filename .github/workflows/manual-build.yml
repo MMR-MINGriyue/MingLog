@@ -1,0 +1,422 @@
+name: Manual Build MingLog Desktop
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Target platform'
+        required: true
+        default: 'windows'
+        type: choice
+        options:
+          - windows
+          - linux
+          - macos
+          - all
+      create_release:
+        description: 'Create GitHub Release'
+        required: true
+        default: false
+        type: boolean
+      version:
+        description: 'Version tag (e.g., v1.0.1)'
+        required: false
+        default: ''
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-windows:
+    if: ${{ github.event.inputs.platform == 'windows' || github.event.inputs.platform == 'all' }}
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: apps/tauri-desktop/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './apps/tauri-desktop/src-tauri -> target'
+
+      - name: Install frontend dependencies
+        working-directory: apps/tauri-desktop
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: apps/tauri-desktop
+        run: npm run build
+
+      - name: Build Tauri app
+        working-directory: apps/tauri-desktop
+        run: npm run tauri build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create enhanced portable package
+        shell: powershell
+        run: |
+          $version = "${{ github.event.inputs.version }}"
+          if ([string]::IsNullOrEmpty($version)) {
+            $version = "v1.0.0-dev-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+          }
+          
+          # Create portable directory
+          $portableDir = "MingLog-$version-portable-windows-x64"
+          New-Item -ItemType Directory -Path $portableDir -Force
+          
+          # Copy main executable
+          $exePath = "apps/tauri-desktop/src-tauri/target/release/minglog_tauri.exe"
+          Copy-Item $exePath "$portableDir/MingLog.exe"
+          
+          # Create comprehensive startup and diagnostic scripts
+          
+          # Simple Start Script
+          @"
+          @echo off
+          title MingLog Desktop $version - Simple Start
+          echo.
+          echo ========================================
+          echo    MingLog Desktop $version
+          echo ========================================
+          echo.
+          echo Starting MingLog Desktop...
+          start "" "MingLog.exe"
+          echo.
+          echo If the application doesn't appear, please:
+          echo 1. Check if WebView2 Runtime is installed
+          echo 2. Run System-Check.bat for diagnostics
+          echo 3. Try running as Administrator
+          echo.
+          timeout /t 3 /nobreak >nul
+          "@ | Out-File -FilePath "$portableDir/Simple-Start.bat" -Encoding ASCII
+          
+          # Auto Test Script
+          @"
+          @echo off
+          title MingLog Desktop $version - Auto Test
+          echo.
+          echo ========================================
+          echo    MingLog Auto Test Suite
+          echo ========================================
+          echo.
+          
+          echo [TEST 1/5] Checking system requirements...
+          reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" >nul 2>&1
+          if %errorlevel% equ 0 (
+              echo [PASS] WebView2 Runtime is installed
+          ) else (
+              echo [FAIL] WebView2 Runtime not found
+              echo [INFO] Download from: https://developer.microsoft.com/en-us/microsoft-edge/webview2/
+          )
+          echo.
+          
+          echo [TEST 2/5] Checking file integrity...
+          if exist "MingLog.exe" (
+              echo [PASS] MingLog.exe found
+          ) else (
+              echo [FAIL] MingLog.exe not found
+          )
+          echo.
+          
+          echo [TEST 3/5] Testing application launch...
+          echo Starting MingLog.exe for 5 seconds...
+          start "" "MingLog.exe"
+          timeout /t 5 /nobreak >nul
+          tasklist /FI "IMAGENAME eq MingLog.exe" 2>nul | find /I "MingLog.exe" >nul
+          if %errorlevel% equ 0 (
+              echo [PASS] Application launched successfully
+              taskkill /IM "MingLog.exe" /F >nul 2>&1
+          ) else (
+              echo [WARN] Application may not have started properly
+          )
+          echo.
+          
+          echo [TEST 4/5] Checking data directory access...
+          set "DATA_DIR=%APPDATA%\com.minglog.desktop"
+          if not exist "%DATA_DIR%" mkdir "%DATA_DIR%" 2>nul
+          echo test > "%DATA_DIR%\test.tmp" 2>nul
+          if %errorlevel% equ 0 (
+              echo [PASS] Data directory access OK
+              del "%DATA_DIR%\test.tmp" 2>nul
+          ) else (
+              echo [FAIL] Cannot write to data directory
+          )
+          echo.
+          
+          echo [TEST 5/5] System information...
+          echo OS Version: 
+          ver
+          echo Architecture: %PROCESSOR_ARCHITECTURE%
+          echo.
+          
+          echo ========================================
+          echo           Test Complete
+          echo ========================================
+          echo.
+          echo If all tests passed, you can safely use MingLog!
+          echo If any tests failed, please check the troubleshooting guide.
+          echo.
+          pause
+          "@ | Out-File -FilePath "$portableDir/Auto-Test.bat" -Encoding ASCII
+          
+          # System Check Script
+          @"
+          @echo off
+          title MingLog Desktop $version - System Check
+          echo.
+          echo ========================================
+          echo    System Requirements Check
+          echo ========================================
+          echo.
+          
+          echo Checking Windows version...
+          ver
+          echo.
+          
+          echo Checking WebView2 Runtime...
+          reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" >nul 2>&1
+          if %errorlevel% equ 0 (
+              echo [OK] WebView2 Runtime is installed
+              for /f "tokens=3" %%a in ('reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" /v pv 2^>nul') do echo Version: %%a
+          ) else (
+              echo [WARNING] WebView2 Runtime not found
+              echo.
+              echo Please install WebView2 Runtime:
+              echo 1. Go to: https://developer.microsoft.com/en-us/microsoft-edge/webview2/
+              echo 2. Download "Evergreen Standalone Installer"
+              echo 3. Run the installer
+              echo 4. Restart MingLog
+          )
+          echo.
+          
+          echo Checking Visual C++ Redistributable...
+          reg query "HKLM\SOFTWARE\Classes\Installer\Dependencies\Microsoft.VS.VC_RuntimeMinimumVSU_amd64,v14" >nul 2>&1
+          if %errorlevel% equ 0 (
+              echo [OK] Visual C++ Redistributable is installed
+          ) else (
+              echo [INFO] Visual C++ Redistributable may be missing
+              echo Download from: https://aka.ms/vs/17/release/vc_redist.x64.exe
+          )
+          echo.
+          
+          echo System check completed.
+          pause
+          "@ | Out-File -FilePath "$portableDir/System-Check.bat" -Encoding ASCII
+          
+          # Enhanced README
+          @"
+          # MingLog Desktop $version - Portable Edition
+          
+          ## 🚀 Quick Start
+          
+          1. **First Time Setup**:
+             - Run ``Auto-Test.bat`` to verify system requirements
+             - If tests fail, run ``System-Check.bat`` for detailed diagnostics
+          
+          2. **Launch Application**:
+             - Double-click ``Simple-Start.bat`` (recommended)
+             - Or directly run ``MingLog.exe``
+          
+          ## 📋 System Requirements
+          
+          - **Operating System**: Windows 10/11 (64-bit)
+          - **Dependencies**: Microsoft Edge WebView2 Runtime
+          - **Memory**: 4GB RAM minimum
+          - **Storage**: 50MB available space
+          
+          ## 🔧 Troubleshooting
+          
+          ### Common Issues
+          
+          **Q: Application starts but no window appears?**
+          A: This is the most common issue. Try:
+          1. Press Alt+Tab to check if window is hidden
+          2. Run ``System-Check.bat`` to verify WebView2
+          3. Install WebView2 Runtime if missing
+          4. Try running as Administrator
+          
+          **Q: How to backup my data?**
+          A: Your notes are stored in:
+          ``%APPDATA%\com.minglog.desktop\minglog.db``
+          Simply copy this file to backup your data.
+          
+          ## 📁 Data Location
+          
+          - **Windows**: ``%APPDATA%\com.minglog.desktop\``
+          - **Database**: ``minglog.db``
+          - **Logs**: ``logs\`` folder
+          
+          ## 🆘 Support
+          
+          - **GitHub**: https://github.com/MMR-MINGriyue/MingLog
+          - **Issues**: https://github.com/MMR-MINGriyue/MingLog/issues
+          - **Documentation**: Check README.md in the repository
+          
+          ## 📝 Version Information
+          
+          - **Version**: $version
+          - **Platform**: Windows x64
+          - **Build Type**: Portable
+          - **Build Date**: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')
+          
+          ---
+          
+          **Note**: This is a portable version that doesn't require installation.
+          All files can be placed in any directory and run directly.
+          "@ | Out-File -FilePath "$portableDir/README.md" -Encoding UTF8
+          
+          # Version Info
+          @"
+          MingLog Desktop $version
+          Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')
+          Platform: Windows x64
+          Build Type: Portable Edition
+          Commit: ${{ github.sha }}
+          "@ | Out-File -FilePath "$portableDir/VERSION.txt" -Encoding UTF8
+          
+          # Create ZIP package
+          Compress-Archive -Path "$portableDir/*" -DestinationPath "$portableDir.zip" -Force
+          
+          echo "PACKAGE_NAME=$portableDir.zip" >> $env:GITHUB_ENV
+          echo "VERSION=$version" >> $env:GITHUB_ENV
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglog-windows-x64
+          path: ${{ env.PACKAGE_NAME }}
+
+  build-linux:
+    if: ${{ github.event.inputs.platform == 'linux' || github.event.inputs.platform == 'all' }}
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: apps/tauri-desktop/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './apps/tauri-desktop/src-tauri -> target'
+
+      - name: Install frontend dependencies
+        working-directory: apps/tauri-desktop
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: apps/tauri-desktop
+        run: npm run build
+
+      - name: Build Tauri app
+        working-directory: apps/tauri-desktop
+        run: npm run tauri build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create portable package
+        run: |
+          version="${{ github.event.inputs.version }}"
+          if [ -z "$version" ]; then
+            version="v1.0.0-dev-$(date +%Y%m%d-%H%M%S)"
+          fi
+          
+          portable_dir="MingLog-$version-portable-linux-x64"
+          mkdir -p "$portable_dir"
+          
+          # Copy executable
+          cp "apps/tauri-desktop/src-tauri/target/release/minglog_tauri" "$portable_dir/MingLog"
+          chmod +x "$portable_dir/MingLog"
+          
+          # Create startup script
+          cat > "$portable_dir/start-minglog.sh" << 'EOF'
+          #!/bin/bash
+          echo "Starting MingLog Desktop..."
+          ./MingLog
+          EOF
+          chmod +x "$portable_dir/start-minglog.sh"
+          
+          # Create README
+          cat > "$portable_dir/README.md" << EOF
+          # MingLog Desktop $version - Linux Portable Edition
+          
+          ## Quick Start
+          1. Run ./start-minglog.sh or ./MingLog
+          2. Your data is stored in ~/.local/share/com.minglog.desktop/
+          
+          ## System Requirements
+          - Linux x64 (Ubuntu 18.04+ or equivalent)
+          - GTK 3.0+
+          - WebKitGTK 2.0+
+          
+          ## Support
+          - GitHub: https://github.com/MMR-MINGriyue/MingLog
+          EOF
+          
+          tar -czf "$portable_dir.tar.gz" "$portable_dir"
+          echo "PACKAGE_NAME=$portable_dir.tar.gz" >> $GITHUB_ENV
+          echo "VERSION=$version" >> $GITHUB_ENV
+
+      - name: Upload Linux package
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglog-linux-x64
+          path: ${{ env.PACKAGE_NAME }}
+
+  create-release:
+    if: ${{ github.event.inputs.create_release == 'true' }}
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${{ github.event.inputs.version }}"
+          if [ -z "$version" ]; then
+            version="v1.0.0-dev-$(date +%Y%m%d-%H%M%S)"
+          fi
+          
+          gh release create "$version" \
+            --title "MingLog Desktop $version" \
+            --notes "Automated build of MingLog Desktop" \
+            --prerelease \
+            artifacts/*/* || true
