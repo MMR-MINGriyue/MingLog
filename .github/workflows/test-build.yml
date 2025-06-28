@@ -1,0 +1,165 @@
+name: Test Build MingLog Desktop
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Target platform'
+        required: true
+        default: 'windows'
+        type: choice
+        options:
+          - windows
+          - linux
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test-build-windows:
+    if: ${{ github.event.inputs.platform == 'windows' }}
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        working-directory: apps/tauri-desktop
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: apps/tauri-desktop
+        run: npm run build
+
+      - name: Build Tauri app
+        working-directory: apps/tauri-desktop
+        run: npm run tauri build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create test package
+        shell: powershell
+        run: |
+          $version = "test-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+          $portableDir = "MingLog-$version-test-windows-x64"
+          
+          # Create directory
+          New-Item -ItemType Directory -Path $portableDir -Force
+          
+          # Copy executable
+          $exePath = "apps/tauri-desktop/src-tauri/target/release/minglog_tauri.exe"
+          if (Test-Path $exePath) {
+            Copy-Item $exePath "$portableDir/MingLog.exe"
+          } else {
+            Write-Host "Executable not found at $exePath"
+            Get-ChildItem "apps/tauri-desktop/src-tauri/target" -Recurse -Name "*.exe"
+            exit 1
+          }
+          
+          # Create simple README
+          @"
+          # MingLog Desktop Test Build
+          
+          This is a test build from GitHub Actions.
+          
+          Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')
+          Platform: Windows x64
+          Version: $version
+          "@ | Out-File -FilePath "$portableDir/README.md" -Encoding UTF8
+          
+          # Create ZIP
+          Compress-Archive -Path "$portableDir/*" -DestinationPath "$portableDir.zip" -Force
+          
+          echo "PACKAGE_NAME=$portableDir.zip" >> $env:GITHUB_ENV
+
+      - name: Upload test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglog-test-windows-x64
+          path: ${{ env.PACKAGE_NAME }}
+
+  test-build-linux:
+    if: ${{ github.event.inputs.platform == 'linux' }}
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        working-directory: apps/tauri-desktop
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: apps/tauri-desktop
+        run: npm run build
+
+      - name: Build Tauri app
+        working-directory: apps/tauri-desktop
+        run: npm run tauri build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create test package
+        run: |
+          version="test-$(date +%Y%m%d-%H%M%S)"
+          portable_dir="MingLog-$version-test-linux-x64"
+          
+          mkdir -p "$portable_dir"
+          
+          # Copy executable
+          exe_path="apps/tauri-desktop/src-tauri/target/release/minglog_tauri"
+          if [ -f "$exe_path" ]; then
+            cp "$exe_path" "$portable_dir/MingLog"
+            chmod +x "$portable_dir/MingLog"
+          else
+            echo "Executable not found at $exe_path"
+            find apps/tauri-desktop/src-tauri/target -name "minglog*" -type f
+            exit 1
+          fi
+          
+          # Create README
+          cat > "$portable_dir/README.md" << EOF
+          # MingLog Desktop Test Build
+          
+          This is a test build from GitHub Actions.
+          
+          Build Date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          Platform: Linux x64
+          Version: $version
+          EOF
+          
+          # Create TAR.GZ
+          tar -czf "$portable_dir.tar.gz" "$portable_dir"
+          
+          echo "PACKAGE_NAME=$portable_dir.tar.gz" >> $GITHUB_ENV
+
+      - name: Upload test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglog-test-linux-x64
+          path: ${{ env.PACKAGE_NAME }}
