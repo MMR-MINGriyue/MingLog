@@ -133,10 +133,10 @@ $requiredPaths = @(
 
 foreach ($path in $requiredPaths) {
     if (Test-Path $path) {
-        Write-Host "✅ $path: Found" -ForegroundColor Green
+        Write-Host "OK $path Found" -ForegroundColor Green
         $allChecks += @{Name="Project: $path"; Status="OK"; Details="Found"}
     } else {
-        Write-Host "❌ $path: Missing" -ForegroundColor Red
+        Write-Host "MISSING $path" -ForegroundColor Red
         $allChecks += @{Name="Project: $path"; Status="MISSING"; Details="Required file/directory"}
     }
 }
@@ -160,9 +160,9 @@ Write-Host ""
 Write-Host "📋 Detailed Results:" -ForegroundColor Blue
 foreach ($check in $allChecks) {
     $status = switch ($check.Status) {
-        "OK" { "✅" }
-        "MISSING" { "❌" }
-        "ERROR" { "⚠️" }
+        "OK" { "OK" }
+        "MISSING" { "MISSING" }
+        "ERROR" { "ERROR" }
     }
     Write-Host "$status $($check.Name): $($check.Details)" -ForegroundColor White
 }

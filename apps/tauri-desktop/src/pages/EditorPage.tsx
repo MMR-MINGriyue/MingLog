@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/tauri';
-import { Save, ArrowLeft, Trash2 } from 'lucide-react';
+import { Save, ArrowLeft, Trash2, FileText, Edit3 } from 'lucide-react';
+import { SimpleBlockEditor } from '../components/SimpleBlockEditor';
 
 interface Page {
   id: string;
@@ -9,6 +10,13 @@ interface Page {
   content: string;
   created_at: number;
   updated_at: number;
+}
+
+interface Block {
+  id: string;
+  content: string;
+  type: 'paragraph' | 'heading' | 'list' | 'quote';
+  level: number;
 }
 
 export const EditorPage: React.FC = () => {
@@ -19,6 +27,8 @@ export const EditorPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [editorMode, setEditorMode] = useState<'simple' | 'rich'>('rich');
+  const [blocks, setBlocks] = useState<any[]>([]);
 
   const isNewPage = !pageId;
 
@@ -27,6 +37,26 @@ export const EditorPage: React.FC = () => {
       loadPage();
     }
   }, [pageId]);
+
+  // Convert content string to blocks
+  const contentToBlocks = (content: string): Block[] => {
+    if (!content.trim()) return [];
+
+    const paragraphs = content.split('\n\n').filter(p => p.trim());
+    return paragraphs.map((paragraph, index) => ({
+      id: `block-${index}`,
+      content: paragraph.trim(),
+      type: 'paragraph',
+      level: 0
+    }));
+  };
+
+  // Update blocks when content changes (for mode switching)
+  useEffect(() => {
+    if (editorMode === 'rich' && content && blocks.length === 0) {
+      setBlocks(contentToBlocks(content));
+    }
+  }, [editorMode, content, blocks.length]);
 
   const loadPage = async () => {
     if (!pageId) return;
@@ -37,6 +67,11 @@ export const EditorPage: React.FC = () => {
       const page = JSON.parse(pageData) as Page;
       setTitle(page.title);
       setContent(page.content);
+
+      // Convert content to blocks for rich editor
+      if (page.content) {
+        setBlocks(contentToBlocks(page.content));
+      }
     } catch (error) {
       console.error('Failed to load page:', error);
       // If page not found, redirect to home
@@ -138,6 +173,34 @@ export const EditorPage: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-2">
+            {/* Editor Mode Toggle */}
+            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setEditorMode('simple')}
+                className={`inline-flex items-center space-x-1 px-3 py-1 rounded-md text-sm transition-colors ${
+                  editorMode === 'simple'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                title="Simple Editor"
+              >
+                <FileText size={14} />
+                <span>Simple</span>
+              </button>
+              <button
+                onClick={() => setEditorMode('rich')}
+                className={`inline-flex items-center space-x-1 px-3 py-1 rounded-md text-sm transition-colors ${
+                  editorMode === 'rich'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                title="Rich Editor"
+              >
+                <Edit3 size={14} />
+                <span>Rich</span>
+              </button>
+            </div>
+
             {!isNewPage && (
               <button
                 onClick={deletePage}
@@ -177,12 +240,30 @@ export const EditorPage: React.FC = () => {
 
           {/* Content editor */}
           <div className="flex-1 p-6">
-            <textarea
-              placeholder="Start writing..."
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="w-full h-full text-gray-700 placeholder-gray-400 border-none outline-none resize-none font-mono text-sm leading-relaxed"
-            />
+            {editorMode === 'simple' ? (
+              <textarea
+                placeholder="Start writing..."
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="w-full h-full text-gray-700 placeholder-gray-400 border-none outline-none resize-none font-mono text-sm leading-relaxed"
+              />
+            ) : (
+              <div className="h-full">
+                <SimpleBlockEditor
+                  blocks={blocks}
+                  onChange={(newBlocks) => {
+                    setBlocks(newBlocks);
+                    // Convert blocks to content string for saving
+                    const contentString = newBlocks
+                      .map(block => block.content)
+                      .join('\n\n');
+                    setContent(contentString);
+                  }}
+                  placeholder="Start writing with rich text..."
+                  className="h-full"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
