@@ -40,6 +40,7 @@ fn main() {
             delete_page,
             search_pages,
             get_recent_pages,
+            create_sample_data,
 
             // System commands
             get_app_version,

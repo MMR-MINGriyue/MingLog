@@ -191,6 +191,81 @@ pub async fn get_all_pages(app_handle: AppHandle) -> Result<String, String> {
 }
 
 #[command]
+pub async fn create_sample_data(app_handle: AppHandle) -> Result<(), String> {
+    use crate::database::{Database, Page};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let app_dir = app_handle.path()
+        .app_data_dir()
+        .map_err(|_| "Failed to get app data directory")?;
+
+    if !app_dir.exists() {
+        std::fs::create_dir_all(&app_dir)
+            .map_err(|e| format!("Failed to create app directory: {}", e))?;
+    }
+
+    let db_path = app_dir.join("minglog.db");
+    let db = Database::new(db_path.to_str().unwrap())
+        .map_err(|e| format!("Failed to connect to database: {}", e))?;
+
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
+    // 创建示例页面
+    let sample_pages = vec![
+        Page {
+            id: "page-1".to_string(),
+            title: "Getting Started with MingLog".to_string(),
+            content: "Welcome to MingLog! This is your first note. You can create connections between notes using [[links]] and organize them with #tags.".to_string(),
+            tags: vec!["tutorial".to_string(), "getting-started".to_string()],
+            created_at: timestamp,
+            updated_at: timestamp,
+        },
+        Page {
+            id: "page-2".to_string(),
+            title: "Knowledge Management".to_string(),
+            content: "Knowledge management is the process of capturing, distributing, and effectively using knowledge. It involves #organization and #learning.".to_string(),
+            tags: vec!["knowledge".to_string(), "management".to_string(), "learning".to_string()],
+            created_at: timestamp,
+            updated_at: timestamp,
+        },
+        Page {
+            id: "page-3".to_string(),
+            title: "Graph Visualization".to_string(),
+            content: "Graph visualization helps you see connections between your ideas. Each note becomes a node, and relationships become edges in the graph.".to_string(),
+            tags: vec!["visualization".to_string(), "graph".to_string(), "connections".to_string()],
+            created_at: timestamp,
+            updated_at: timestamp,
+        },
+        Page {
+            id: "page-4".to_string(),
+            title: "Tauri Desktop App".to_string(),
+            content: "Tauri is a framework for building desktop applications using web technologies. It's more lightweight than Electron and provides better performance.".to_string(),
+            tags: vec!["tauri".to_string(), "desktop".to_string(), "performance".to_string()],
+            created_at: timestamp,
+            updated_at: timestamp,
+        },
+        Page {
+            id: "page-5".to_string(),
+            title: "React and TypeScript".to_string(),
+            content: "React with TypeScript provides a great developer experience with type safety and modern tooling. Perfect for building complex user interfaces.".to_string(),
+            tags: vec!["react".to_string(), "typescript".to_string(), "frontend".to_string()],
+            created_at: timestamp,
+            updated_at: timestamp,
+        },
+    ];
+
+    for page in sample_pages {
+        db.create_page(&page)
+            .map_err(|e| format!("Failed to create sample page: {}", e))?;
+    }
+
+    Ok(())
+}
+
+#[command]
 pub async fn create_page(app_handle: AppHandle, title: String, content: String) -> Result<String, String> {
     use crate::database::{Database, Page};
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -214,6 +289,7 @@ pub async fn create_page(app_handle: AppHandle, title: String, content: String) 
         id: uuid::Uuid::new_v4().to_string(),
         title,
         content,
+        tags: Vec::new(), // TODO: Extract tags from content
         created_at: now,
         updated_at: now,
     };
@@ -256,6 +332,7 @@ pub async fn update_page(app_handle: AppHandle, id: String, title: String, conte
         id,
         title,
         content,
+        tags: existing_page.tags, // Keep existing tags
         created_at: existing_page.created_at,
         updated_at: now,
     };

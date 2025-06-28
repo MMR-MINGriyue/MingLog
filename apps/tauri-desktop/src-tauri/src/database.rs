@@ -9,6 +9,7 @@ pub struct Page {
     pub id: String,
     pub title: String,
     pub content: String,
+    pub tags: Vec<String>,
     pub created_at: i64,
     pub updated_at: i64,
 }
@@ -107,11 +108,28 @@ impl Database {
     }
 
     pub fn create_page(&self, page: &Page) -> Result<()> {
+        // Insert the page
         self.conn.execute(
-            "INSERT INTO pages (id, title, content, created_at, updated_at) 
+            "INSERT INTO pages (id, title, content, created_at, updated_at)
              VALUES (?1, ?2, ?3, ?4, ?5)",
             [&page.id, &page.title, &page.content, &page.created_at.to_string(), &page.updated_at.to_string()],
         )?;
+
+        // Handle tags
+        for tag_name in &page.tags {
+            // Insert tag if it doesn't exist
+            self.conn.execute(
+                "INSERT OR IGNORE INTO tags (id, name, created_at) VALUES (?1, ?2, ?3)",
+                [&format!("tag-{}", tag_name), tag_name, &page.created_at.to_string()],
+            )?;
+
+            // Link page to tag
+            self.conn.execute(
+                "INSERT OR IGNORE INTO page_tags (page_id, tag_id) VALUES (?1, ?2)",
+                [&page.id, &format!("tag-{}", tag_name)],
+            )?;
+        }
+
         Ok(())
     }
 
@@ -125,13 +143,31 @@ impl Database {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 content: row.get(2)?,
+                tags: Vec::new(), // Will be populated below
                 created_at: row.get(3)?,
                 updated_at: row.get(4)?,
             })
         })?;
 
-        for page in page_iter {
-            return Ok(Some(page?));
+        for page_result in page_iter {
+            let mut page = page_result?;
+
+            // Get tags for this page
+            let mut tag_stmt = self.conn.prepare(
+                "SELECT t.name FROM tags t
+                 JOIN page_tags pt ON t.id = pt.tag_id
+                 WHERE pt.page_id = ?1"
+            )?;
+
+            let tag_iter = tag_stmt.query_map([&page.id], |row| {
+                Ok(row.get::<_, String>(0)?)
+            })?;
+
+            for tag_result in tag_iter {
+                page.tags.push(tag_result?);
+            }
+
+            return Ok(Some(page));
         }
 
         Ok(None)
@@ -147,14 +183,32 @@ impl Database {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 content: row.get(2)?,
+                tags: Vec::new(), // Will be populated below
                 created_at: row.get(3)?,
                 updated_at: row.get(4)?,
             })
         })?;
 
         let mut pages = Vec::new();
-        for page in page_iter {
-            pages.push(page?);
+        for page_result in page_iter {
+            let mut page = page_result?;
+
+            // Get tags for this page
+            let mut tag_stmt = self.conn.prepare(
+                "SELECT t.name FROM tags t
+                 JOIN page_tags pt ON t.id = pt.tag_id
+                 WHERE pt.page_id = ?1"
+            )?;
+
+            let tag_iter = tag_stmt.query_map([&page.id], |row| {
+                Ok(row.get::<_, String>(0)?)
+            })?;
+
+            for tag_result in tag_iter {
+                page.tags.push(tag_result?);
+            }
+
+            pages.push(page);
         }
 
         Ok(pages)
