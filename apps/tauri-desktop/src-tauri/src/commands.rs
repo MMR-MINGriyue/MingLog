@@ -1,7 +1,7 @@
 use tauri::{command, Window, AppHandle, Manager};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use crate::AppState;
+use std::fs;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileInfo {
@@ -136,9 +136,9 @@ pub async fn get_file_info(path: String) -> Result<FileInfo, String> {
 pub async fn init_database(app_handle: AppHandle) -> Result<(), String> {
     use crate::database::Database;
 
-    let app_dir = app_handle.path_resolver()
+    let app_dir = app_handle.path()
         .app_data_dir()
-        .ok_or("Failed to get app data directory")?;
+        .map_err(|_| "Failed to get app data directory")?;
 
     // Create app data directory if it doesn't exist
     if !app_dir.exists() {
@@ -173,9 +173,9 @@ pub async fn execute_query(query: String, params: Vec<String>) -> Result<String,
 pub async fn get_all_pages(app_handle: AppHandle) -> Result<String, String> {
     use crate::database::Database;
 
-    let app_dir = app_handle.path_resolver()
+    let app_dir = app_handle.path()
         .app_data_dir()
-        .ok_or("Failed to get app data directory")?;
+        .map_err(|_| "Failed to get app data directory")?;
 
     let db_path = app_dir.join("minglog.db");
     let db_path_str = db_path.to_string_lossy().to_string();
@@ -195,9 +195,9 @@ pub async fn create_page(app_handle: AppHandle, title: String, content: String) 
     use crate::database::{Database, Page};
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    let app_dir = app_handle.path_resolver()
+    let app_dir = app_handle.path()
         .app_data_dir()
-        .ok_or("Failed to get app data directory")?;
+        .map_err(|_| "Failed to get app data directory")?;
 
     let db_path = app_dir.join("minglog.db");
     let db_path_str = db_path.to_string_lossy().to_string();
@@ -232,9 +232,9 @@ pub async fn update_page(app_handle: AppHandle, id: String, title: String, conte
     use crate::database::{Database, Page};
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    let app_dir = app_handle.path_resolver()
+    let app_dir = app_handle.path()
         .app_data_dir()
-        .ok_or("Failed to get app data directory")?;
+        .map_err(|_| "Failed to get app data directory")?;
 
     let db_path = app_dir.join("minglog.db");
     let db_path_str = db_path.to_string_lossy().to_string();
@@ -271,9 +271,9 @@ pub async fn update_page(app_handle: AppHandle, id: String, title: String, conte
 pub async fn delete_page(app_handle: AppHandle, id: String) -> Result<(), String> {
     use crate::database::Database;
 
-    let app_dir = app_handle.path_resolver()
+    let app_dir = app_handle.path()
         .app_data_dir()
-        .ok_or("Failed to get app data directory")?;
+        .map_err(|_| "Failed to get app data directory")?;
 
     let db_path = app_dir.join("minglog.db");
     let db_path_str = db_path.to_string_lossy().to_string();
@@ -304,8 +304,9 @@ pub async fn get_platform_info() -> Result<PlatformInfo, String> {
 }
 
 #[command]
-pub async fn open_external_url(url: String) -> Result<(), String> {
-    tauri::api::shell::open(&tauri::api::shell::Scope::default(), url, None)
+pub async fn open_external_url(app_handle: AppHandle, url: String) -> Result<(), String> {
+    use tauri_plugin_shell::ShellExt;
+    app_handle.shell().open(url, None)
         .map_err(|e| format!("Failed to open URL: {}", e))
 }
 
@@ -359,9 +360,9 @@ pub async fn close_window(window: Window) -> Result<(), String> {
 pub async fn get_page_by_id(app_handle: AppHandle, id: String) -> Result<String, String> {
     use crate::database::Database;
 
-    let app_dir = app_handle.path_resolver()
+    let app_dir = app_handle.path()
         .app_data_dir()
-        .ok_or("Failed to get app data directory")?;
+        .map_err(|_| "Failed to get app data directory")?;
 
     let db_path = app_dir.join("minglog.db");
     let db_path_str = db_path.to_string_lossy().to_string();
@@ -381,9 +382,9 @@ pub async fn get_page_by_id(app_handle: AppHandle, id: String) -> Result<String,
 pub async fn search_pages(app_handle: AppHandle, query: String) -> Result<String, String> {
     use crate::database::Database;
 
-    let app_dir = app_handle.path_resolver()
+    let app_dir = app_handle.path()
         .app_data_dir()
-        .ok_or("Failed to get app data directory")?;
+        .map_err(|_| "Failed to get app data directory")?;
 
     let db_path = app_dir.join("minglog.db");
     let db_path_str = db_path.to_string_lossy().to_string();
@@ -412,9 +413,9 @@ pub async fn search_pages(app_handle: AppHandle, query: String) -> Result<String
 pub async fn get_recent_pages(app_handle: AppHandle, limit: Option<usize>) -> Result<String, String> {
     use crate::database::Database;
 
-    let app_dir = app_handle.path_resolver()
+    let app_dir = app_handle.path()
         .app_data_dir()
-        .ok_or("Failed to get app data directory")?;
+        .map_err(|_| "Failed to get app data directory")?;
 
     let db_path = app_dir.join("minglog.db");
     let db_path_str = db_path.to_string_lossy().to_string();
