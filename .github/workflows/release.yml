@@ -1,0 +1,326 @@
+name: Release MingLog Desktop
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v1.0.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'windows-latest'
+            target: 'x86_64-pc-windows-msvc'
+            arch: 'x64'
+            ext: '.exe'
+            bundle: 'msi'
+          - platform: 'ubuntu-20.04'
+            target: 'x86_64-unknown-linux-gnu'
+            arch: 'x64'
+            ext: ''
+            bundle: 'deb'
+          - platform: 'macos-latest'
+            target: 'x86_64-apple-darwin'
+            arch: 'x64'
+            ext: '.app'
+            bundle: 'dmg'
+
+    runs-on: ${{ matrix.platform }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies (Ubuntu)
+        if: matrix.platform == 'ubuntu-20.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: apps/tauri-desktop/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './apps/tauri-desktop/src-tauri -> target'
+
+      - name: Install frontend dependencies
+        working-directory: apps/tauri-desktop
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: apps/tauri-desktop
+        run: npm run build
+
+      - name: Build Tauri app
+        working-directory: apps/tauri-desktop
+        run: npm run tauri build -- --target ${{ matrix.target }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+
+      - name: Create portable package (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: powershell
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $portableDir = "MingLog-$version-portable-windows-${{ matrix.arch }}"
+          
+          # Create directory structure
+          New-Item -ItemType Directory -Path $portableDir -Force
+          
+          # Copy main executable
+          $exePath = "apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/release/minglog_tauri.exe"
+          Copy-Item $exePath "$portableDir/MingLog.exe"
+          
+          # Copy all diagnostic and startup scripts from dist folder if they exist
+          if (Test-Path "dist/MingLog-v1.0.0-portable") {
+            $sourceDir = "dist/MingLog-v1.0.0-portable"
+            Get-ChildItem $sourceDir -Filter "*.bat" | ForEach-Object {
+              Copy-Item $_.FullName "$portableDir/"
+            }
+            if (Test-Path "$sourceDir/README.md") {
+              Copy-Item "$sourceDir/README.md" "$portableDir/"
+            }
+            if (Test-Path "$sourceDir/TROUBLESHOOTING.md") {
+              Copy-Item "$sourceDir/TROUBLESHOOTING.md" "$portableDir/"
+            }
+            if (Test-Path "$sourceDir/MANUAL_TEST_CHECKLIST.md") {
+              Copy-Item "$sourceDir/MANUAL_TEST_CHECKLIST.md" "$portableDir/"
+            }
+            if (Test-Path "$sourceDir/TEST_GUIDE.md") {
+              Copy-Item "$sourceDir/TEST_GUIDE.md" "$portableDir/"
+            }
+          } else {
+            # Create basic startup script if dist folder doesn't exist
+            @"
+          @echo off
+          title MingLog Desktop $version
+          echo Starting MingLog Desktop...
+          start "" "MingLog.exe"
+          "@ | Out-File -FilePath "$portableDir/Simple-Start.bat" -Encoding ASCII
+          }
+          
+          # Create version info
+          @"
+          MingLog Desktop $version
+          Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')
+          Platform: Windows ${{ matrix.arch }}
+          Commit: ${{ github.sha }}
+          "@ | Out-File -FilePath "$portableDir/VERSION.txt" -Encoding UTF8
+          
+          # Create ZIP package
+          Compress-Archive -Path "$portableDir/*" -DestinationPath "$portableDir.zip" -Force
+          
+          echo "PORTABLE_PACKAGE=$portableDir.zip" >> $env:GITHUB_ENV
+
+      - name: Create portable package (Linux)
+        if: matrix.platform == 'ubuntu-20.04'
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          portable_dir="MingLog-$version-portable-linux-${{ matrix.arch }}"
+          
+          mkdir -p "$portable_dir"
+          
+          # Copy executable
+          cp "apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/release/minglog_tauri" "$portable_dir/MingLog"
+          chmod +x "$portable_dir/MingLog"
+          
+          # Create startup script
+          cat > "$portable_dir/start-minglog.sh" << 'EOF'
+          #!/bin/bash
+          echo "Starting MingLog Desktop..."
+          ./MingLog
+          EOF
+          chmod +x "$portable_dir/start-minglog.sh"
+          
+          # Create README
+          cat > "$portable_dir/README.md" << EOF
+          # MingLog Desktop $version - Linux Portable
+          
+          ## Quick Start
+          1. Run ./start-minglog.sh or ./MingLog
+          2. Data stored in: ~/.local/share/com.minglog.desktop/
+          
+          ## System Requirements
+          - Linux x64 (Ubuntu 18.04+)
+          - GTK 3.0+ and WebKitGTK 2.0+
+          
+          ## Support
+          GitHub: https://github.com/MMR-MINGriyue/MingLog
+          EOF
+          
+          # Create version info
+          cat > "$portable_dir/VERSION.txt" << EOF
+          MingLog Desktop $version
+          Build Date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          Platform: Linux ${{ matrix.arch }}
+          Commit: ${{ github.sha }}
+          EOF
+          
+          tar -czf "$portable_dir.tar.gz" "$portable_dir"
+          echo "PORTABLE_PACKAGE=$portable_dir.tar.gz" >> $GITHUB_ENV
+
+      - name: Create portable package (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          portable_dir="MingLog-$version-portable-macos-${{ matrix.arch }}"
+          
+          mkdir -p "$portable_dir"
+          
+          # Copy app bundle
+          cp -r "apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/macos/MingLog.app" "$portable_dir/"
+          
+          # Create startup script
+          cat > "$portable_dir/start-minglog.sh" << 'EOF'
+          #!/bin/bash
+          echo "Starting MingLog Desktop..."
+          open MingLog.app
+          EOF
+          chmod +x "$portable_dir/start-minglog.sh"
+          
+          # Create README
+          cat > "$portable_dir/README.md" << EOF
+          # MingLog Desktop $version - macOS Portable
+          
+          ## Quick Start
+          1. Double-click MingLog.app or run ./start-minglog.sh
+          2. Data stored in: ~/Library/Application Support/com.minglog.desktop/
+          
+          ## System Requirements
+          - macOS 10.15+ (Catalina or later)
+          - 4GB RAM minimum
+          
+          ## Support
+          GitHub: https://github.com/MMR-MINGriyue/MingLog
+          EOF
+          
+          # Create version info
+          cat > "$portable_dir/VERSION.txt" << EOF
+          MingLog Desktop $version
+          Build Date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          Platform: macOS ${{ matrix.arch }}
+          Commit: ${{ github.sha }}
+          EOF
+          
+          zip -r "$portable_dir.zip" "$portable_dir"
+          echo "PORTABLE_PACKAGE=$portable_dir.zip" >> $GITHUB_ENV
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglog-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            ${{ env.PORTABLE_PACKAGE }}
+            apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/${{ matrix.bundle }}/*
+
+  create-release:
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure
+        run: find artifacts -type f
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          
+          # Create release
+          gh release create "$version" \
+            --title "MingLog Desktop $version" \
+            --notes-file - \
+            --prerelease << 'EOF'
+          # 🚀 MingLog Desktop $version
+          
+          ## ✨ 新版本发布
+          
+          这是MingLog桌面应用的最新版本，基于Tauri技术栈构建。
+          
+          ## 📦 下载说明
+          
+          选择适合你系统的版本：
+          - **Windows**: `MingLog-*-portable-windows-x64.zip`
+          - **macOS Intel**: `MingLog-*-portable-macos-x64.zip`  
+          - **Linux**: `MingLog-*-portable-linux-x64.tar.gz`
+          
+          ## 🚀 快速开始
+          
+          1. 下载对应平台的便携版压缩包
+          2. 解压到任意目录
+          3. Windows: 运行 `Simple-Start.bat` 或 `MingLog.exe`
+          4. Linux/macOS: 运行 `./start-minglog.sh` 或直接运行主程序
+          
+          ## 🔧 系统要求
+          
+          - **Windows**: Windows 10/11 + WebView2 Runtime
+          - **macOS**: macOS 10.15+ (Catalina or later)
+          - **Linux**: Ubuntu 18.04+ + GTK 3.0+
+          
+          ## 🆘 支持
+          
+          如遇问题请查看：
+          - [故障排除指南](https://github.com/MMR-MINGriyue/MingLog/blob/main/TROUBLESHOOTING.md)
+          - [提交Issue](https://github.com/MMR-MINGriyue/MingLog/issues)
+          
+          ---
+          
+          **注意**: 这是预发布版本，可能存在一些问题。
+          EOF
+          
+          # Upload all portable packages
+          find artifacts -name "*.zip" -o -name "*.tar.gz" | while read file; do
+            echo "Uploading: $file"
+            gh release upload "$version" "$file"
+          done
