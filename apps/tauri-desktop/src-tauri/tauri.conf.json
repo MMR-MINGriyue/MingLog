@@ -62,7 +62,29 @@
         "icons/128x128@2x.png",
         "icons/icon.icns",
         "icons/icon.ico"
-      ]
+      ],
+      "resources": [],
+      "externalBin": [],
+      "copyright": "Copyright © 2024 MingLog Team. All rights reserved.",
+      "category": "Productivity",
+      "shortDescription": "Modern knowledge management application",
+      "longDescription": "MingLog is a modern, powerful knowledge management application that helps you organize, connect, and visualize your ideas with an intuitive interface and advanced features.",
+      "deb": {
+        "depends": []
+      },
+      "macOS": {
+        "frameworks": [],
+        "minimumSystemVersion": "10.13",
+        "exceptionDomain": "",
+        "signingIdentity": null,
+        "providerShortName": null,
+        "entitlements": null
+      },
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": ""
+      }
     },
     "security": {
       "csp": null
