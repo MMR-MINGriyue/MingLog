@@ -1,3 +1,0 @@
-# Placeholder for icon-16x16.png
-# Size: 16x16
-# Generate from icon.svg

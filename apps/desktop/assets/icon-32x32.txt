@@ -1,3 +1,0 @@
-# Placeholder for icon-32x32.png
-# Size: 32x32
-# Generate from icon.svg

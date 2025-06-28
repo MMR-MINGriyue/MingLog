@@ -1,3 +1,0 @@
-# Placeholder for icon-256x256.png
-# Size: 256x256
-# Generate from icon.svg
