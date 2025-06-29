@@ -18,6 +18,7 @@ import LoadingScreen from './components/LoadingScreen'
 import ErrorBoundary from './components/ErrorBoundary'
 import { NotificationProvider } from './components/NotificationSystem'
 import { ThemeProvider } from './hooks/useTheme'
+import OnboardingTour from './components/OnboardingTour'
 
 // Types
 interface AppState {
@@ -32,6 +33,7 @@ function App() {
     isInitialized: false,
     error: null,
   })
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   // Initialize the application
   useEffect(() => {
@@ -51,6 +53,12 @@ function App() {
           isInitialized: true,
           error: null,
         })
+
+        // Check if this is the first time user opens the app
+        const hasCompletedOnboarding = localStorage.getItem('minglog-onboarding-completed')
+        if (!hasCompletedOnboarding) {
+          setShowOnboarding(true)
+        }
         
         console.log('MingLog Desktop app initialized successfully')
       } catch (error) {
@@ -124,6 +132,13 @@ function App() {
           {/* </EditorProvider> */}
           {/* </DatabaseProvider> */}
         </NotificationProvider>
+
+        {/* Onboarding Tour */}
+        <OnboardingTour
+          isOpen={showOnboarding}
+          onClose={() => setShowOnboarding(false)}
+          onComplete={() => setShowOnboarding(false)}
+        />
       </ThemeProvider>
     </ErrorBoundary>
   )

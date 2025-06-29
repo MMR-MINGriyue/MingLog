@@ -8,12 +8,17 @@ import {
   Download,
   Upload,
   Trash2,
-  Info
+  Info,
+  Activity,
+  Sync,
+  HelpCircle
 } from 'lucide-react'
 import { useSettings } from '../hooks/useSettings'
 import { useThemeContext, ThemeToggle } from '../hooks/useTheme'
 import { useNotifications } from '../components/NotificationSystem'
 import { exportData, importData, getAppInfo, withErrorHandling } from '../utils/tauri'
+import PerformanceMonitor from '../components/PerformanceMonitor'
+import OnboardingTour from '../components/OnboardingTour'
 
 const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('general')
@@ -21,6 +26,8 @@ const SettingsPage: React.FC = () => {
   const { theme } = useThemeContext()
   const { success, error } = useNotifications()
   const [appInfo, setAppInfo] = useState<any>(null)
+  const [showPerformanceMonitor, setShowPerformanceMonitor] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   // Load app info
   React.useEffect(() => {
@@ -82,7 +89,9 @@ const SettingsPage: React.FC = () => {
   const tabs = [
     { id: 'general', name: 'General', icon: Settings },
     { id: 'appearance', name: 'Appearance', icon: Palette },
+    { id: 'sync', name: 'Sync & Cloud', icon: Sync },
     { id: 'data', name: 'Data & Storage', icon: Database },
+    { id: 'performance', name: 'Performance', icon: Activity },
     { id: 'privacy', name: 'Privacy & Security', icon: Shield },
     { id: 'about', name: 'About', icon: Info },
   ]
@@ -460,8 +469,134 @@ const SettingsPage: React.FC = () => {
               </div>
             </div>
           )}
+          )}
+
+          {/* Sync & Cloud Settings */}
+          {activeTab === 'sync' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Sync & Cloud Settings</h3>
+                <p className="text-gray-600">Configure data synchronization across devices.</p>
+              </div>
+
+              <div className="card">
+                <div className="card-header">
+                  <h4 className="text-lg font-medium text-gray-900">Sync Status</h4>
+                </div>
+                <div className="card-body">
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <h5 className="font-medium text-blue-900 mb-2">🚀 Coming Soon!</h5>
+                    <p className="text-blue-700 text-sm">
+                      Cloud synchronization is currently in development. Features will include:
+                    </p>
+                    <ul className="text-blue-700 text-sm mt-2 space-y-1">
+                      <li>• Sync across multiple devices</li>
+                      <li>• GitHub repository backup</li>
+                      <li>• Dropbox integration</li>
+                      <li>• Conflict resolution</li>
+                      <li>• Offline-first design</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Performance Settings */}
+          {activeTab === 'performance' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Performance Settings</h3>
+                <p className="text-gray-600">Monitor and optimize application performance.</p>
+              </div>
+
+              <div className="card">
+                <div className="card-header">
+                  <h4 className="text-lg font-medium text-gray-900">Performance Monitor</h4>
+                </div>
+                <div className="card-body">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="font-medium text-gray-900">Real-time Performance Monitoring</h5>
+                      <p className="text-sm text-gray-600">Monitor memory usage, render time, and database performance</p>
+                    </div>
+                    <button
+                      onClick={() => setShowPerformanceMonitor(true)}
+                      className="btn-secondary flex items-center space-x-2"
+                    >
+                      <Activity className="w-4 h-4" />
+                      <span>Open Monitor</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card">
+                <div className="card-header">
+                  <h4 className="text-lg font-medium text-gray-900">Performance Tips</h4>
+                </div>
+                <div className="card-body">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h5 className="font-medium text-gray-900 mb-2">Memory Optimization</h5>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        <li>• Close unused notes and tabs</li>
+                        <li>• Archive old notes regularly</li>
+                        <li>• Limit search results</li>
+                        <li>• Restart app if memory usage is high</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-900 mb-2">Speed Optimization</h5>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        <li>• Use keyboard shortcuts</li>
+                        <li>• Enable auto-save to reduce manual saves</li>
+                        <li>• Keep database optimized</li>
+                        <li>• Close performance monitor when not needed</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Help & Support */}
+          <div className="mt-8 bg-gray-50 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Help & Support</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button
+                onClick={() => setShowOnboarding(true)}
+                className="btn-ghost justify-start text-sm"
+              >
+                <HelpCircle className="w-4 h-4 mr-2" />
+                Show Tutorial
+              </button>
+              <button className="btn-ghost justify-start text-sm">
+                <Info className="w-4 h-4 mr-2" />
+                User Guide
+              </button>
+              <button className="btn-ghost justify-start text-sm">
+                <Settings className="w-4 h-4 mr-2" />
+                Reset All Settings
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Performance Monitor Modal */}
+      <PerformanceMonitor
+        isOpen={showPerformanceMonitor}
+        onClose={() => setShowPerformanceMonitor(false)}
+      />
+
+      {/* Onboarding Tour Modal */}
+      <OnboardingTour
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onComplete={() => setShowOnboarding(false)}
+      />
     </div>
   )
 }
