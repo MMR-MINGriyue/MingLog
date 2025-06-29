@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, createContext, useContext } from 'react'
 
 export type Theme = 'light' | 'dark' | 'auto'
 
@@ -104,8 +104,6 @@ export const useTheme = (): UseThemeReturn => {
 }
 
 // Theme context for providing theme throughout the app
-import React, { createContext, useContext } from 'react'
-
 interface ThemeContextType extends UseThemeReturn {}
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)

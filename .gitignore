@@ -112,6 +112,15 @@ temp/
 
 # Tauri
 src-tauri/target/
+**/target/
+**/Cargo.lock
+
+# Production builds (keep source but exclude large binaries)
+apps/dist/desktop/*.exe
+apps/dist/desktop/*.app
+apps/dist/desktop/*.dmg
+apps/dist/desktop/*.deb
+apps/dist/desktop/*.rpm
 
 # Test results
 test-results/

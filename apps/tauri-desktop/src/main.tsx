@@ -4,15 +4,19 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import './index.css'
 
+// Initialize i18n
+import './i18n'
+
 // Import Tauri API for desktop functionality
-import { invoke } from '@tauri-apps/api/tauri'
-import { appWindow } from '@tauri-apps/api/window'
+import { invoke } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 
 // Initialize Tauri app
 async function initializeApp() {
   try {
     // Set up window properties
-    await appWindow.setTitle('MingLog Desktop')
+    const window = getCurrentWindow()
+    await window.setTitle('MingLog Desktop')
     
     // Prevent default context menu
     document.addEventListener('contextmenu', (e) => {

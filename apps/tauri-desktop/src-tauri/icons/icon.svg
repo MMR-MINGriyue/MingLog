@@ -7,22 +7,12 @@
     </linearGradient>
   </defs>
   
-  <!-- Book icon -->
-  <g transform="translate(128, 128)">
+  <!-- Book icon scaled to size -->
+  <g transform="translate(128, 128) scale(1)">
     <path d="M48 64C48 28.7 76.7 0 112 0H336C371.3 0 400 28.7 400 64V320C400 355.3 371.3 384 336 384H112C76.7 384 48 355.3 48 320V64Z" fill="white" opacity="0.9"/>
     <path d="M80 96H368V128H80V96Z" fill="url(#gradient)" opacity="0.7"/>
     <path d="M80 160H368V192H80V160Z" fill="url(#gradient)" opacity="0.5"/>
     <path d="M80 224H320V256H80V224Z" fill="url(#gradient)" opacity="0.3"/>
     <path d="M80 288H288V320H80V288Z" fill="url(#gradient)" opacity="0.2"/>
   </g>
-  
-  <!-- Connection nodes -->
-  <circle cx="400" cy="150" r="12" fill="white" opacity="0.8"/>
-  <circle cx="450" cy="200" r="8" fill="white" opacity="0.6"/>
-  <circle cx="380" cy="220" r="6" fill="white" opacity="0.4"/>
-  
-  <!-- Connection lines -->
-  <line x1="400" y1="150" x2="450" y2="200" stroke="white" stroke-width="2" opacity="0.3"/>
-  <line x1="450" y1="200" x2="380" y2="220" stroke="white" stroke-width="2" opacity="0.3"/>
-  <line x1="380" y1="220" x2="400" y2="150" stroke="white" stroke-width="2" opacity="0.3"/>
 </svg>

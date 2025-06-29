@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
@@ -31,7 +31,7 @@ interface BlockEditorProps {
   showToolbar?: boolean; // Show formatting toolbar
 }
 
-export const BlockEditor: React.FC<BlockEditorProps> = ({
+const BlockEditor: React.FC<BlockEditorProps> = ({
   block,
   onUpdate,
   onEnter,
@@ -347,3 +347,5 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     </div>
   );
 };
+
+export default React.memo(BlockEditor);

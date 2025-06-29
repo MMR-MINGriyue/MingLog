@@ -5,7 +5,7 @@
 export interface GraphNode {
   id: string;
   label: string;
-  type: 'note' | 'tag' | 'folder' | 'link';
+  type: 'note' | 'tag' | 'folder' | 'link' | 'page' | 'block';
   x?: number;
   y?: number;
   fx?: number | null;
@@ -86,6 +86,8 @@ export interface GraphTheme {
     tag: string;
     folder: string;
     link: string;
+    page: string;
+    block: string;
     selected: string;
     hovered: string;
   };

@@ -6,25 +6,18 @@ authors = ["MingLog Team <Dasein1997@outlook.com>"]
 license = "MIT"
 repository = "https://github.com/MMR-MINGriyue/MingLog"
 edition = "2021"
+default-run = "minglog-desktop"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "simple_test"
+path = "src/bin/simple_test.rs"
 
-[build-dependencies]
-tauri-build = { version = "1.5", features = [] }
+[[bin]]
+name = "comprehensive_test"
+path = "src/bin/comprehensive_test.rs"
 
 [dependencies]
-tauri = { version = "1.6", features = [
-    "api-all",
-    "devtools",
-    "shell-open",
-    "window-all",
-    "fs-all",
-    "dialog-all",
-    "notification-all",
-    "global-shortcut-all",
-    "system-tray",
-    "updater"
-] }
+tauri = { version = "2.0", features = [ "protocol-asset", "tray-icon"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.0", features = ["full"] }
@@ -32,25 +25,26 @@ sqlx = { version = "0.7", features = [
     "runtime-tokio-rustls",
     "sqlite",
     "chrono",
-    "uuid"
+    "uuid",
+    "json"
 ] }
 chrono = { version = "0.4", features = ["serde"] }
+log = "0.4"
+env_logger = "0.10"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 anyhow = "1.0"
 thiserror = "1.0"
-log = "0.4"
-env_logger = "0.10"
 dirs = "5.0"
-async-trait = "0.1"
+# File operations and Markdown processing
+pulldown-cmark = "0.9"
+serde_yaml = "0.9"
+walkdir = "2.0"
+zip = "0.6"
+base64 = "0.21"
 
-[features]
-# This feature is used for production builds or when `devPath` points to the filesystem
-# DO NOT REMOVE!!
-custom-protocol = ["tauri/custom-protocol"]
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
 
-[profile.release]
-panic = "abort"
-codegen-units = 1
-lto = true
-opt-level = "s"
-strip = true
+[dev-dependencies]
+tempfile = "3.8"
+tokio-test = "0.4"

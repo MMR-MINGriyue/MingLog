@@ -1,13 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { D3GraphRenderer } from '../renderer/D3GraphRenderer';
 import { GraphDataProcessor } from '../data/GraphDataProcessor';
-import { 
-  GraphData, 
-  GraphConfig, 
-  GraphEvents, 
-  GraphTheme, 
+import {
+  GraphData,
+  GraphConfig,
+  GraphEvents,
+  GraphTheme,
   GraphFilter,
-  GraphNode,
   GraphLink 
 } from '../types';
 
@@ -48,6 +47,8 @@ const defaultTheme: GraphTheme = {
     tag: '#10b981',
     folder: '#f59e0b',
     link: '#8b5cf6',
+    page: '#3b82f6',
+    block: '#6b7280',
     selected: '#ef4444',
     hovered: '#f97316',
   },
@@ -72,6 +73,8 @@ const darkTheme: GraphTheme = {
     tag: '#34d399',
     folder: '#fbbf24',
     link: '#a78bfa',
+    page: '#60a5fa',
+    block: '#9ca3af',
     selected: '#f87171',
     hovered: '#fb923c',
   },
@@ -103,24 +106,58 @@ export const GraphVisualization: React.FC<GraphVisualizationProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<D3GraphRenderer | null>(null);
-  const [processedData, setProcessedData] = useState<GraphData>({ nodes: [], links: [] });
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
 
-  // Merge configurations
-  const finalConfig = { ...defaultConfig, ...config };
-  const finalTheme = { 
-    ...(finalConfig.theme === 'dark' ? darkTheme : defaultTheme), 
-    ...theme 
-  };
+  // Merge configurations with memoization
+  const finalConfig = useMemo(() => ({ ...defaultConfig, ...config }), [config]);
+  const finalTheme = useMemo(() => ({
+    ...(finalConfig.theme === 'dark' ? darkTheme : defaultTheme),
+    ...theme
+  }), [finalConfig.theme, theme]);
 
-  // Process data
-  useEffect(() => {
+  // Process data with memoization
+  const processedData = useMemo(() => {
     if (data) {
       const processed = GraphDataProcessor.processData(data);
-      const filtered = GraphDataProcessor.filterData(processed, filter);
-      setProcessedData(filtered);
+      return GraphDataProcessor.filterData(processed, filter);
     }
+    return { nodes: [], links: [] };
   }, [data, filter]);
+
+  // Optimize event handlers with useCallback
+  const handleNodeClick = useCallback((node: GraphNode) => {
+    setSelectedNodes((prev: Set<string>) => {
+      const newSet = new Set(prev);
+      if (newSet.has(node.id)) {
+        newSet.delete(node.id);
+      } else {
+        newSet.add(node.id);
+      }
+      return newSet;
+    });
+    onNodeClick?.(node);
+  }, [onNodeClick]);
+
+  const handleNodeHover = useCallback((node: GraphNode | null) => {
+    onNodeHover?.(node);
+  }, [onNodeHover]);
+
+  const handleLinkClick = useCallback((link: GraphLink) => {
+    onLinkClick?.(link);
+  }, [onLinkClick]);
+
+  const handleBackgroundClick = useCallback(() => {
+    setSelectedNodes(new Set());
+    onBackgroundClick?.();
+  }, [onBackgroundClick]);
+
+  // Create events object with memoization
+  const events = useMemo((): GraphEvents => ({
+    onNodeClick: handleNodeClick,
+    onNodeHover: handleNodeHover,
+    onLinkClick: handleLinkClick,
+    onBackgroundClick: handleBackgroundClick,
+  }), [handleNodeClick, handleNodeHover, handleLinkClick, handleBackgroundClick]);
 
   // Initialize renderer
   useEffect(() => {
@@ -129,32 +166,6 @@ export const GraphVisualization: React.FC<GraphVisualizationProps> = ({
       if (rendererRef.current) {
         rendererRef.current.destroy();
       }
-
-      // Create events object
-      const events: GraphEvents = {
-        onNodeClick: (node) => {
-          setSelectedNodes((prev: Set<string>) => {
-            const newSet = new Set(prev);
-            if (newSet.has(node.id)) {
-              newSet.delete(node.id);
-            } else {
-              newSet.add(node.id);
-            }
-            return newSet;
-          });
-          onNodeClick?.(node);
-        },
-        onNodeHover: (node) => {
-          onNodeHover?.(node);
-        },
-        onLinkClick: (link) => {
-          onLinkClick?.(link);
-        },
-        onBackgroundClick: () => {
-          setSelectedNodes(new Set());
-          onBackgroundClick?.();
-        },
-      };
 
       // Create new renderer
       rendererRef.current = new D3GraphRenderer(
@@ -174,7 +185,7 @@ export const GraphVisualization: React.FC<GraphVisualizationProps> = ({
         rendererRef.current = null;
       }
     };
-  }, [processedData, finalConfig, finalTheme, onNodeClick, onNodeHover, onLinkClick, onBackgroundClick]);
+  }, [processedData, finalConfig, finalTheme, events]);
 
   // Update highlights when selection changes
   useEffect(() => {
@@ -213,4 +224,4 @@ export const GraphVisualization: React.FC<GraphVisualizationProps> = ({
   );
 };
 
-export default GraphVisualization;
+export default React.memo(GraphVisualization);

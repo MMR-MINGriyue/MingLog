@@ -10,7 +10,7 @@ import {
   Trash2,
   Info,
   Activity,
-  Sync,
+  RefreshCw,
   HelpCircle
 } from 'lucide-react'
 import { useSettings } from '../hooks/useSettings'
@@ -19,6 +19,7 @@ import { useNotifications } from '../components/NotificationSystem'
 import { exportData, importData, getAppInfo, withErrorHandling } from '../utils/tauri'
 import PerformanceMonitor from '../components/PerformanceMonitor'
 import OnboardingTour from '../components/OnboardingTour'
+import FileOperations from '../components/FileOperations'
 
 const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('general')
@@ -28,6 +29,7 @@ const SettingsPage: React.FC = () => {
   const [appInfo, setAppInfo] = useState<any>(null)
   const [showPerformanceMonitor, setShowPerformanceMonitor] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showFileOperations, setShowFileOperations] = useState(false)
 
   // Load app info
   React.useEffect(() => {
@@ -89,7 +91,7 @@ const SettingsPage: React.FC = () => {
   const tabs = [
     { id: 'general', name: 'General', icon: Settings },
     { id: 'appearance', name: 'Appearance', icon: Palette },
-    { id: 'sync', name: 'Sync & Cloud', icon: Sync },
+    { id: 'sync', name: 'Sync & Cloud', icon: RefreshCw },
     { id: 'data', name: 'Data & Storage', icon: Database },
     { id: 'performance', name: 'Performance', icon: Activity },
     { id: 'privacy', name: 'Privacy & Security', icon: Shield },
@@ -302,36 +304,20 @@ const SettingsPage: React.FC = () => {
 
               <div className="card">
                 <div className="card-header">
-                  <h4 className="text-lg font-medium text-gray-900">Backup & Export</h4>
+                  <h4 className="text-lg font-medium text-gray-900">File Operations</h4>
                 </div>
                 <div className="card-body space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h5 className="font-medium text-gray-900">Export Data</h5>
-                      <p className="text-sm text-gray-600">Download all your notes and data</p>
+                      <h5 className="font-medium text-gray-900">Import & Export</h5>
+                      <p className="text-sm text-gray-600">Import Markdown files, export pages, and create backups</p>
                     </div>
                     <button
-                      onClick={handleExportData}
-                      disabled={loading}
-                      className="btn-secondary flex items-center space-x-2 disabled:opacity-50"
+                      onClick={() => setShowFileOperations(true)}
+                      className="btn-primary flex items-center space-x-2"
                     >
-                      <Download className="w-4 h-4" />
-                      <span>Export</span>
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h5 className="font-medium text-gray-900">Import Data</h5>
-                      <p className="text-sm text-gray-600">Import notes from other applications</p>
-                    </div>
-                    <button
-                      onClick={handleImportData}
-                      disabled={loading}
-                      className="btn-secondary flex items-center space-x-2 disabled:opacity-50"
-                    >
-                      <Upload className="w-4 h-4" />
-                      <span>Import</span>
+                      <Database className="w-4 h-4" />
+                      <span>Manage Files</span>
                     </button>
                   </div>
                 </div>
@@ -469,7 +455,6 @@ const SettingsPage: React.FC = () => {
               </div>
             </div>
           )}
-          )}
 
           {/* Sync & Cloud Settings */}
           {activeTab === 'sync' && (
@@ -596,6 +581,11 @@ const SettingsPage: React.FC = () => {
         isOpen={showOnboarding}
         onClose={() => setShowOnboarding(false)}
         onComplete={() => setShowOnboarding(false)}
+      />
+
+      <FileOperations
+        isOpen={showFileOperations}
+        onClose={() => setShowFileOperations(false)}
       />
     </div>
   )

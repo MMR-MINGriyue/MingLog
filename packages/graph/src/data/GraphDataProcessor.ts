@@ -12,19 +12,45 @@ export class GraphDataProcessor {
     const links: GraphLink[] = [];
     const nodeMap = new Map<string, GraphNode>();
 
-    // Process nodes
-    if (rawData.notes) {
-      rawData.notes.forEach((note: any) => {
+    // Process page nodes
+    if (rawData.pages) {
+      rawData.pages.forEach((page: any) => {
         const node: GraphNode = {
-          id: note.id,
-          label: note.title || note.name,
-          type: 'note',
-          size: this.calculateNodeSize(note),
+          id: page.id,
+          label: page.title || page.name,
+          type: 'note', // Keep as 'note' for compatibility with existing themes
+          size: this.calculatePageSize(page),
           metadata: {
-            content: note.content,
-            createdAt: note.createdAt,
-            updatedAt: note.updatedAt,
-            tags: note.tags || [],
+            name: page.name,
+            title: page.title,
+            isJournal: page.is_journal,
+            createdAt: page.created_at,
+            updatedAt: page.updated_at,
+            tags: this.parseTags(page.tags),
+            blockCount: rawData.blocks ? rawData.blocks.filter((b: any) => b.page_id === page.id).length : 0,
+          },
+        };
+        nodes.push(node);
+        nodeMap.set(node.id, node);
+      });
+    }
+
+    // Process block nodes (optional - can be enabled for detailed view)
+    if (rawData.blocks && rawData.includeBlocks) {
+      rawData.blocks.forEach((block: any) => {
+        const node: GraphNode = {
+          id: `block-${block.id}`,
+          label: this.extractBlockTitle(block.content),
+          type: 'link', // Use 'link' type for blocks to differentiate from pages
+          size: this.calculateBlockSize(block),
+          metadata: {
+            content: block.content,
+            pageId: block.page_id,
+            parentId: block.parent_id,
+            createdAt: block.created_at,
+            updatedAt: block.updated_at,
+            refs: this.parseRefs(block.refs),
+            order: block.order,
           },
         };
         nodes.push(node);
@@ -43,7 +69,7 @@ export class GraphDataProcessor {
           metadata: {
             description: tag.description,
             color: tag.color,
-            noteCount: tag.noteCount || 0,
+            pageCount: this.countPagesWithTag(rawData.pages || [], tag.name),
           },
         };
         nodes.push(node);
@@ -68,21 +94,80 @@ export class GraphDataProcessor {
       });
     }
 
-    // Generate tag-note links
-    rawData.notes?.forEach((note: any) => {
-      note.tags?.forEach((tagId: string) => {
-        const tagNodeId = `tag-${tagId}`;
-        if (nodeMap.has(tagNodeId)) {
+    // Generate tag-page links
+    rawData.pages?.forEach((page: any) => {
+      const pageTags = this.parseTags(page.tags);
+      pageTags.forEach((tagName: string) => {
+        // Find tag node by name
+        const tagNode = nodes.find(n => n.type === 'tag' && n.label === tagName);
+        if (tagNode) {
           links.push({
-            id: `${note.id}-${tagNodeId}`,
-            source: note.id,
-            target: tagNodeId,
+            id: `${page.id}-${tagNode.id}`,
+            source: page.id,
+            target: tagNode.id,
             type: 'tag',
             weight: 0.5,
           });
         }
       });
     });
+
+    // Generate block-page hierarchy links
+    if (rawData.blocks && rawData.includeBlocks) {
+      rawData.blocks.forEach((block: any) => {
+        const blockNodeId = `block-${block.id}`;
+        if (nodeMap.has(blockNodeId) && nodeMap.has(block.page_id)) {
+          links.push({
+            id: `${blockNodeId}-${block.page_id}`,
+            source: blockNodeId,
+            target: block.page_id,
+            type: 'hierarchy',
+            weight: 0.8,
+          });
+        }
+
+        // Generate parent-child block links
+        if (block.parent_id) {
+          const parentBlockNodeId = `block-${block.parent_id}`;
+          if (nodeMap.has(parentBlockNodeId)) {
+            links.push({
+              id: `${parentBlockNodeId}-${blockNodeId}`,
+              source: parentBlockNodeId,
+              target: blockNodeId,
+              type: 'hierarchy',
+              weight: 0.7,
+            });
+          }
+        }
+      });
+    }
+
+    // Generate reference links from block refs
+    if (rawData.blocks) {
+      rawData.blocks.forEach((block: any) => {
+        const refs = this.parseRefs(block.refs);
+        refs.forEach((ref: string) => {
+          // Try to find referenced page
+          const referencedPage = rawData.pages?.find((p: any) =>
+            p.name.toLowerCase() === ref.toLowerCase() ||
+            p.title?.toLowerCase() === ref.toLowerCase()
+          );
+
+          if (referencedPage) {
+            const sourceId = rawData.includeBlocks ? `block-${block.id}` : block.page_id;
+            if (nodeMap.has(sourceId) && nodeMap.has(referencedPage.id)) {
+              links.push({
+                id: `${sourceId}-${referencedPage.id}`,
+                source: sourceId,
+                target: referencedPage.id,
+                type: 'reference',
+                weight: 1.0,
+              });
+            }
+          }
+        });
+      });
+    }
 
     // Calculate node connections
     this.calculateConnections(nodes, links);
@@ -146,29 +231,85 @@ export class GraphDataProcessor {
   }
 
   /**
-   * Calculate node size based on content or connections
-   */
-  private static calculateNodeSize(node: any): number {
-    const baseSize = 5;
-    const contentLength = node.content?.length || 0;
-    const connectionCount = node.connections || 0;
-    
-    // Size based on content length and connections
-    const contentFactor = Math.min(contentLength / 1000, 3);
-    const connectionFactor = Math.min(connectionCount / 10, 2);
-    
-    return baseSize + contentFactor + connectionFactor;
-  }
-
-  /**
    * Calculate tag size based on usage
    */
   private static calculateTagSize(tag: any): number {
     const baseSize = 4;
-    const noteCount = tag.noteCount || 0;
-    const usageFactor = Math.min(noteCount / 5, 3);
-    
+    const pageCount = tag.pageCount || 0;
+    const usageFactor = Math.min(pageCount / 5, 3);
+
     return baseSize + usageFactor;
+  }
+
+  /**
+   * Calculate page size based on content and blocks
+   */
+  private static calculatePageSize(page: any): number {
+    const baseSize = 6;
+    const blockCount = page.blockCount || 0;
+    const isJournal = page.is_journal ? 1 : 0;
+
+    // Size based on block count and type
+    const blockFactor = Math.min(blockCount / 10, 4);
+    const journalFactor = isJournal * 0.5;
+
+    return baseSize + blockFactor + journalFactor;
+  }
+
+  /**
+   * Calculate block size based on content
+   */
+  private static calculateBlockSize(block: any): number {
+    const baseSize = 3;
+    const contentLength = block.content?.length || 0;
+    const hasParent = block.parent_id ? 0.5 : 0;
+
+    // Size based on content length
+    const contentFactor = Math.min(contentLength / 500, 2);
+
+    return baseSize + contentFactor + hasParent;
+  }
+
+  /**
+   * Parse tags from JSON string
+   */
+  private static parseTags(tagsJson: string): string[] {
+    try {
+      return JSON.parse(tagsJson || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Parse refs from JSON string
+   */
+  private static parseRefs(refsJson: string): string[] {
+    try {
+      return JSON.parse(refsJson || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Extract title from block content
+   */
+  private static extractBlockTitle(content: string): string {
+    // Remove HTML tags and get first line or first 30 characters
+    const text = content.replace(/<[^>]*>/g, '').trim();
+    const firstLine = text.split('\n')[0];
+    return firstLine.length > 30 ? firstLine.substring(0, 30) + '...' : firstLine || 'Block';
+  }
+
+  /**
+   * Count pages that have a specific tag
+   */
+  private static countPagesWithTag(pages: any[], tagName: string): number {
+    return pages.filter(page => {
+      const tags = this.parseTags(page.tags);
+      return tags.includes(tagName);
+    }).length;
   }
 
   /**

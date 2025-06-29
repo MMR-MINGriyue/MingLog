@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "echo 'Search package build skipped for now'",
+    "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest",
     "type-check": "tsc --noEmit",

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Home,
   Edit3,
@@ -14,12 +15,14 @@ import {
 } from 'lucide-react'
 import { useGlobalShortcuts } from '../hooks/useKeyboardShortcuts'
 import KeyboardShortcutsHelp from './KeyboardShortcutsHelp'
+import LanguageSwitcher from './LanguageSwitcher'
 
 interface LayoutProps {
   children: React.ReactNode
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const { t } = useTranslation()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
   const location = useLocation()
@@ -41,11 +44,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [])
 
   const navigation = [
-    { name: 'Home', href: '/', icon: Home },
-    { name: 'Editor', href: '/editor', icon: Edit3 },
-    { name: 'Knowledge Graph', href: '/graph', icon: Network },
-    { name: 'Search', href: '/search', icon: Search },
-    { name: 'Settings', href: '/settings', icon: Settings },
+    { name: t('navigation.home'), href: '/', icon: Home },
+    { name: t('editor.title'), href: '/editor', icon: Edit3 },
+    { name: t('block.title'), href: '/blocks', icon: BookOpen },
+    { name: t('graph.title'), href: '/graph', icon: Network },
+    { name: t('navigation.search'), href: '/search', icon: Search },
+    { name: t('navigation.settings'), href: '/settings', icon: Settings },
   ]
 
   const isActive = (href: string) => {
@@ -113,17 +117,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               className="w-full btn-primary flex items-center justify-center space-x-2"
             >
               <Plus className="w-4 h-4" />
-              <span>New Note</span>
+              <span>{t('page.newPage')}</span>
             </Link>
 
             <button
               onClick={() => setShowShortcutsHelp(true)}
               className="w-full btn-ghost flex items-center justify-center space-x-2 text-sm"
-              title="Keyboard shortcuts (F1)"
+              title={t('shortcuts.title')}
             >
               <HelpCircle className="w-4 h-4" />
-              <span>Shortcuts</span>
+              <span>{t('shortcuts.title')}</span>
             </button>
+
+            {/* Language Switcher */}
+            <div className="pt-2">
+              <LanguageSwitcher className="w-full" showLabel={true} />
+            </div>
           </div>
         )}
 
@@ -131,8 +140,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="px-4 py-4 border-t border-gray-200">
           {sidebarOpen ? (
             <div className="text-xs text-gray-500 text-center">
-              <div>MingLog Desktop v1.0.0</div>
-              <div className="mt-1">Knowledge Management Tool</div>
+              <div>{t('app.name')} v1.0.0</div>
+              <div className="mt-1">{t('app.description')}</div>
             </div>
           ) : (
             <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center mx-auto">

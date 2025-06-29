@@ -1,20 +1,29 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
-import { Search, Filter, Calendar, Tag, FileText, Star, Clock } from 'lucide-react'
-import { searchNotes, SearchRequest, SearchResult, withErrorHandling } from '../utils/tauri'
+import { Link, useNavigate } from 'react-router-dom'
+import { Search, Filter, Calendar, Tag, FileText, Star, Clock, Hash, ArrowRight } from 'lucide-react'
+import {
+  searchBlocks,
+  BlockSearchRequest,
+  BlockSearchResponse,
+  BlockSearchResult,
+  withErrorHandling
+} from '../utils/tauri'
 import { useTags } from '../hooks/useTags'
 import { useNotifications } from '../components/NotificationSystem'
+import SearchComponent from '../components/SearchComponent'
 
 const SearchPage: React.FC = () => {
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
-  const [searchResults, setSearchResults] = useState<SearchResult | null>(null)
+  const [searchResults, setSearchResults] = useState<BlockSearchResponse | null>(null)
   const [isSearching, setIsSearching] = useState(false)
   const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [dateRange, setDateRange] = useState('any')
-  const [contentType, setContentType] = useState('all')
-  const [includeArchived, setIncludeArchived] = useState(false)
+  const [includePages, setIncludePages] = useState(true)
+  const [includeBlocks, setIncludeBlocks] = useState(true)
+  const [isJournalFilter, setIsJournalFilter] = useState<boolean | undefined>(undefined)
   const [recentSearches, setRecentSearches] = useState<string[]>([])
+  const [showQuickSearch, setShowQuickSearch] = useState(false)
 
   const { tags } = useTags()
   const { error } = useNotifications()
@@ -49,41 +58,17 @@ const SearchPage: React.FC = () => {
 
     setIsSearching(true)
 
-    const searchRequest: SearchRequest = {
-      query: query.trim(),
+    const request: BlockSearchRequest = {
+      query,
+      include_pages: includePages,
+      include_blocks: includeBlocks,
       tags: selectedTags.length > 0 ? selectedTags : undefined,
-      include_archived: includeArchived,
-      limit: 50,
-      offset: 0
-    }
-
-    // Add date range filter
-    if (dateRange !== 'any') {
-      const now = new Date()
-      let dateFrom: Date | undefined
-
-      switch (dateRange) {
-        case 'week':
-          dateFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-          break
-        case 'month':
-          dateFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-          break
-        case 'quarter':
-          dateFrom = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
-          break
-        case 'year':
-          dateFrom = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
-          break
-      }
-
-      if (dateFrom) {
-        searchRequest.date_from = dateFrom.toISOString()
-      }
+      is_journal: isJournalFilter,
+      limit: 50
     }
 
     const result = await withErrorHandling(
-      () => searchNotes(searchRequest),
+      () => searchBlocks(request),
       'Search failed'
     )
 
@@ -95,7 +80,7 @@ const SearchPage: React.FC = () => {
     }
 
     setIsSearching(false)
-  }, [searchQuery, selectedTags, dateRange, includeArchived, saveRecentSearch, error])
+  }, [searchQuery, selectedTags, includePages, includeBlocks, isJournalFilter, saveRecentSearch, error])
 
   // Handle search input
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -112,15 +97,21 @@ const SearchPage: React.FC = () => {
     )
   }
 
-  // Clear all filters
-  const clearFilters = () => {
-    setSelectedTags([])
-    setDateRange('any')
-    setContentType('all')
-    setIncludeArchived(false)
+  // Handle result click
+  const handleResultClick = (result: BlockSearchResult) => {
+    if (result.result_type === 'page') {
+      navigate(`/blocks/${result.id}`)
+    } else if (result.result_type === 'block' && result.page_id) {
+      navigate(`/blocks/${result.page_id}#${result.id}`)
+    }
   }
 
-  // Highlight search terms in text
+  // Format date
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleDateString()
+  }
+
+  // Highlight search terms
   const highlightText = (text: string, query: string) => {
     if (!query.trim()) return text
 
@@ -129,11 +120,19 @@ const SearchPage: React.FC = () => {
 
     return parts.map((part, index) =>
       regex.test(part) ? (
-        <mark key={index} className="bg-yellow-200 text-yellow-900 px-1 rounded">
+        <mark key={index} className="bg-yellow-200 dark:bg-yellow-800 px-1 rounded">
           {part}
         </mark>
       ) : part
     )
+  }
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSelectedTags([])
+    setIncludePages(true)
+    setIncludeBlocks(true)
+    setIsJournalFilter(undefined)
   }
 
   return (
@@ -180,19 +179,28 @@ const SearchPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date Range
+                    Search In
                   </label>
-                  <select
-                    value={dateRange}
-                    onChange={(e) => setDateRange(e.target.value)}
-                    className="w-full input"
-                  >
-                    <option value="any">Any time</option>
-                    <option value="week">Last 7 days</option>
-                    <option value="month">Last 30 days</option>
-                    <option value="quarter">Last 3 months</option>
-                    <option value="year">Last year</option>
-                  </select>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={includePages}
+                        onChange={(e) => setIncludePages(e.target.checked)}
+                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Pages</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={includeBlocks}
+                        onChange={(e) => setIncludeBlocks(e.target.checked)}
+                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Blocks</span>
+                    </label>
+                  </div>
                 </div>
 
                 <div>
@@ -200,31 +208,17 @@ const SearchPage: React.FC = () => {
                     Content Type
                   </label>
                   <select
-                    value={contentType}
-                    onChange={(e) => setContentType(e.target.value)}
+                    value={isJournalFilter === undefined ? 'all' : isJournalFilter ? 'journal' : 'regular'}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setIsJournalFilter(value === 'all' ? undefined : value === 'journal')
+                    }}
                     className="w-full input"
                   >
                     <option value="all">All content</option>
-                    <option value="text">Text only</option>
-                    <option value="images">With images</option>
-                    <option value="code">With code</option>
-                    <option value="links">With links</option>
+                    <option value="journal">Journal entries</option>
+                    <option value="regular">Regular pages</option>
                   </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Options
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={includeArchived}
-                      onChange={(e) => setIncludeArchived(e.target.checked)}
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Include archived</span>
-                  </label>
                 </div>
               </div>
 
@@ -275,76 +269,83 @@ const SearchPage: React.FC = () => {
                       Found {searchResults.total} result{searchResults.total !== 1 ? 's' : ''} for "{searchQuery}"
                       {selectedTags.length > 0 && (
                         <span className="ml-2">
-                          with tags: {selectedTags.map(tagId =>
-                            tags.find(t => t.id === tagId)?.name
-                          ).filter(Boolean).join(', ')}
+                          with tags: {selectedTags.join(', ')}
                         </span>
                       )}
                     </div>
                   ) : null}
                 </div>
 
-                {searchResults && searchResults.notes.length > 0 && (
+                {searchResults && searchResults.results.length > 0 && (
                   <div className="text-sm text-gray-500">
-                    {searchResults.has_more && 'Showing first 50 results'}
+                    Showing {searchResults.results.length} of {searchResults.total} results
                   </div>
                 )}
               </div>
 
               {/* Search Results */}
-              {searchResults && searchResults.notes.length > 0 ? (
+              {searchResults && searchResults.results.length > 0 ? (
                 <div className="space-y-4">
-                  {searchResults.notes.map(note => (
-                    <div key={note.id} className="card hover:shadow-medium transition-shadow">
+                  {searchResults.results.map(result => (
+                    <div
+                      key={result.id}
+                      className="card hover:shadow-medium transition-shadow cursor-pointer"
+                      onClick={() => handleResultClick(result)}
+                    >
                       <div className="card-body">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-2 mb-2">
-                              <h3 className="text-lg font-semibold text-gray-900 truncate">
-                                {highlightText(note.title || 'Untitled', searchQuery)}
-                              </h3>
-                              {note.is_favorite && (
-                                <Star className="w-4 h-4 text-yellow-500 fill-current flex-shrink-0" />
+                              {result.result_type === 'page' ? (
+                                <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                              ) : (
+                                <Hash className="w-4 h-4 text-green-500 flex-shrink-0" />
                               )}
-                              {note.is_archived && (
-                                <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
-                                  Archived
+                              <h3 className="text-lg font-semibold text-gray-900 truncate">
+                                {highlightText(result.title, searchQuery)}
+                              </h3>
+                              <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                                {result.result_type}
+                              </span>
+                              {result.is_journal && (
+                                <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-600">
+                                  Journal
                                 </span>
                               )}
                             </div>
 
-                            {note.content && (
-                              <p className="text-gray-600 text-sm mb-3 line-clamp-3">
-                                {highlightText(
-                                  note.content.length > 200
-                                    ? note.content.substring(0, 200) + '...'
-                                    : note.content,
-                                  searchQuery
-                                )}
-                              </p>
-                            )}
+                            <p className="text-gray-600 text-sm mb-3 line-clamp-3">
+                              {highlightText(result.excerpt, searchQuery)}
+                            </p>
 
                             <div className="flex items-center space-x-4 text-xs text-gray-500">
                               <div className="flex items-center">
                                 <Clock className="w-3 h-3 mr-1" />
-                                {new Date(note.updated_at).toLocaleDateString()}
+                                {formatDate(result.updated_at)}
                               </div>
-                              {note.tags && note.tags.length > 0 && (
+
+                              {result.page_name && result.result_type === 'block' && (
+                                <div className="flex items-center">
+                                  <FileText className="w-3 h-3 mr-1" />
+                                  {result.page_name}
+                                </div>
+                              )}
+
+                              {result.tags.length > 0 && (
                                 <div className="flex items-center">
                                   <Tag className="w-3 h-3 mr-1" />
-                                  {note.tags.length} tag{note.tags.length !== 1 ? 's' : ''}
+                                  {result.tags.slice(0, 2).join(', ')}
+                                  {result.tags.length > 2 && ` +${result.tags.length - 2}`}
                                 </div>
                               )}
                             </div>
                           </div>
 
                           <div className="flex items-center space-x-2 ml-4">
-                            <Link
-                              to={`/editor/${note.id}`}
-                              className="btn-secondary text-sm"
-                            >
-                              Edit
-                            </Link>
+                            <div className="text-xs text-gray-400">
+                              {Math.round(result.score * 100)}%
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-gray-400" />
                           </div>
                         </div>
                       </div>

@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/core'
+import { useTranslation } from 'react-i18next'
+
+// Import i18n configuration
+import './i18n'
 
 // Import components from packages (will be implemented later)
 // import { DatabaseProvider } from '@minglog/database'
@@ -11,6 +15,7 @@ import { invoke } from '@tauri-apps/api/tauri'
 import Layout from './components/Layout'
 import HomePage from './pages/HomePage'
 import EditorPage from './pages/EditorPage'
+import BlockEditorPage from './components/BlockEditorPage'
 import GraphPage from './pages/GraphPage'
 import SearchPage from './pages/SearchPage'
 import SettingsPage from './pages/SettingsPage'
@@ -19,6 +24,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { NotificationProvider } from './components/NotificationSystem'
 import { ThemeProvider } from './hooks/useTheme'
 import OnboardingTour from './components/OnboardingTour'
+import SearchComponent from './components/SearchComponent'
 
 // Types
 interface AppState {
@@ -28,12 +34,39 @@ interface AppState {
 }
 
 function App() {
+  const { t } = useTranslation()
   const [appState, setAppState] = useState<AppState>({
     isLoading: true,
     isInitialized: false,
     error: null,
   })
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
+
+  // Handle global search shortcut
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ctrl+K or Ctrl+F to open search
+      if ((event.ctrlKey || event.metaKey) && (event.key === 'k' || event.key === 'f')) {
+        // Don't trigger if already in an input field
+        const target = event.target as HTMLElement
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+          return
+        }
+
+        event.preventDefault()
+        setShowSearch(true)
+      }
+
+      // Escape to close search
+      if (event.key === 'Escape' && showSearch) {
+        setShowSearch(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [showSearch])
 
   // Initialize the application
   useEffect(() => {
@@ -76,7 +109,7 @@ function App() {
 
   // Show loading screen while initializing
   if (appState.isLoading) {
-    return <LoadingScreen message="Initializing MingLog Desktop..." />
+    return <LoadingScreen message={t('common.loading')} />
   }
 
   // Show error screen if initialization failed
@@ -90,7 +123,7 @@ function App() {
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Failed to Initialize
+            {t('errors.generic')}
           </h2>
           <p className="text-gray-600 mb-4">
             {appState.error}
@@ -99,7 +132,7 @@ function App() {
             onClick={() => window.location.reload()}
             className="btn-primary"
           >
-            Retry
+            {t('common.retry')}
           </button>
         </div>
       </div>
@@ -121,6 +154,8 @@ function App() {
                   <Route path="/" element={<HomePage />} />
                   <Route path="/editor" element={<EditorPage />} />
                   <Route path="/editor/:pageId" element={<EditorPage />} />
+                  <Route path="/blocks" element={<BlockEditorPage />} />
+                  <Route path="/blocks/:pageId" element={<BlockEditorPage />} />
                   <Route path="/graph" element={<GraphPage />} />
                   <Route path="/search" element={<SearchPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
@@ -138,6 +173,12 @@ function App() {
           isOpen={showOnboarding}
           onClose={() => setShowOnboarding(false)}
           onComplete={() => setShowOnboarding(false)}
+        />
+
+        {/* Global Search */}
+        <SearchComponent
+          isOpen={showSearch}
+          onClose={() => setShowSearch(false)}
         />
       </ThemeProvider>
     </ErrorBoundary>
