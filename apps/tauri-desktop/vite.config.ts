@@ -41,12 +41,6 @@ export default defineConfig(async () => ({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
-      '@minglog/core': resolve(__dirname, '../../packages/core/src'),
-      '@minglog/database': resolve(__dirname, '../../packages/database/src'),
-      '@minglog/editor': resolve(__dirname, '../../packages/editor/src'),
-      '@minglog/graph': resolve(__dirname, '../../packages/graph/src'),
-      '@minglog/search': resolve(__dirname, '../../packages/search/src'),
-      '@minglog/ui': resolve(__dirname, '../../packages/ui/src'),
     },
   },
 

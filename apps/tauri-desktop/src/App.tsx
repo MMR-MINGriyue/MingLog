@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { invoke } from '@tauri-apps/api/tauri'
 
-// Import components from packages
-import { DatabaseProvider } from '@minglog/database'
-import { EditorProvider } from '@minglog/editor'
-import { SearchProvider } from '@minglog/search'
+// Import components from packages (will be implemented later)
+// import { DatabaseProvider } from '@minglog/database'
+// import { EditorProvider } from '@minglog/editor'
+// import { SearchProvider } from '@minglog/search'
 
 // Import local components
 import Layout from './components/Layout'
@@ -99,25 +99,26 @@ function App() {
   // Main app content
   return (
     <ErrorBoundary>
-      <DatabaseProvider>
-        <EditorProvider>
-          <SearchProvider>
-            <div className="h-full flex flex-col bg-gray-50">
-              <Layout>
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/editor" element={<EditorPage />} />
-                  <Route path="/editor/:pageId" element={<EditorPage />} />
-                  <Route path="/graph" element={<GraphPage />} />
-                  <Route path="/search" element={<SearchPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </Layout>
-            </div>
-          </SearchProvider>
-        </EditorProvider>
-      </DatabaseProvider>
+      {/* TODO: Add providers when packages are ready */}
+      {/* <DatabaseProvider> */}
+      {/* <EditorProvider> */}
+      {/* <SearchProvider> */}
+        <div className="h-full flex flex-col bg-gray-50">
+          <Layout>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/editor" element={<EditorPage />} />
+              <Route path="/editor/:pageId" element={<EditorPage />} />
+              <Route path="/graph" element={<GraphPage />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Layout>
+        </div>
+      {/* </SearchProvider> */}
+      {/* </EditorProvider> */}
+      {/* </DatabaseProvider> */}
     </ErrorBoundary>
   )
 }

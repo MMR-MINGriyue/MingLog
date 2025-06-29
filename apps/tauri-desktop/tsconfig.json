@@ -23,13 +23,7 @@
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@minglog/core": ["../../packages/core/src"],
-      "@minglog/database": ["../../packages/database/src"],
-      "@minglog/editor": ["../../packages/editor/src"],
-      "@minglog/graph": ["../../packages/graph/src"],
-      "@minglog/search": ["../../packages/search/src"],
-      "@minglog/ui": ["../../packages/ui/src"]
+      "@/*": ["./src/*"]
     },
 
     /* Type definitions */
