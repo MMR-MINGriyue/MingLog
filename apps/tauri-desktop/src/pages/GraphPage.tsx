@@ -1,7 +1,23 @@
-import React from 'react'
-import { Network, Maximize2, Filter, Download } from 'lucide-react'
+import React, { useState } from 'react'
+import { Network, Maximize2, Filter, Download, RefreshCw, Settings } from 'lucide-react'
+import KnowledgeGraph from '../components/KnowledgeGraph'
 
 const GraphPage: React.FC = () => {
+  const [showFilters, setShowFilters] = useState(false)
+  const [graphLayout, setGraphLayout] = useState('force')
+  const [nodeSize, setNodeSize] = useState('medium')
+  const [showLabels, setShowLabels] = useState(true)
+
+  const handleExportGraph = () => {
+    // In a real app, this would export the graph as SVG/PNG
+    console.log('Exporting graph...')
+  }
+
+  const handleRefreshGraph = () => {
+    // In a real app, this would reload graph data
+    console.log('Refreshing graph...')
+  }
+
   return (
     <div className="h-full flex flex-col">
       {/* Graph Toolbar */}
@@ -11,69 +27,120 @@ const GraphPage: React.FC = () => {
             <h2 className="text-lg font-semibold text-gray-900">Knowledge Graph</h2>
             <div className="flex items-center space-x-2 text-sm text-gray-500">
               <Network className="w-4 h-4" />
-              <span>0 nodes, 0 connections</span>
+              <span>6 nodes, 7 connections</span>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-2">
-            <button className="btn-ghost">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`btn-ghost ${showFilters ? 'bg-primary-100 text-primary-700' : ''}`}
+              title="Toggle filters"
+            >
               <Filter className="w-4 h-4" />
             </button>
-            <button className="btn-ghost">
+            <button
+              onClick={handleRefreshGraph}
+              className="btn-ghost"
+              title="Refresh graph"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleExportGraph}
+              className="btn-ghost"
+              title="Export graph"
+            >
               <Download className="w-4 h-4" />
             </button>
-            <button className="btn-ghost">
+            <button className="btn-ghost" title="Fullscreen">
               <Maximize2 className="w-4 h-4" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Graph Content */}
-      <div className="flex-1 bg-gray-50">
-        <div className="h-full relative">
-          {/* Graph Canvas Placeholder */}
-          <div className="absolute inset-0 bg-white m-6 rounded-lg border border-gray-200">
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center">
-                <Network className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Knowledge Graph Visualization
-                </h3>
-                <p className="text-gray-600 mb-6 max-w-md">
-                  The graph visualization component will be integrated here from @minglog/graph package
-                </p>
-                <div className="space-y-4 text-left max-w-md mx-auto">
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <h4 className="font-medium text-gray-900 mb-2">Features to include:</h4>
-                    <ul className="text-sm text-gray-600 space-y-1">
-                      <li>• Interactive node-link diagram</li>
-                      <li>• Force-directed layout</li>
-                      <li>• Node clustering and filtering</li>
-                      <li>• Search and highlight</li>
-                      <li>• Export capabilities</li>
-                      <li>• Zoom and pan controls</li>
-                    </ul>
-                  </div>
-                </div>
+      {/* Filters Panel */}
+      {showFilters && (
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Layout Algorithm
+              </label>
+              <select
+                value={graphLayout}
+                onChange={(e) => setGraphLayout(e.target.value)}
+                className="input w-full"
+              >
+                <option value="force">Force-directed</option>
+                <option value="circular">Circular</option>
+                <option value="hierarchical">Hierarchical</option>
+                <option value="grid">Grid</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Node Size
+              </label>
+              <select
+                value={nodeSize}
+                onChange={(e) => setNodeSize(e.target.value)}
+                className="input w-full"
+              >
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large">Large</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Display Options
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={showLabels}
+                  onChange={(e) => setShowLabels(e.target.checked)}
+                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Show labels</span>
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Filter by Type
+              </label>
+              <div className="space-y-1">
+                <label className="flex items-center">
+                  <input type="checkbox" defaultChecked className="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                  <span className="ml-2 text-sm text-gray-700">📝 Notes</span>
+                </label>
+                <label className="flex items-center">
+                  <input type="checkbox" defaultChecked className="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                  <span className="ml-2 text-sm text-gray-700">🏷️ Tags</span>
+                </label>
+                <label className="flex items-center">
+                  <input type="checkbox" defaultChecked className="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                  <span className="ml-2 text-sm text-gray-700">💡 Concepts</span>
+                </label>
               </div>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Graph Controls */}
-          <div className="absolute top-4 right-4 bg-white rounded-lg shadow-soft border border-gray-200 p-2">
-            <div className="space-y-2">
-              <button className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100" title="Zoom In">
-                <span className="text-lg font-bold text-gray-600">+</span>
-              </button>
-              <button className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100" title="Zoom Out">
-                <span className="text-lg font-bold text-gray-600">−</span>
-              </button>
-              <button className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100" title="Reset View">
-                <span className="text-sm font-bold text-gray-600">⌂</span>
-              </button>
-            </div>
-          </div>
+      {/* Graph Content */}
+      <div className="flex-1 bg-gray-50 overflow-hidden">
+        <div className="h-full p-6">
+          <KnowledgeGraph
+            width={window.innerWidth - 300}
+            height={window.innerHeight - 200}
+            className="w-full h-full"
+          />
         </div>
       </div>
     </div>

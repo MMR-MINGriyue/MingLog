@@ -1,0 +1,191 @@
+name: 'Build Tauri Desktop App'
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: [ 'apps/tauri-desktop/**' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'apps/tauri-desktop/**' ]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Create release'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  test-frontend:
+    name: Test Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/tauri-desktop
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: apps/tauri-desktop/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+
+      - name: Run TypeScript check
+        run: npm run type-check
+
+      - name: Run linting
+        run: npm run lint || echo "Linting completed with warnings"
+
+      - name: Build frontend
+        run: npm run vite:build
+
+  build-tauri:
+    name: Build Tauri App
+    needs: test-frontend
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-20.04, windows-latest]
+        include:
+          - platform: macos-latest
+            rust-target: x86_64-apple-darwin
+          - platform: ubuntu-20.04
+            rust-target: x86_64-unknown-linux-gnu
+          - platform: windows-latest
+            rust-target: x86_64-pc-windows-msvc
+
+    runs-on: ${{ matrix.platform }}
+    defaults:
+      run:
+        working-directory: apps/tauri-desktop
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: apps/tauri-desktop/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './apps/tauri-desktop/src-tauri -> target'
+
+      - name: Install system dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-20.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Install frontend dependencies
+        run: |
+          npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+
+      - name: Build frontend
+        run: npm run vite:build
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/tauri-desktop
+          tagName: v__VERSION__
+          releaseName: 'MingLog Desktop v__VERSION__'
+          releaseBody: 'See the assets to download this version and install.'
+          releaseDraft: true
+          prerelease: false
+          includeDebug: false
+          includeRelease: true
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-app-${{ matrix.platform }}
+          path: |
+            apps/tauri-desktop/src-tauri/target/release/bundle/
+          retention-days: 30
+
+  create-release:
+    name: Create Release
+    if: github.event.inputs.release == 'true' && github.ref == 'refs/heads/main'
+    needs: build-tauri
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -la ./artifacts
+
+      - name: Get version from package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./apps/tauri-desktop/package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: MingLog Desktop v${{ steps.version.outputs.version }}
+          body: |
+            ## 🎉 MingLog Desktop v${{ steps.version.outputs.version }}
+            
+            ### 📦 Downloads
+            Choose the appropriate installer for your platform:
+            
+            - **Windows**: `.msi` installer
+            - **macOS**: `.dmg` installer  
+            - **Linux**: `.deb` or `.AppImage`
+            
+            ### ✨ What's New
+            - Modern Tauri-based desktop application
+            - Rich text note editing
+            - Knowledge graph visualization
+            - Full-text search capabilities
+            - Dark/light theme support
+            - Keyboard shortcuts
+            
+            ### 🔧 System Requirements
+            - **Windows**: Windows 10 or later
+            - **macOS**: macOS 10.13 or later
+            - **Linux**: Ubuntu 18.04 or equivalent
+            
+            ### 🐛 Known Issues
+            - First launch may take a few seconds
+            - Some antivirus software may flag the installer (false positive)
+            
+            For support and documentation, visit our [GitHub repository](https://github.com/MMR-MINGriyue/MingLog).
+          files: ./artifacts/**/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

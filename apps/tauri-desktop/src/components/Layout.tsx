@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
   Home,
@@ -9,9 +9,11 @@ import {
   Menu,
   X,
   Plus,
-  BookOpen
+  BookOpen,
+  HelpCircle
 } from 'lucide-react'
 import { useGlobalShortcuts } from '../hooks/useKeyboardShortcuts'
+import KeyboardShortcutsHelp from './KeyboardShortcutsHelp'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -19,10 +21,24 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
   const location = useLocation()
 
   // Enable global keyboard shortcuts
   useGlobalShortcuts()
+
+  // Listen for F1 key to show shortcuts help
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'F1') {
+        event.preventDefault()
+        setShowShortcutsHelp(true)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
@@ -91,7 +107,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* Quick Actions */}
         {sidebarOpen && (
-          <div className="px-4 py-4 border-t border-gray-200">
+          <div className="px-4 py-4 border-t border-gray-200 space-y-2">
             <Link
               to="/editor"
               className="w-full btn-primary flex items-center justify-center space-x-2"
@@ -99,6 +115,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <Plus className="w-4 h-4" />
               <span>New Note</span>
             </Link>
+
+            <button
+              onClick={() => setShowShortcutsHelp(true)}
+              className="w-full btn-ghost flex items-center justify-center space-x-2 text-sm"
+              title="Keyboard shortcuts (F1)"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span>Shortcuts</span>
+            </button>
           </div>
         )}
 
@@ -140,6 +165,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {children}
         </main>
       </div>
+
+      {/* Keyboard Shortcuts Help Modal */}
+      <KeyboardShortcutsHelp
+        isOpen={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
+      />
     </div>
   )
 }
