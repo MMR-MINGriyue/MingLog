@@ -1,16 +1,17 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { 
-  Home, 
-  Edit3, 
-  Network, 
-  Search, 
-  Settings, 
+import {
+  Home,
+  Edit3,
+  Network,
+  Search,
+  Settings,
   Menu,
   X,
   Plus,
   BookOpen
 } from 'lucide-react'
+import { useGlobalShortcuts } from '../hooks/useKeyboardShortcuts'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -19,6 +20,9 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const location = useLocation()
+
+  // Enable global keyboard shortcuts
+  useGlobalShortcuts()
 
   const navigation = [
     { name: 'Home', href: '/', icon: Home },

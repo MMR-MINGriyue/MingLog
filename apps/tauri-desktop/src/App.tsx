@@ -16,6 +16,8 @@ import SearchPage from './pages/SearchPage'
 import SettingsPage from './pages/SettingsPage'
 import LoadingScreen from './components/LoadingScreen'
 import ErrorBoundary from './components/ErrorBoundary'
+import { NotificationProvider } from './components/NotificationSystem'
+import { ThemeProvider } from './hooks/useTheme'
 
 // Types
 interface AppState {
@@ -99,26 +101,30 @@ function App() {
   // Main app content
   return (
     <ErrorBoundary>
-      {/* TODO: Add providers when packages are ready */}
-      {/* <DatabaseProvider> */}
-      {/* <EditorProvider> */}
-      {/* <SearchProvider> */}
-        <div className="h-full flex flex-col bg-gray-50">
-          <Layout>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/editor" element={<EditorPage />} />
-              <Route path="/editor/:pageId" element={<EditorPage />} />
-              <Route path="/graph" element={<GraphPage />} />
-              <Route path="/search" element={<SearchPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Layout>
-        </div>
-      {/* </SearchProvider> */}
-      {/* </EditorProvider> */}
-      {/* </DatabaseProvider> */}
+      <ThemeProvider>
+        <NotificationProvider>
+          {/* TODO: Add other providers when packages are ready */}
+          {/* <DatabaseProvider> */}
+          {/* <EditorProvider> */}
+          {/* <SearchProvider> */}
+            <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors">
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/editor" element={<EditorPage />} />
+                  <Route path="/editor/:pageId" element={<EditorPage />} />
+                  <Route path="/graph" element={<GraphPage />} />
+                  <Route path="/search" element={<SearchPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Layout>
+            </div>
+          {/* </SearchProvider> */}
+          {/* </EditorProvider> */}
+          {/* </DatabaseProvider> */}
+        </NotificationProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   )
 }

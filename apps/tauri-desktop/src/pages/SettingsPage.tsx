@@ -1,18 +1,83 @@
 import React, { useState } from 'react'
-import { 
-  Settings, 
-  User, 
-  Database, 
-  Palette, 
-  Shield, 
-  Download, 
+import {
+  Settings,
+  User,
+  Database,
+  Palette,
+  Shield,
+  Download,
   Upload,
   Trash2,
   Info
 } from 'lucide-react'
+import { useSettings } from '../hooks/useSettings'
+import { useThemeContext, ThemeToggle } from '../hooks/useTheme'
+import { useNotifications } from '../components/NotificationSystem'
+import { exportData, importData, getAppInfo, withErrorHandling } from '../utils/tauri'
 
 const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('general')
+  const { settings, updateSetting, updateMultipleSettings, resetToDefaults, loading } = useSettings()
+  const { theme } = useThemeContext()
+  const { success, error } = useNotifications()
+  const [appInfo, setAppInfo] = useState<any>(null)
+
+  // Load app info
+  React.useEffect(() => {
+    const loadAppInfo = async () => {
+      const info = await withErrorHandling(() => getAppInfo(), 'Failed to load app info')
+      if (info) setAppInfo(info)
+    }
+    loadAppInfo()
+  }, [])
+
+  const handleExportData = async () => {
+    try {
+      // In a real app, you'd use Tauri's dialog API to select save location
+      const timestamp = new Date().toISOString().split('T')[0]
+      const filename = `minglog-backup-${timestamp}.json`
+
+      const result = await withErrorHandling(
+        () => exportData(filename),
+        'Failed to export data'
+      )
+
+      if (result !== null) {
+        success('Data Exported', `Your data has been exported to ${filename}`)
+      }
+    } catch (err) {
+      error('Export Failed', 'Unable to export your data')
+    }
+  }
+
+  const handleImportData = async () => {
+    try {
+      // In a real app, you'd use Tauri's dialog API to select file
+      const filename = 'minglog-backup.json' // Placeholder
+
+      const result = await withErrorHandling(
+        () => importData(filename),
+        'Failed to import data'
+      )
+
+      if (result) {
+        success('Data Imported', result)
+      }
+    } catch (err) {
+      error('Import Failed', 'Unable to import data')
+    }
+  }
+
+  const handleResetSettings = async () => {
+    if (window.confirm('Are you sure you want to reset all settings to defaults? This action cannot be undone.')) {
+      const result = await resetToDefaults()
+      if (result) {
+        success('Settings Reset', 'All settings have been reset to defaults')
+      } else {
+        error('Reset Failed', 'Unable to reset settings')
+      }
+    }
+  }
 
   const tabs = [
     { id: 'general', name: 'General', icon: Settings },
@@ -68,26 +133,73 @@ const SettingsPage: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Language
                     </label>
-                    <select className="input w-full max-w-xs">
-                      <option>English</option>
-                      <option>中文</option>
-                      <option>日本語</option>
+                    <select
+                      value={settings.language}
+                      onChange={(e) => updateSetting('language', e.target.value as any)}
+                      className="input w-full max-w-xs"
+                      disabled={loading}
+                    >
+                      <option value="en">English</option>
+                      <option value="zh">中文</option>
+                      <option value="ja">日本語</option>
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="flex items-center">
-                      <input type="checkbox" className="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                      <input
+                        type="checkbox"
+                        checked={settings.startWithSystem}
+                        onChange={(e) => updateSetting('startWithSystem', e.target.checked)}
+                        disabled={loading}
+                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
                       <span className="ml-2 text-sm text-gray-700">Start with system</span>
                     </label>
                   </div>
-                  
+
                   <div>
                     <label className="flex items-center">
-                      <input type="checkbox" className="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                      <input
+                        type="checkbox"
+                        checked={settings.minimizeToTray}
+                        onChange={(e) => updateSetting('minimizeToTray', e.target.checked)}
+                        disabled={loading}
+                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
                       <span className="ml-2 text-sm text-gray-700">Minimize to system tray</span>
                     </label>
                   </div>
+
+                  <div>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={settings.autoSave}
+                        onChange={(e) => updateSetting('autoSave', e.target.checked)}
+                        disabled={loading}
+                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Auto-save notes</span>
+                    </label>
+                  </div>
+
+                  {settings.autoSave && (
+                    <div className="ml-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Auto-save interval (seconds)
+                      </label>
+                      <input
+                        type="number"
+                        min="10"
+                        max="300"
+                        value={settings.autoSaveInterval}
+                        onChange={(e) => updateSetting('autoSaveInterval', parseInt(e.target.value))}
+                        disabled={loading}
+                        className="input w-24"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -108,31 +220,65 @@ const SettingsPage: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Color Theme
                     </label>
-                    <div className="grid grid-cols-3 gap-3">
-                      <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="theme" value="light" className="text-primary-600 focus:ring-primary-500" />
-                        <span className="ml-2 text-sm text-gray-700">Light</span>
-                      </label>
-                      <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="theme" value="dark" className="text-primary-600 focus:ring-primary-500" />
-                        <span className="ml-2 text-sm text-gray-700">Dark</span>
-                      </label>
-                      <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="theme" value="auto" className="text-primary-600 focus:ring-primary-500" defaultChecked />
-                        <span className="ml-2 text-sm text-gray-700">Auto</span>
-                      </label>
-                    </div>
+                    <ThemeToggle className="justify-start" />
+                    <p className="text-xs text-gray-500 mt-2">
+                      Current theme: {theme} mode
+                    </p>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Font Size
                     </label>
-                    <select className="input w-full max-w-xs">
-                      <option>Small</option>
-                      <option>Medium</option>
-                      <option>Large</option>
+                    <select
+                      value={settings.fontSize}
+                      onChange={(e) => updateSetting('fontSize', e.target.value as any)}
+                      disabled={loading}
+                      className="input w-full max-w-xs"
+                    >
+                      <option value="small">Small</option>
+                      <option value="medium">Medium</option>
+                      <option value="large">Large</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={settings.showLineNumbers}
+                        onChange={(e) => updateSetting('showLineNumbers', e.target.checked)}
+                        disabled={loading}
+                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Show line numbers in editor</span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={settings.wordWrap}
+                        onChange={(e) => updateSetting('wordWrap', e.target.checked)}
+                        disabled={loading}
+                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Word wrap</span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={settings.spellCheck}
+                        onChange={(e) => updateSetting('spellCheck', e.target.checked)}
+                        disabled={loading}
+                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Spell check</span>
+                    </label>
                   </div>
                 </div>
               </div>
@@ -155,18 +301,26 @@ const SettingsPage: React.FC = () => {
                       <h5 className="font-medium text-gray-900">Export Data</h5>
                       <p className="text-sm text-gray-600">Download all your notes and data</p>
                     </div>
-                    <button className="btn-secondary flex items-center space-x-2">
+                    <button
+                      onClick={handleExportData}
+                      disabled={loading}
+                      className="btn-secondary flex items-center space-x-2 disabled:opacity-50"
+                    >
                       <Download className="w-4 h-4" />
                       <span>Export</span>
                     </button>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div>
                       <h5 className="font-medium text-gray-900">Import Data</h5>
                       <p className="text-sm text-gray-600">Import notes from other applications</p>
                     </div>
-                    <button className="btn-secondary flex items-center space-x-2">
+                    <button
+                      onClick={handleImportData}
+                      disabled={loading}
+                      className="btn-secondary flex items-center space-x-2 disabled:opacity-50"
+                    >
                       <Upload className="w-4 h-4" />
                       <span>Import</span>
                     </button>
