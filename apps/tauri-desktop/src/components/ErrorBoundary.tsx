@@ -68,8 +68,8 @@ class ErrorBoundary extends Component<Props, State> {
               We encountered an unexpected error. Don't worry, your data is safe.
             </p>
 
-            {/* Error Details (in development) */}
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {/* Error Details (always show for debugging) */}
+            {this.state.error && (
               <div className="mb-6 p-4 bg-gray-100 rounded-lg text-left">
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">
                   Error Details:
@@ -80,6 +80,19 @@ class ErrorBoundary extends Component<Props, State> {
                 </pre>
               </div>
             )}
+
+            {/* Additional debugging info */}
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg text-left">
+              <h3 className="text-sm font-semibold text-blue-900 mb-2">
+                Debug Information:
+              </h3>
+              <div className="text-xs text-blue-700 space-y-1">
+                <div>Timestamp: {new Date().toISOString()}</div>
+                <div>User Agent: {navigator.userAgent}</div>
+                <div>URL: {window.location.href}</div>
+                <div>Local Storage: {Object.keys(localStorage).length} items</div>
+              </div>
+            </div>
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center">

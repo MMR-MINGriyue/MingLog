@@ -1,11 +1,14 @@
 import '@testing-library/jest-dom'
-import { vi } from 'vitest'
+
+// 检测是否在Jest环境中
+const isJest = typeof jest !== 'undefined'
+const mockFn = isJest ? jest.fn : require('vitest').vi.fn
 
 // Mock Tauri APIs
 const mockTauri = {
-  invoke: vi.fn(),
-  listen: vi.fn(),
-  emit: vi.fn(),
+  invoke: mockFn(),
+  listen: mockFn(),
+  emit: mockFn(),
 }
 
 // Mock window.__TAURI__
@@ -15,61 +18,80 @@ Object.defineProperty(window, '__TAURI__', {
 })
 
 // Mock Tauri modules
-vi.mock('@tauri-apps/api/core', () => ({
-  invoke: mockTauri.invoke,
-}))
+const mockModule = isJest ? jest.mock : require('vitest').vi.mock
 
-vi.mock('@tauri-apps/api/event', () => ({
-  listen: mockTauri.listen,
-  emit: mockTauri.emit,
-}))
+if (isJest) {
+  jest.mock('@tauri-apps/api/core', () => ({
+    invoke: mockTauri.invoke,
+  }))
 
-vi.mock('@tauri-apps/api/dialog', () => ({
-  open: vi.fn(),
-  save: vi.fn(),
-}))
+  jest.mock('@tauri-apps/api/event', () => ({
+    listen: mockTauri.listen,
+    emit: mockTauri.emit,
+  }))
+
+  jest.mock('@tauri-apps/api/dialog', () => ({
+    open: jest.fn(),
+    save: jest.fn(),
+  }))
+} else {
+  const { vi } = require('vitest')
+  vi.mock('@tauri-apps/api/core', () => ({
+    invoke: mockTauri.invoke,
+  }))
+
+  vi.mock('@tauri-apps/api/event', () => ({
+    listen: mockTauri.listen,
+    emit: mockTauri.emit,
+  }))
+
+  vi.mock('@tauri-apps/api/dialog', () => ({
+    open: vi.fn(),
+    save: vi.fn(),
+  }))
+}
 
 // Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
+global.ResizeObserver = mockFn().mockImplementation(() => ({
+  observe: mockFn(),
+  unobserve: mockFn(),
+  disconnect: mockFn(),
 }))
 
 // Mock IntersectionObserver
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
+global.IntersectionObserver = mockFn().mockImplementation(() => ({
+  observe: mockFn(),
+  unobserve: mockFn(),
+  disconnect: mockFn(),
 }))
 
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: mockFn().mockImplementation(query => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: vi.fn(), // deprecated
-    removeListener: vi.fn(), // deprecated
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
+    addListener: mockFn(), // deprecated
+    removeListener: mockFn(), // deprecated
+    addEventListener: mockFn(),
+    removeEventListener: mockFn(),
+    dispatchEvent: mockFn(),
   })),
 })
 
 // Mock scrollTo
 Object.defineProperty(window, 'scrollTo', {
-  value: vi.fn(),
+  value: mockFn(),
   writable: true,
 })
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+  getItem: mockFn(),
+  setItem: mockFn(),
+  removeItem: mockFn(),
+  clear: mockFn(),
 }
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
@@ -77,10 +99,10 @@ Object.defineProperty(window, 'localStorage', {
 
 // Mock sessionStorage
 const sessionStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+  getItem: mockFn(),
+  setItem: mockFn(),
+  removeItem: mockFn(),
+  clear: mockFn(),
 }
 Object.defineProperty(window, 'sessionStorage', {
   value: sessionStorageMock,
@@ -88,7 +110,12 @@ Object.defineProperty(window, 'sessionStorage', {
 
 // Reset all mocks before each test
 beforeEach(() => {
-  vi.clearAllMocks()
+  if (isJest) {
+    jest.clearAllMocks()
+  } else {
+    const { vi } = require('vitest')
+    vi.clearAllMocks()
+  }
   localStorageMock.getItem.mockClear()
   localStorageMock.setItem.mockClear()
   localStorageMock.removeItem.mockClear()

@@ -348,4 +348,6 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
   );
 };
 
-export default React.memo(BlockEditor);
+const MemoizedBlockEditor = React.memo(BlockEditor);
+export { MemoizedBlockEditor as BlockEditor };
+export default MemoizedBlockEditor;

@@ -1,4 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+// 兼容Jest和Vitest
+const isJest = typeof jest !== 'undefined'
+const { describe, it, expect, beforeEach } = isJest
+  ? { describe, it, expect, beforeEach }
+  : require('vitest')
+const mockFn = isJest ? jest.fn : require('vitest').vi.fn
 import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import VirtualizedSearchResults from '../VirtualizedSearchResults'
@@ -23,48 +28,53 @@ const mockProps = {
   results: mockResults,
   selectedIndex: 0,
   query: 'test',
-  onResultClick: vi.fn(),
-  highlightText: vi.fn((text: string) => text),
-  formatDate: vi.fn((timestamp: number) => new Date(timestamp * 1000).toLocaleDateString()),
+  onResultClick: mockFn(),
+  highlightText: mockFn((text: string) => text),
+  formatDate: mockFn((timestamp: number) => new Date(timestamp * 1000).toLocaleDateString()),
 }
 
 describe('VirtualizedSearchResults', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    if (isJest) {
+      jest.clearAllMocks()
+    } else {
+      const { vi } = require('vitest')
+      vi.clearAllMocks()
+    }
   })
 
   it('renders virtualized list container', () => {
     render(<VirtualizedSearchResults {...mockProps} />)
-    
-    const container = screen.getByRole('generic')
+
+    const container = screen.getByTestId('search-results-container')
     expect(container).toBeInTheDocument()
-    expect(container).toHaveStyle({ position: 'relative' })
+    expect(container).toHaveClass('relative', 'overflow-auto')
   })
 
   it('renders only visible items initially', () => {
     render(<VirtualizedSearchResults {...mockProps} />)
-    
+
     // Should render only visible items + buffer
-    const visibleItems = screen.getAllByText(/Test Result/)
+    const visibleItems = screen.getAllByTestId(/search-result-\d+/)
     expect(visibleItems.length).toBeLessThan(mockResults.length)
     expect(visibleItems.length).toBeGreaterThan(0)
   })
 
   it('calls onResultClick when item is clicked', async () => {
-    const onResultClick = vi.fn()
+    const onResultClick = mockFn()
     render(<VirtualizedSearchResults {...mockProps} onResultClick={onResultClick} />)
-    
-    const firstResult = screen.getByText('Test Result 0')
+
+    const firstResult = screen.getByTestId('search-result-0')
     await userEvent.click(firstResult)
-    
+
     expect(onResultClick).toHaveBeenCalledWith(mockResults[0], 0)
   })
 
   it('highlights selected item', () => {
     render(<VirtualizedSearchResults {...mockProps} selectedIndex={1} />)
-    
+
     // Find the selected item container
-    const selectedItem = screen.getByText('Test Result 1').closest('div')
+    const selectedItem = screen.getByTestId('search-result-1')
     expect(selectedItem).toHaveClass('bg-blue-50')
   })
 
@@ -152,9 +162,9 @@ describe('VirtualizedSearchResults', () => {
 
   it('maintains correct item positioning', () => {
     render(<VirtualizedSearchResults {...mockProps} />)
-    
+
     // Check that items have correct absolute positioning
-    const firstItem = screen.getByText('Test Result 0').closest('div')
+    const firstItem = screen.getByTestId('search-result-0')
     expect(firstItem).toHaveStyle({ position: 'absolute', top: '0px' })
   })
 
@@ -171,30 +181,30 @@ describe('VirtualizedSearchResults', () => {
       id: `large-result-${i}`,
       title: `Large Result ${i}`,
     }))
-    
+
     const startTime = performance.now()
     render(<VirtualizedSearchResults {...mockProps} results={largeResults} />)
     const endTime = performance.now()
-    
+
     // Should render quickly even with large datasets
     expect(endTime - startTime).toBeLessThan(100) // Less than 100ms
-    
+
     // Should still only render visible items
-    const visibleItems = screen.getAllByText(/Large Result/)
+    const visibleItems = screen.getAllByTestId(/search-result-\d+/)
     expect(visibleItems.length).toBeLessThan(50) // Much less than 10000
   })
 
   it('updates visible items when scrolling', () => {
     render(<VirtualizedSearchResults {...mockProps} />)
-    
-    const container = screen.getByRole('generic')
-    
+
+    const container = screen.getByTestId('search-results-container')
+
     // Initial state - should see first items
-    expect(screen.getByText('Test Result 0')).toBeInTheDocument()
-    
+    expect(screen.getByTestId('search-result-0')).toBeInTheDocument()
+
     // Scroll down significantly
     fireEvent.scroll(container, { target: { scrollTop: 1000 } })
-    
+
     // Should now see different items (this is a simplified test)
     // In a real scenario, we'd need to wait for the component to update
     expect(container.scrollTop).toBe(1000)

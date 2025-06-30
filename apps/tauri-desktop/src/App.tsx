@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { invoke } from '@tauri-apps/api/core'
 import { useTranslation } from 'react-i18next'
 
 // Import i18n configuration
 import './i18n'
-
-// Import components from packages (will be implemented later)
-// import { DatabaseProvider } from '@minglog/database'
-// import { EditorProvider } from '@minglog/editor'
-// import { SearchProvider } from '@minglog/search'
 
 // Import local components
 import Layout from './components/Layout'
@@ -73,13 +67,15 @@ function App() {
     const initializeApp = async () => {
       try {
         setAppState(prev => ({ ...prev, isLoading: true, error: null }))
-        
-        // Initialize Tauri backend
-        await invoke('init_app')
-        
-        // Initialize database
-        await invoke('init_database')
-        
+
+        console.log('Starting MingLog Desktop initialization...')
+
+        // Simple initialization without backend calls
+        console.log('Initializing frontend components...')
+
+        // Add a small delay to simulate initialization
+        await new Promise(resolve => setTimeout(resolve, 500))
+
         // Set app as initialized
         setAppState({
           isLoading: false,
@@ -88,11 +84,15 @@ function App() {
         })
 
         // Check if this is the first time user opens the app
-        const hasCompletedOnboarding = localStorage.getItem('minglog-onboarding-completed')
-        if (!hasCompletedOnboarding) {
-          setShowOnboarding(true)
+        try {
+          const hasCompletedOnboarding = localStorage.getItem('minglog-onboarding-completed')
+          if (!hasCompletedOnboarding) {
+            setShowOnboarding(true)
+          }
+        } catch (e) {
+          console.warn('LocalStorage not available:', e)
         }
-        
+
         console.log('MingLog Desktop app initialized successfully')
       } catch (error) {
         console.error('Failed to initialize app:', error)

@@ -1,0 +1,27 @@
+MingLog 快速修复命令序列
+
+问题：App-minimal.tsx 引用了不存在的 App.css 文件
+解决：已删除该引用
+
+立即执行以下命令：
+
+1. 进入目录：
+cd /d D:\Git\MingLog\apps\tauri-desktop
+
+2. 清理旧构建：
+rmdir /s /q dist
+
+3. 重新构建前端：
+npm run build
+
+4. 构建Tauri应用：
+npm run tauri build
+
+5. 启动应用：
+start src-tauri\target\release\minglog-desktop.exe
+
+或者直接运行脚本：
+双击 quick-fix.bat
+
+预期结果：
+应用启动后显示绿色的成功页面，标题为"🎉 MingLog Desktop"

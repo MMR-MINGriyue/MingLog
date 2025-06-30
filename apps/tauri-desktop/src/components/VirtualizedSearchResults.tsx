@@ -86,11 +86,13 @@ const VirtualizedSearchResults: React.FC<VirtualizedSearchResultsProps> = ({
       items.push(
         <div
           key={result.id}
+          data-testid={`search-result-${i}`}
+          data-result-id={result.id}
           className={`
             absolute left-0 right-0 px-4 py-3 cursor-pointer border-b border-gray-100 dark:border-gray-700
             transition-colors duration-150
-            ${isSelected 
-              ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700' 
+            ${isSelected
+              ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700'
               : 'hover:bg-gray-50 dark:hover:bg-gray-800'
             }
           `}
@@ -171,12 +173,16 @@ const VirtualizedSearchResults: React.FC<VirtualizedSearchResultsProps> = ({
   return (
     <div
       ref={containerRef}
+      data-testid="search-results-container"
       className="relative overflow-auto"
       style={{ height: Math.min(CONTAINER_HEIGHT, totalHeight) }}
       onScroll={handleScroll}
     >
       {/* Virtual container to maintain scroll height */}
-      <div style={{ height: totalHeight, position: 'relative' }}>
+      <div
+        data-testid="search-results-virtual-container"
+        style={{ height: totalHeight, position: 'relative' }}
+      >
         {visibleItems}
       </div>
     </div>
