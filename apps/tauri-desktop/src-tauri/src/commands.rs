@@ -1,4 +1,7 @@
 use crate::error::Result;
+use sysinfo::{System, SystemExt, ProcessExt, CpuExt};
+use std::time::Instant;
+use crate::database::Database;
 
 #[cfg(test)]
 mod tests;
@@ -1001,4 +1004,153 @@ pub async fn resolve_sync_conflict(
 ) -> Result<()> {
     let mut sync_manager = state.sync_manager.lock().await;
     sync_manager.resolve_conflict(&file_path, resolution).await
+}
+
+#[tauri::command]
+pub async fn get_system_info() -> Result<serde_json::Value, String> {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+
+    let current_pid = std::process::id();
+    let process = sys.process(current_pid.into())
+        .ok_or_else(|| "Failed to get process information".to_string())?;
+
+    // 获取CPU信息
+    let cpu_usage = process.cpu_usage();
+    let cpu_cores = sys.cpus().len();
+    
+    // 获取内存信息
+    let total_memory = sys.total_memory();
+    let used_memory = sys.used_memory();
+    let process_memory = process.memory();
+    
+    // 获取磁盘信息
+    let disk_usage = process.disk_usage();
+    let disk_read = disk_usage.read_bytes;
+    let disk_write = disk_usage.written_bytes;
+
+    Ok(serde_json::json!({
+        "cpu": {
+            "cores": cpu_cores,
+            "usage": cpu_usage,
+            "frequency": sys.global_cpu_info().frequency(),
+        },
+        "memory": {
+            "total": total_memory,
+            "used": used_memory,
+            "process": process_memory,
+            "percentage": (used_memory as f64 / total_memory as f64 * 100.0) as u64
+        },
+        "disk": {
+            "read_bytes": disk_read,
+            "write_bytes": disk_write
+        },
+        "process": {
+            "run_time": process.run_time(),
+            "threads": process.thread_count(),
+            "status": format!("{:?}", process.status())
+        }
+    }))
+}
+
+#[tauri::command]
+pub async fn measure_db_performance(state: tauri::State<'_, Database>) -> Result<serde_json::Value, String> {
+    let mut metrics = Vec::new();
+    
+    // 测试写入性能
+    let write_start = Instant::now();
+    state.connection
+        .execute(
+            "INSERT INTO performance_test (timestamp) VALUES (?1)",
+            [chrono::Utc::now().timestamp()]
+        )
+        .map_err(|e| e.to_string())?;
+    let write_time = write_start.elapsed().as_secs_f64() * 1000.0;
+    
+    // 测试读取性能
+    let read_start = Instant::now();
+    state.connection
+        .prepare("SELECT COUNT(*) FROM blocks")
+        .map_err(|e| e.to_string())?
+        .query([])
+        .map_err(|e| e.to_string())?;
+    let read_time = read_start.elapsed().as_secs_f64() * 1000.0;
+    
+    // 测试索引性能
+    let index_start = Instant::now();
+    state.connection
+        .prepare("SELECT * FROM blocks WHERE id IN (SELECT id FROM blocks ORDER BY created_at DESC LIMIT 10)")
+        .map_err(|e| e.to_string())?
+        .query([])
+        .map_err(|e| e.to_string())?;
+    let index_time = index_start.elapsed().as_secs_f64() * 1000.0;
+
+    Ok(serde_json::json!({
+        "write_time": write_time,
+        "read_time": read_time,
+        "index_time": index_time,
+        "total_time": write_time + read_time + index_time
+    }))
+}
+
+#[tauri::command]
+pub async fn analyze_performance_bottlenecks() -> Result<serde_json::Value, String> {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+    
+    let current_pid = std::process::id();
+    let process = sys.process(current_pid.into())
+        .ok_or_else(|| "Failed to get process information".to_string())?;
+    
+    // 分析CPU使用情况
+    let cpu_usage = process.cpu_usage();
+    let is_cpu_bottleneck = cpu_usage > 80.0;
+    
+    // 分析内存使用情况
+    let memory_usage = (process.memory() as f64 / sys.total_memory() as f64 * 100.0) as f64;
+    let is_memory_bottleneck = memory_usage > 80.0;
+    
+    // 分析磁盘I/O情况
+    let disk_usage = process.disk_usage();
+    let is_io_bottleneck = disk_usage.read_bytes > 10_000_000 || disk_usage.written_bytes > 10_000_000;
+
+    Ok(serde_json::json!({
+        "bottlenecks": {
+            "cpu": {
+                "is_bottleneck": is_cpu_bottleneck,
+                "usage": cpu_usage,
+                "threshold": 80.0
+            },
+            "memory": {
+                "is_bottleneck": is_memory_bottleneck,
+                "usage": memory_usage,
+                "threshold": 80.0
+            },
+            "io": {
+                "is_bottleneck": is_io_bottleneck,
+                "read_bytes": disk_usage.read_bytes,
+                "write_bytes": disk_usage.written_bytes,
+                "threshold": 10_000_000
+            }
+        },
+        "recommendations": [
+            {
+                "type": if is_cpu_bottleneck { "cpu" } else if is_memory_bottleneck { "memory" } else if is_io_bottleneck { "io" } else { "none" },
+                "severity": if is_cpu_bottleneck || is_memory_bottleneck || is_io_bottleneck { "high" } else { "low" },
+                "message": get_optimization_message(is_cpu_bottleneck, is_memory_bottleneck, is_io_bottleneck)
+            }
+        ]
+    }))
+}
+
+fn get_optimization_message(is_cpu: bool, is_memory: bool, is_io: bool) -> String {
+    if is_cpu {
+        "CPU使用率过高，建议优化计算密集型操作或考虑使用后台线程".to_string()
+    } else if is_memory {
+        "内存使用率过高，建议检查内存泄漏或优化大数据集处理".to_string()
+    } else if is_io {
+        "磁盘I/O负载过高，建议优化文件操作或使用缓存".to_string()
+    } else {
+        "系统运行正常，无需优化".to_string()
+    }
 }
