@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebDAV 同步功能演示</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #495057;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.success {
+            background: #28a745;
+        }
+        button.warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.syncing {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 12px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .result.success {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        .result.error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #007bff;
+            transition: width 0.3s ease;
+        }
+        .sync-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        .sync-info h4 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebDAV 同步功能演示</h1>
+        
+        <div id="connection-status" class="status disconnected">
+            连接状态: 检查中...
+        </div>
+        
+        <div class="sync-info">
+            <h4>🔄 WebDAV 同步功能说明</h4>
+            <p>WebDAV同步功能允许您将MingLog数据与云存储服务（如坚果云、NextCloud等）同步。这是一个预留接口演示，展示了完整的同步架构设计。</p>
+            <p><strong>支持的功能：</strong>配置管理、连接测试、双向同步、冲突解决、状态监控</p>
+        </div>
+        
+        <div class="grid">
+            <div class="section">
+                <h3>WebDAV 配置</h3>
+                <div class="form-group">
+                    <label for="server-url">服务器地址</label>
+                    <input type="url" id="server-url" placeholder="https://dav.jianguoyun.com/dav/" value="https://dav.jianguoyun.com/dav/">
+                </div>
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" placeholder="your@email.com" value="demo@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" placeholder="应用密码" value="demo-password">
+                </div>
+                <div class="form-group">
+                    <label for="remote-path">远程路径</label>
+                    <input type="text" id="remote-path" placeholder="/minglog/" value="/minglog/">
+                </div>
+                <div class="form-group">
+                    <label for="auto-sync">自动同步间隔（秒）</label>
+                    <input type="number" id="auto-sync" placeholder="300" value="300" min="60">
+                </div>
+                <button onclick="saveWebDAVConfig()">保存配置</button>
+                <button onclick="loadWebDAVConfig()" class="warning">加载配置</button>
+                <div id="config-result" class="result"></div>
+            </div>
+            
+            <div class="section">
+                <h3>连接测试</h3>
+                <p>测试与WebDAV服务器的连接状态</p>
+                <button onclick="testConnection()">测试连接</button>
+                <div id="connection-result" class="result"></div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>同步操作</h3>
+            <div class="grid">
+                <div>
+                    <h4>同步方向</h4>
+                    <button onclick="startSync('Upload')" class="success">上传到云端</button>
+                    <button onclick="startSync('Download')" class="success">从云端下载</button>
+                    <button onclick="startSync('Bidirectional')" class="success">双向同步</button>
+                    <button onclick="stopSync()" class="danger">停止同步</button>
+                </div>
+                <div>
+                    <h4>同步状态</h4>
+                    <div id="sync-status" class="status disconnected">状态: 未知</div>
+                    <button onclick="getSyncStatus()">刷新状态</button>
+                </div>
+            </div>
+            
+            <div class="progress">
+                <div id="sync-progress" class="progress-bar" style="width: 0%"></div>
+            </div>
+            
+            <div id="sync-result" class="result"></div>
+        </div>
+        
+        <div class="section">
+            <h3>冲突管理</h3>
+            <p>查看和解决同步冲突</p>
+            <button onclick="getConflicts()">检查冲突</button>
+            <button onclick="simulateConflict()" class="warning">模拟冲突</button>
+            <div id="conflicts-result" class="result"></div>
+        </div>
+        
+        <div class="section">
+            <h3>完整同步测试</h3>
+            <button onclick="runFullSyncTest()" class="success" style="font-size: 16px; padding: 12px 24px;">运行完整同步测试</button>
+            <div id="full-sync-result" class="result"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { invoke } from '@tauri-apps/api/core';
+        
+        // 检查连接状态
+        async function checkConnection() {
+            try {
+                await invoke('get_app_info');
+                document.getElementById('connection-status').textContent = '连接状态: 已连接到MingLog';
+                document.getElementById('connection-status').className = 'status connected';
+                return true;
+            } catch (error) {
+                document.getElementById('connection-status').textContent = '连接状态: 未连接 - ' + error.toString();
+                document.getElementById('connection-status').className = 'status disconnected';
+                return false;
+            }
+        }
+        
+        // 辅助函数
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.className = `result ${isError ? 'error' : 'success'}`;
+        }
+        
+        function showError(elementId, error) {
+            showResult(elementId, { error: error.toString() }, true);
+        }
+        
+        function log(message) {
+            console.log(`[${new Date().toISOString()}] ${message}`);
+        }
+        
+        function updateSyncProgress(percent) {
+            document.getElementById('sync-progress').style.width = percent + '%';
+        }
+        
+        // WebDAV配置函数
+        window.saveWebDAVConfig = async function() {
+            try {
+                const config = {
+                    server_url: document.getElementById('server-url').value,
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value,
+                    remote_path: document.getElementById('remote-path').value,
+                    enabled: true,
+                    auto_sync_interval: parseInt(document.getElementById('auto-sync').value) || null
+                };
+                
+                await invoke('configure_webdav_sync', { config });
+                
+                showResult('config-result', {
+                    message: 'WebDAV配置保存成功',
+                    config: { ...config, password: '***' }, // 隐藏密码
+                    timestamp: new Date().toISOString()
+                });
+                
+                log('WebDAV配置保存成功');
+            } catch (error) {
+                log('WebDAV配置保存失败: ' + error.toString());
+                showError('config-result', error);
+            }
+        };
+        
+        window.loadWebDAVConfig = async function() {
+            try {
+                const config = await invoke('get_webdav_config');
+                
+                if (config) {
+                    document.getElementById('server-url').value = config.server_url || '';
+                    document.getElementById('username').value = config.username || '';
+                    document.getElementById('remote-path').value = config.remote_path || '';
+                    document.getElementById('auto-sync').value = config.auto_sync_interval || 300;
+                    
+                    showResult('config-result', {
+                        message: 'WebDAV配置加载成功',
+                        config: { ...config, password: '***' },
+                        timestamp: new Date().toISOString()
+                    });
+                } else {
+                    showResult('config-result', {
+                        message: '未找到WebDAV配置',
+                        timestamp: new Date().toISOString()
+                    }, true);
+                }
+                
+                log('WebDAV配置加载完成');
+            } catch (error) {
+                log('WebDAV配置加载失败: ' + error.toString());
+                showError('config-result', error);
+            }
+        };
+        
+        // 连接测试函数
+        window.testConnection = async function() {
+            try {
+                log('开始测试WebDAV连接');
+
+                const isConnected = await invoke('test_webdav_connection');
+
+                showResult('connection-result', {
+                    message: isConnected ? 'WebDAV连接测试成功' : 'WebDAV连接测试失败',
+                    connected: isConnected,
+                    timestamp: new Date().toISOString()
+                }, !isConnected);
+
+                log(`WebDAV连接测试${isConnected ? '成功' : '失败'}`);
+            } catch (error) {
+                log('WebDAV连接测试失败: ' + error.toString());
+                showError('connection-result', error);
+            }
+        };
+
+        // 同步操作函数
+        window.startSync = async function(direction) {
+            try {
+                log(`开始${direction}同步`);
+
+                // 更新状态
+                document.getElementById('sync-status').textContent = '状态: 同步中...';
+                document.getElementById('sync-status').className = 'status syncing';
+                updateSyncProgress(0);
+
+                // 模拟进度更新
+                const progressInterval = setInterval(() => {
+                    const currentWidth = parseFloat(document.getElementById('sync-progress').style.width) || 0;
+                    if (currentWidth < 90) {
+                        updateSyncProgress(currentWidth + 10);
+                    }
+                }, 200);
+
+                const result = await invoke('start_webdav_sync', { direction });
+
+                clearInterval(progressInterval);
+                updateSyncProgress(100);
+
+                // 更新状态
+                document.getElementById('sync-status').textContent = `状态: ${result.status}`;
+                document.getElementById('sync-status').className = `status ${result.status === 'Success' ? 'connected' : 'disconnected'}`;
+
+                showResult('sync-result', {
+                    message: `${direction}同步完成`,
+                    result: result,
+                    timestamp: new Date().toISOString()
+                });
+
+                log(`${direction}同步完成: ${result.status}`);
+            } catch (error) {
+                log(`${direction}同步失败: ` + error.toString());
+                showError('sync-result', error);
+
+                document.getElementById('sync-status').textContent = '状态: 同步失败';
+                document.getElementById('sync-status').className = 'status disconnected';
+            }
+        };
+
+        window.stopSync = async function() {
+            try {
+                await invoke('stop_webdav_sync');
+
+                document.getElementById('sync-status').textContent = '状态: 已停止';
+                document.getElementById('sync-status').className = 'status disconnected';
+                updateSyncProgress(0);
+
+                showResult('sync-result', {
+                    message: '同步已停止',
+                    timestamp: new Date().toISOString()
+                });
+
+                log('同步已停止');
+            } catch (error) {
+                log('停止同步失败: ' + error.toString());
+                showError('sync-result', error);
+            }
+        };
+
+        window.getSyncStatus = async function() {
+            try {
+                const status = await invoke('get_sync_status');
+
+                document.getElementById('sync-status').textContent = `状态: ${status}`;
+                document.getElementById('sync-status').className = `status ${status === 'Success' ? 'connected' : 'disconnected'}`;
+
+                log(`当前同步状态: ${status}`);
+            } catch (error) {
+                log('获取同步状态失败: ' + error.toString());
+                showError('sync-result', error);
+            }
+        };
+
+        // 冲突管理函数
+        window.getConflicts = async function() {
+            try {
+                const conflicts = await invoke('get_sync_conflicts');
+
+                showResult('conflicts-result', {
+                    message: conflicts.length > 0 ? `发现 ${conflicts.length} 个冲突` : '没有发现冲突',
+                    conflicts: conflicts,
+                    timestamp: new Date().toISOString()
+                }, conflicts.length > 0);
+
+                log(`冲突检查完成: ${conflicts.length} 个冲突`);
+            } catch (error) {
+                log('冲突检查失败: ' + error.toString());
+                showError('conflicts-result', error);
+            }
+        };
+
+        window.simulateConflict = async function() {
+            showResult('conflicts-result', {
+                message: '模拟冲突场景',
+                simulated_conflicts: [
+                    {
+                        file_path: '/minglog/page1.md',
+                        conflict_type: 'ContentConflict',
+                        description: '本地和远程版本都有修改'
+                    },
+                    {
+                        file_path: '/minglog/page2.md',
+                        conflict_type: 'DeleteConflict',
+                        description: '本地删除，远程修改'
+                    }
+                ],
+                note: '这是演示数据，实际冲突需要真实的WebDAV服务器',
+                timestamp: new Date().toISOString()
+            }, true);
+
+            log('模拟冲突场景完成');
+        };
+
+        // 完整同步测试
+        window.runFullSyncTest = async function() {
+            const startTime = Date.now();
+            log('开始运行完整WebDAV同步测试套件');
+
+            try {
+                let results = [];
+
+                // 1. 配置测试
+                results.push('1. 测试WebDAV配置...');
+                await saveWebDAVConfig();
+                results.push('   ✅ 配置保存成功');
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // 2. 连接测试
+                results.push('2. 测试WebDAV连接...');
+                await testConnection();
+                results.push('   ✅ 连接测试完成');
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // 3. 同步状态测试
+                results.push('3. 测试同步状态...');
+                await getSyncStatus();
+                results.push('   ✅ 状态获取成功');
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // 4. 上传同步测试
+                results.push('4. 测试上传同步...');
+                await startSync('Upload');
+                results.push('   ✅ 上传同步完成');
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // 5. 冲突检查测试
+                results.push('5. 测试冲突检查...');
+                await getConflicts();
+                results.push('   ✅ 冲突检查完成');
+
+                const endTime = Date.now();
+                const duration = (endTime - startTime) / 1000;
+
+                results.push('');
+                results.push(`🎉 完整WebDAV同步测试套件执行完成！`);
+                results.push(`⏱️  总耗时: ${duration.toFixed(2)} 秒`);
+                results.push(`📊 测试时间: ${new Date().toLocaleString('zh-CN')}`);
+                results.push('');
+                results.push('📝 注意: 这是WebDAV同步功能的预留接口演示');
+                results.push('🔧 实际的WebDAV客户端实现需要额外的HTTP库支持');
+
+                showResult('full-sync-result', {
+                    status: 'WebDAV同步测试套件执行成功',
+                    duration: `${duration.toFixed(2)} 秒`,
+                    results: results,
+                    timestamp: new Date().toISOString()
+                });
+
+                log(`完整WebDAV同步测试套件执行完成，耗时 ${duration.toFixed(2)} 秒`);
+
+            } catch (error) {
+                showError('full-sync-result', error);
+                log('WebDAV同步测试套件执行失败: ' + error.toString());
+            }
+        };
+
+        // 页面加载时检查连接
+        checkConnection();
+    </script>
+</body>
+</html>

@@ -23,6 +23,9 @@ pub enum AppError {
     
     #[error("Internal error: {0}")]
     Internal(String),
+
+    #[error("Sync error: {0}")]
+    Sync(String),
 }
 
 impl From<sqlx::Error> for AppError {

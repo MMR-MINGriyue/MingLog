@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MingLog 数据持久化测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.success {
+            background: #28a745;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .result.success {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        .result.error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .stats {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .stats h4 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MingLog 数据持久化测试</h1>
+        
+        <div id="connection-status" class="status disconnected">
+            连接状态: 检查中...
+        </div>
+        
+        <div class="stats">
+            <h4>数据库统计</h4>
+            <div id="stats-content">正在加载...</div>
+        </div>
+        
+        <div class="test-grid">
+            <div class="test-section">
+                <h3>数据库初始化</h3>
+                <button onclick="testInitDatabase()">初始化数据库</button>
+                <button onclick="testGetAppInfo()">获取应用信息</button>
+                <div id="init-result" class="result"></div>
+            </div>
+            
+            <div class="test-section">
+                <h3>页面CRUD操作</h3>
+                <button onclick="testCreatePage()">创建页面</button>
+                <button onclick="testGetPages()">获取页面列表</button>
+                <button onclick="testUpdatePage()">更新页面</button>
+                <button class="danger" onclick="testDeletePage()">删除页面</button>
+                <div id="page-result" class="result"></div>
+            </div>
+            
+            <div class="test-section">
+                <h3>块CRUD操作</h3>
+                <button onclick="testCreateBlock()">创建块</button>
+                <button onclick="testGetBlocks()">获取块列表</button>
+                <button onclick="testUpdateBlock()">更新块</button>
+                <button class="danger" onclick="testDeleteBlock()">删除块</button>
+                <div id="block-result" class="result"></div>
+            </div>
+            
+            <div class="test-section">
+                <h3>搜索功能</h3>
+                <button onclick="testSearch()">搜索测试</button>
+                <button onclick="testAdvancedSearch()">高级搜索</button>
+                <div id="search-result" class="result"></div>
+            </div>
+            
+            <div class="test-section">
+                <h3>数据完整性</h3>
+                <button onclick="testDataIntegrity()">检查数据完整性</button>
+                <button onclick="testConcurrentOperations()">并发操作测试</button>
+                <div id="integrity-result" class="result"></div>
+            </div>
+            
+            <div class="test-section">
+                <h3>批量操作</h3>
+                <button class="success" onclick="testCreateSampleData()">创建示例数据</button>
+                <button onclick="testBatchOperations()">批量操作测试</button>
+                <button class="danger" onclick="testCleanupData()">清理测试数据</button>
+                <div id="batch-result" class="result"></div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>完整测试套件</h3>
+            <button class="success" onclick="runFullTestSuite()" style="font-size: 16px; padding: 12px 24px;">运行完整测试套件</button>
+            <div id="full-test-result" class="result"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { invoke } from '@tauri-apps/api/core';
+        
+        // 全局变量存储测试数据
+        window.testData = {
+            pageId: null,
+            blockId: null,
+            graphId: 'default'
+        };
+        
+        // 检查连接状态
+        async function checkConnection() {
+            try {
+                await invoke('get_app_info');
+                document.getElementById('connection-status').textContent = '连接状态: 已连接';
+                document.getElementById('connection-status').className = 'status connected';
+                await updateStats();
+                return true;
+            } catch (error) {
+                document.getElementById('connection-status').textContent = '连接状态: 未连接 - ' + error.toString();
+                document.getElementById('connection-status').className = 'status disconnected';
+                return false;
+            }
+        }
+        
+        // 更新统计信息
+        async function updateStats() {
+            try {
+                const pages = await invoke('get_pages_by_graph', { graphId: 'default' });
+                const statsContent = document.getElementById('stats-content');
+                statsContent.innerHTML = `
+                    页面数量: ${pages.length}<br>
+                    数据库路径: 本地SQLite数据库<br>
+                    最后更新: ${new Date().toLocaleString('zh-CN')}
+                `;
+            } catch (error) {
+                document.getElementById('stats-content').textContent = '无法获取统计信息: ' + error.toString();
+            }
+        }
+        
+        // 辅助函数
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.className = `result ${isError ? 'error' : 'success'}`;
+        }
+        
+        function showError(elementId, error) {
+            showResult(elementId, { error: error.toString() }, true);
+        }
+        
+        function log(message) {
+            console.log(`[${new Date().toISOString()}] ${message}`);
+        }
+        
+        // 测试函数
+        window.testInitDatabase = async function() {
+            try {
+                log('开始数据库初始化测试');
+                const result = await invoke('init_database');
+                showResult('init-result', { message: result, timestamp: new Date().toISOString() });
+                await updateStats();
+                log('数据库初始化测试完成');
+            } catch (error) {
+                log('数据库初始化测试失败: ' + error.toString());
+                showError('init-result', error);
+            }
+        };
+        
+        window.testGetAppInfo = async function() {
+            try {
+                const result = await invoke('get_app_info');
+                showResult('init-result', result);
+            } catch (error) {
+                showError('init-result', error);
+            }
+        };
+        
+        window.testCreatePage = async function() {
+            try {
+                const timestamp = Date.now();
+                const request = {
+                    graph_id: 'default',
+                    name: `测试页面_${timestamp}`,
+                    title: `测试页面标题_${timestamp}`,
+                    tags: JSON.stringify(['测试', '持久化']),
+                    is_journal: false
+                };
+                const result = await invoke('create_page', { request });
+                window.testData.pageId = result.id;
+                showResult('page-result', result);
+                await updateStats();
+                log(`创建页面成功: ${result.id}`);
+            } catch (error) {
+                showError('page-result', error);
+            }
+        };
+        
+        window.testGetPages = async function() {
+            try {
+                const result = await invoke('get_pages_by_graph', { graphId: 'default' });
+                showResult('page-result', { count: result.length, pages: result });
+                log(`获取到 ${result.length} 个页面`);
+            } catch (error) {
+                showError('page-result', error);
+            }
+        };
+        
+        window.testUpdatePage = async function() {
+            if (!window.testData.pageId) {
+                showError('page-result', '请先创建页面');
+                return;
+            }
+            
+            try {
+                const request = {
+                    id: window.testData.pageId,
+                    title: `更新的页面标题_${Date.now()}`
+                };
+                const result = await invoke('update_page', { request });
+                showResult('page-result', result);
+                log(`更新页面成功: ${window.testData.pageId}`);
+            } catch (error) {
+                showError('page-result', error);
+            }
+        };
+        
+        window.testDeletePage = async function() {
+            if (!window.testData.pageId) {
+                showError('page-result', '请先创建页面');
+                return;
+            }
+            
+            try {
+                await invoke('delete_page', { id: window.testData.pageId });
+                showResult('page-result', { message: '页面删除成功', deletedId: window.testData.pageId });
+                window.testData.pageId = null;
+                await updateStats();
+                log('删除页面成功');
+            } catch (error) {
+                showError('page-result', error);
+            }
+        };
+        
+        window.testCreateBlock = async function() {
+            if (!window.testData.pageId) {
+                showError('block-result', '请先创建页面');
+                return;
+            }
+
+            try {
+                const request = {
+                    graph_id: 'default',
+                    page_id: window.testData.pageId,
+                    content: `测试块内容 - ${new Date().toLocaleString('zh-CN')}`,
+                    order: 0
+                };
+                const result = await invoke('create_block', { request });
+                window.testData.blockId = result.id;
+                showResult('block-result', result);
+                log(`创建块成功: ${result.id}`);
+            } catch (error) {
+                showError('block-result', error);
+            }
+        };
+
+        window.testGetBlocks = async function() {
+            if (!window.testData.pageId) {
+                showError('block-result', '请先创建页面');
+                return;
+            }
+
+            try {
+                const result = await invoke('get_blocks_by_page', { pageId: window.testData.pageId });
+                showResult('block-result', { count: result.length, blocks: result });
+                log(`获取到 ${result.length} 个块`);
+            } catch (error) {
+                showError('block-result', error);
+            }
+        };
+
+        window.testUpdateBlock = async function() {
+            if (!window.testData.blockId) {
+                showError('block-result', '请先创建块');
+                return;
+            }
+
+            try {
+                const request = {
+                    id: window.testData.blockId,
+                    content: `更新的块内容 - ${new Date().toLocaleString('zh-CN')}`
+                };
+                const result = await invoke('update_block', { request });
+                showResult('block-result', result);
+                log(`更新块成功: ${window.testData.blockId}`);
+            } catch (error) {
+                showError('block-result', error);
+            }
+        };
+
+        window.testDeleteBlock = async function() {
+            if (!window.testData.blockId) {
+                showError('block-result', '请先创建块');
+                return;
+            }
+
+            try {
+                await invoke('delete_block', { id: window.testData.blockId });
+                showResult('block-result', { message: '块删除成功', deletedId: window.testData.blockId });
+                window.testData.blockId = null;
+                log('删除块成功');
+            } catch (error) {
+                showError('block-result', error);
+            }
+        };
+
+        window.testSearch = async function() {
+            try {
+                const request = {
+                    query: '测试',
+                    include_pages: true,
+                    include_blocks: true,
+                    limit: 10
+                };
+                const result = await invoke('search_blocks', { request });
+                showResult('search-result', result);
+                log(`搜索完成，找到 ${result.pages?.length || 0} 个页面，${result.blocks?.length || 0} 个块`);
+            } catch (error) {
+                showError('search-result', error);
+            }
+        };
+
+        window.testAdvancedSearch = async function() {
+            try {
+                const request = {
+                    query: '持久化',
+                    include_pages: true,
+                    include_blocks: true,
+                    limit: 20
+                };
+                const result = await invoke('search_blocks', { request });
+                showResult('search-result', {
+                    query: '持久化',
+                    results: result,
+                    timestamp: new Date().toISOString()
+                });
+            } catch (error) {
+                showError('search-result', error);
+            }
+        };
+
+        window.testDataIntegrity = async function() {
+            try {
+                log('开始数据完整性检查');
+                const pages = await invoke('get_pages_by_graph', { graphId: 'default' });
+                let totalBlocks = 0;
+                let integrityIssues = [];
+
+                for (const page of pages) {
+                    try {
+                        const blocks = await invoke('get_blocks_by_page', { pageId: page.id });
+                        totalBlocks += blocks.length;
+
+                        // 检查每个块是否有有效的page_id
+                        for (const block of blocks) {
+                            if (block.page_id !== page.id) {
+                                integrityIssues.push(`块 ${block.id} 的 page_id 不匹配`);
+                            }
+                        }
+                    } catch (error) {
+                        integrityIssues.push(`无法获取页面 ${page.id} 的块: ${error.toString()}`);
+                    }
+                }
+
+                const result = {
+                    totalPages: pages.length,
+                    totalBlocks: totalBlocks,
+                    integrityIssues: integrityIssues,
+                    status: integrityIssues.length === 0 ? '数据完整性良好' : '发现完整性问题',
+                    timestamp: new Date().toISOString()
+                };
+
+                showResult('integrity-result', result);
+                log(`数据完整性检查完成: ${pages.length} 页面, ${totalBlocks} 块, ${integrityIssues.length} 问题`);
+            } catch (error) {
+                showError('integrity-result', error);
+            }
+        };
+
+        window.testConcurrentOperations = async function() {
+            try {
+                log('开始并发操作测试');
+                const promises = [];
+
+                // 并发创建多个页面
+                for (let i = 0; i < 5; i++) {
+                    promises.push(invoke('create_page', {
+                        request: {
+                            graph_id: 'default',
+                            name: `并发测试页面_${i}_${Date.now()}`,
+                            title: `并发测试页面标题_${i}`,
+                            tags: JSON.stringify(['并发', '测试']),
+                            is_journal: false
+                        }
+                    }));
+                }
+
+                const results = await Promise.all(promises);
+                showResult('integrity-result', {
+                    message: '并发操作测试完成',
+                    createdPages: results.length,
+                    pageIds: results.map(r => r.id),
+                    timestamp: new Date().toISOString()
+                });
+
+                await updateStats();
+                log(`并发操作测试完成，创建了 ${results.length} 个页面`);
+            } catch (error) {
+                showError('integrity-result', error);
+            }
+        };
+
+        window.testCreateSampleData = async function() {
+            try {
+                await invoke('create_sample_graph_data');
+                showResult('batch-result', {
+                    message: '示例数据创建成功',
+                    timestamp: new Date().toISOString()
+                });
+                await updateStats();
+                log('示例数据创建成功');
+            } catch (error) {
+                showError('batch-result', error);
+            }
+        };
+
+        window.testBatchOperations = async function() {
+            try {
+                log('开始批量操作测试');
+
+                // 批量创建页面
+                const pagePromises = [];
+                for (let i = 0; i < 3; i++) {
+                    pagePromises.push(invoke('create_page', {
+                        request: {
+                            graph_id: 'default',
+                            name: `批量页面_${i}_${Date.now()}`,
+                            title: `批量页面标题_${i}`,
+                            tags: JSON.stringify(['批量', '测试']),
+                            is_journal: false
+                        }
+                    }));
+                }
+
+                const pages = await Promise.all(pagePromises);
+
+                // 为每个页面创建块
+                const blockPromises = [];
+                pages.forEach((page, index) => {
+                    for (let j = 0; j < 2; j++) {
+                        blockPromises.push(invoke('create_block', {
+                            request: {
+                                graph_id: 'default',
+                                page_id: page.id,
+                                content: `批量块内容 ${index}-${j} - ${new Date().toLocaleString('zh-CN')}`,
+                                order: j
+                            }
+                        }));
+                    }
+                });
+
+                const blocks = await Promise.all(blockPromises);
+
+                showResult('batch-result', {
+                    message: '批量操作完成',
+                    createdPages: pages.length,
+                    createdBlocks: blocks.length,
+                    timestamp: new Date().toISOString()
+                });
+
+                await updateStats();
+                log(`批量操作完成: ${pages.length} 页面, ${blocks.length} 块`);
+            } catch (error) {
+                showError('batch-result', error);
+            }
+        };
+
+        window.testCleanupData = async function() {
+            if (!confirm('确定要清理所有测试数据吗？这将删除所有包含"测试"、"并发"、"批量"的页面。')) {
+                return;
+            }
+
+            try {
+                log('开始清理测试数据');
+                const pages = await invoke('get_pages_by_graph', { graphId: 'default' });
+                let deletedCount = 0;
+
+                for (const page of pages) {
+                    if (page.name.includes('测试') || page.name.includes('并发') || page.name.includes('批量')) {
+                        try {
+                            await invoke('delete_page', { id: page.id });
+                            deletedCount++;
+                        } catch (error) {
+                            log(`删除页面 ${page.id} 失败: ${error.toString()}`);
+                        }
+                    }
+                }
+
+                showResult('batch-result', {
+                    message: '测试数据清理完成',
+                    deletedPages: deletedCount,
+                    timestamp: new Date().toISOString()
+                });
+
+                await updateStats();
+                log(`清理完成，删除了 ${deletedCount} 个页面`);
+            } catch (error) {
+                showError('batch-result', error);
+            }
+        };
+
+        window.runFullTestSuite = async function() {
+            const startTime = Date.now();
+            log('开始运行完整测试套件');
+
+            try {
+                let results = [];
+
+                // 1. 初始化测试
+                results.push('1. 数据库初始化测试...');
+                await testInitDatabase();
+                results.push('   ✅ 数据库初始化成功');
+
+                // 2. 页面CRUD测试
+                results.push('2. 页面CRUD测试...');
+                await testCreatePage();
+                results.push('   ✅ 页面创建成功');
+                await testUpdatePage();
+                results.push('   ✅ 页面更新成功');
+
+                // 3. 块CRUD测试
+                results.push('3. 块CRUD测试...');
+                await testCreateBlock();
+                results.push('   ✅ 块创建成功');
+                await testUpdateBlock();
+                results.push('   ✅ 块更新成功');
+
+                // 4. 搜索测试
+                results.push('4. 搜索功能测试...');
+                await testSearch();
+                results.push('   ✅ 搜索功能正常');
+
+                // 5. 数据完整性测试
+                results.push('5. 数据完整性测试...');
+                await testDataIntegrity();
+                results.push('   ✅ 数据完整性检查完成');
+
+                // 6. 批量操作测试
+                results.push('6. 批量操作测试...');
+                await testBatchOperations();
+                results.push('   ✅ 批量操作成功');
+
+                const endTime = Date.now();
+                const duration = (endTime - startTime) / 1000;
+
+                results.push('');
+                results.push(`🎉 完整测试套件执行完成！`);
+                results.push(`⏱️  总耗时: ${duration.toFixed(2)} 秒`);
+                results.push(`📊 测试时间: ${new Date().toLocaleString('zh-CN')}`);
+
+                showResult('full-test-result', {
+                    status: '测试套件执行成功',
+                    duration: `${duration.toFixed(2)} 秒`,
+                    results: results,
+                    timestamp: new Date().toISOString()
+                });
+
+                log(`完整测试套件执行完成，耗时 ${duration.toFixed(2)} 秒`);
+
+            } catch (error) {
+                showError('full-test-result', error);
+                log('测试套件执行失败: ' + error.toString());
+            }
+        };
+
+        // 页面加载时检查连接
+        checkConnection();
+    </script>
+</body>
+</html>

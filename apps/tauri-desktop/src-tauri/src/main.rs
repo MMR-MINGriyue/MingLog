@@ -7,6 +7,7 @@ mod error;
 mod models;
 mod state;
 mod file_operations;
+mod sync;
 
 use commands::*;
 use database::Database;
@@ -33,6 +34,7 @@ async fn main() {
                     Ok(db) => {
                         let state = AppState {
                             db: Arc::new(Mutex::new(db)),
+                            sync_manager: Arc::new(Mutex::new(sync::WebDAVSyncManager::new())),
                         };
                         app_handle.manage(state);
                         log::info!("Database initialized successfully");
@@ -144,6 +146,24 @@ async fn main() {
             export_page_to_markdown,
             bulk_export_pages,
             create_backup,
+
+            // File dialog commands
+            open_file_dialog,
+            save_file_dialog,
+            select_folder_dialog,
+            import_markdown_files_with_dialog,
+            export_pages_with_dialog,
+            create_backup_with_dialog,
+
+            // WebDAV sync commands
+            configure_webdav_sync,
+            get_webdav_config,
+            test_webdav_connection,
+            start_webdav_sync,
+            stop_webdav_sync,
+            get_sync_status,
+            get_sync_conflicts,
+            resolve_sync_conflict,
 
             // Tag commands
             get_tags,
