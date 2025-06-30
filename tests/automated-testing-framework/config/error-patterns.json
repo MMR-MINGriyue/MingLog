@@ -1,0 +1,222 @@
+{
+  "startup_errors": {
+    "app_crash_on_startup": {
+      "pattern": "Process exited with code [1-9]\\d*",
+      "severity": "critical",
+      "category": "startup",
+      "description": "应用程序启动时崩溃",
+      "symptoms": [
+        "进程异常退出",
+        "返回非零退出码",
+        "启动超时"
+      ],
+      "auto_fix": true,
+      "fix_strategy": "restart_with_safe_mode"
+    },
+    "database_connection_failed": {
+      "pattern": "Failed to connect to database|Database.*error|SQLite.*error",
+      "severity": "high",
+      "category": "database",
+      "description": "数据库连接失败",
+      "symptoms": [
+        "数据库文件不存在",
+        "权限不足",
+        "文件损坏"
+      ],
+      "auto_fix": true,
+      "fix_strategy": "recreate_database"
+    },
+    "missing_dependencies": {
+      "pattern": "DLL not found|Library.*not found|Missing.*dependency",
+      "severity": "critical",
+      "category": "dependencies",
+      "description": "缺少必要的依赖文件",
+      "symptoms": [
+        "DLL文件缺失",
+        "运行时库未安装",
+        "系统组件缺失"
+      ],
+      "auto_fix": false,
+      "fix_strategy": "manual_dependency_install"
+    }
+  },
+  "ui_errors": {
+    "render_failure": {
+      "pattern": "Failed to render|Render.*error|WebView.*error",
+      "severity": "high",
+      "category": "ui",
+      "description": "UI渲染失败",
+      "symptoms": [
+        "白屏或黑屏",
+        "界面元素缺失",
+        "CSS样式未加载"
+      ],
+      "auto_fix": true,
+      "fix_strategy": "reload_webview"
+    },
+    "element_not_found": {
+      "pattern": "Element.*not found|Cannot find element|Selector.*failed",
+      "severity": "medium",
+      "category": "ui",
+      "description": "UI元素未找到",
+      "symptoms": [
+        "按钮或链接不可点击",
+        "表单元素缺失",
+        "导航菜单异常"
+      ],
+      "auto_fix": true,
+      "fix_strategy": "wait_and_retry"
+    },
+    "layout_broken": {
+      "pattern": "Layout.*error|CSS.*error|Style.*not applied",
+      "severity": "medium",
+      "category": "ui",
+      "description": "页面布局错误",
+      "symptoms": [
+        "元素位置错误",
+        "响应式布局失效",
+        "样式显示异常"
+      ],
+      "auto_fix": true,
+      "fix_strategy": "refresh_styles"
+    }
+  },
+  "functionality_errors": {
+    "search_not_working": {
+      "pattern": "Search.*failed|Query.*error|Index.*error",
+      "severity": "high",
+      "category": "search",
+      "description": "搜索功能异常",
+      "symptoms": [
+        "搜索无结果",
+        "搜索响应慢",
+        "搜索索引损坏"
+      ],
+      "auto_fix": true,
+      "fix_strategy": "rebuild_search_index"
+    },
+    "save_operation_failed": {
+      "pattern": "Save.*failed|Write.*error|File.*error",
+      "severity": "high",
+      "category": "data",
+      "description": "保存操作失败",
+      "symptoms": [
+        "文件无法保存",
+        "数据丢失",
+        "权限错误"
+      ],
+      "auto_fix": true,
+      "fix_strategy": "retry_with_backup"
+    },
+    "graph_render_error": {
+      "pattern": "Graph.*error|Visualization.*failed|D3.*error",
+      "severity": "medium",
+      "category": "graph",
+      "description": "知识图谱渲染错误",
+      "symptoms": [
+        "图谱无法显示",
+        "节点连接异常",
+        "交互功能失效"
+      ],
+      "auto_fix": true,
+      "fix_strategy": "reload_graph_data"
+    }
+  },
+  "performance_errors": {
+    "memory_leak": {
+      "pattern": "Memory usage exceeding threshold|Out of memory|Memory.*leak",
+      "severity": "high",
+      "category": "performance",
+      "description": "内存泄漏",
+      "symptoms": [
+        "内存使用持续增长",
+        "应用响应变慢",
+        "系统资源不足"
+      ],
+      "auto_fix": true,
+      "fix_strategy": "force_garbage_collection"
+    },
+    "high_cpu_usage": {
+      "pattern": "CPU usage exceeding threshold|High CPU|Performance.*degraded",
+      "severity": "medium",
+      "category": "performance",
+      "description": "CPU使用率过高",
+      "symptoms": [
+        "应用响应慢",
+        "风扇噪音大",
+        "系统卡顿"
+      ],
+      "auto_fix": true,
+      "fix_strategy": "optimize_operations"
+    },
+    "slow_response": {
+      "pattern": "Response time exceeding threshold|Timeout|Slow.*operation",
+      "severity": "medium",
+      "category": "performance",
+      "description": "响应时间过长",
+      "symptoms": [
+        "操作响应慢",
+        "界面卡顿",
+        "用户体验差"
+      ],
+      "auto_fix": true,
+      "fix_strategy": "optimize_queries"
+    }
+  },
+  "network_errors": {
+    "webdav_connection_failed": {
+      "pattern": "WebDAV.*failed|Sync.*error|Network.*error",
+      "severity": "medium",
+      "category": "sync",
+      "description": "WebDAV同步失败",
+      "symptoms": [
+        "无法连接服务器",
+        "同步超时",
+        "认证失败"
+      ],
+      "auto_fix": true,
+      "fix_strategy": "retry_connection"
+    },
+    "offline_mode_issues": {
+      "pattern": "Offline.*error|Network.*unavailable|Connection.*lost",
+      "severity": "low",
+      "category": "network",
+      "description": "离线模式问题",
+      "symptoms": [
+        "网络功能不可用",
+        "同步暂停",
+        "在线功能失效"
+      ],
+      "auto_fix": true,
+      "fix_strategy": "enable_offline_mode"
+    }
+  },
+  "system_errors": {
+    "file_permission_error": {
+      "pattern": "Permission denied|Access.*denied|Unauthorized",
+      "severity": "high",
+      "category": "system",
+      "description": "文件权限错误",
+      "symptoms": [
+        "无法读写文件",
+        "配置保存失败",
+        "数据访问受限"
+      ],
+      "auto_fix": false,
+      "fix_strategy": "request_admin_privileges"
+    },
+    "disk_space_low": {
+      "pattern": "Disk.*full|No space.*left|Storage.*insufficient",
+      "severity": "high",
+      "category": "system",
+      "description": "磁盘空间不足",
+      "symptoms": [
+        "无法保存文件",
+        "临时文件创建失败",
+        "数据库操作失败"
+      ],
+      "auto_fix": true,
+      "fix_strategy": "cleanup_temp_files"
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "metadata": {
+    "sessionId": "test_1751273331505_0nwhncfvz",
+    "suite": "smoke",
+    "startTime": "2025-06-30T08:48:51.505Z",
+    "endTime": "2025-06-30T08:48:56.521Z",
+    "duration": 5016,
+    "generatedAt": "2025-06-30T08:48:56.537Z"
+  },
+  "summary": {
+    "totalTests": 3,
+    "passedTests": 3,
+    "failedTests": 0,
+    "passRate": 100,
+    "totalErrors": 0,
+    "totalFixes": 0,
+    "successfulFixes": 0,
+    "fixSuccessRate": 0,
+    "status": "PASSED"
+  },
+  "tests": [
+    {
+      "type": "startup",
+      "startTime": 1751273334622,
+      "passed": true,
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "startup_time": 0
+      },
+      "endTime": 1751273334726,
+      "duration": 104
+    },
+    {
+      "type": "basic_ui",
+      "startTime": 1751273334726,
+      "passed": true,
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "ui_response_time": 524.2034128862515
+      },
+      "endTime": 1751273334975,
+      "duration": 249
+    },
+    {
+      "type": "core_functions",
+      "startTime": 1751273334975,
+      "passed": true,
+      "errors": [],
+      "warnings": [],
+      "metrics": {},
+      "endTime": 1751273336498,
+      "duration": 1523
+    }
+  ],
+  "errors": [],
+  "fixes": [],
+  "statistics": {
+    "testDurations": {
+      "startup": 104,
+      "basic_ui": 249,
+      "core_functions": 1523
+    },
+    "errorsByCategory": {},
+    "errorsBySeverity": {},
+    "fixesByStrategy": {}
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "name": "minglog-automated-testing-framework",
+  "version": "1.0.0",
+  "description": "MingLog桌面应用自动化错误检测和修复系统",
+  "main": "run-tests.js",
+  "scripts": {
+    "test": "node run-tests.js smoke",
+    "test:smoke": "node run-tests.js smoke",
+    "test:regression": "node run-tests.js regression",
+    "test:stress": "node run-tests.js stress",
+    "test:security": "node run-tests.js security",
+    "test:all": "node run-tests.js all",
+    "monitor": "node run-tests.js monitor",
+    "monitor:start": "node run-tests.js monitor",
+    "install-deps": "npm install",
+    "setup": "npm install && node setup.js",
+    "clean": "node scripts/clean-reports.js",
+    "report": "node scripts/generate-report.js",
+    "validate": "node scripts/validate-config.js"
+  },
+  "keywords": [
+    "testing",
+    "automation",
+    "error-detection",
+    "auto-fix",
+    "monitoring",
+    "minglog",
+    "desktop-app",
+    "tauri",
+    "quality-assurance"
+  ],
+  "author": "MingLog Development Team",
+  "license": "MIT",
+  "dependencies": {
+    "fs-extra": "^11.1.1",
+    "chalk": "^4.1.2",
+    "commander": "^9.4.1",
+    "node-cron": "^3.0.2",
+    "winston": "^3.8.2",
+    "puppeteer": "^19.11.1",
+    "playwright": "^1.32.3",
+    "sharp": "^0.32.1",
+    "pixelmatch": "^5.3.0",
+    "jimp": "^0.22.8"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "eslint": "^8.40.0",
+    "prettier": "^2.8.8",
+    "nodemon": "^2.0.22"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/minglog.git",
+    "directory": "tests/automated-testing-framework"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/minglog/issues"
+  },
+  "homepage": "https://github.com/your-org/minglog#readme",
+  "config": {
+    "test_timeout": 300000,
+    "report_retention_days": 30,
+    "max_concurrent_tests": 3,
+    "screenshot_quality": 80,
+    "log_level": "info"
+  },
+  "bin": {
+    "minglog-test": "./run-tests.js"
+  },
+  "files": [
+    "core/",
+    "utils/",
+    "config/",
+    "scripts/",
+    "run-tests.js",
+    "setup.js",
+    "README.md"
+  ]
+}
