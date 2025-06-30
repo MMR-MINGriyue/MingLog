@@ -83,9 +83,12 @@ jobs:
         working-directory: apps/tauri-desktop
         run: npm run build
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
       - name: Build Tauri app
-        working-directory: apps/tauri-desktop
-        run: npm run tauri build -- --target ${{ matrix.target }}
+        working-directory: apps/tauri-desktop/src-tauri
+        run: cargo tauri build --target ${{ matrix.target }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
@@ -102,7 +105,10 @@ jobs:
           New-Item -ItemType Directory -Path $portableDir -Force
           
           # Copy main executable
-          $exePath = "apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/release/minglog_tauri.exe"
+          $exePath = "apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/release/minglog-desktop.exe"
+          if (!(Test-Path $exePath)) {
+            $exePath = "apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/release/minglog_tauri.exe"
+          }
           Copy-Item $exePath "$portableDir/MingLog.exe"
           
           # Copy all diagnostic and startup scripts from dist folder if they exist
@@ -155,7 +161,11 @@ jobs:
           mkdir -p "$portable_dir"
           
           # Copy executable
-          cp "apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/release/minglog_tauri" "$portable_dir/MingLog"
+          exe_path="apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/release/minglog-desktop"
+          if [ ! -f "$exe_path" ]; then
+            exe_path="apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/release/minglog_tauri"
+          fi
+          cp "$exe_path" "$portable_dir/MingLog"
           chmod +x "$portable_dir/MingLog"
           
           # Create startup script

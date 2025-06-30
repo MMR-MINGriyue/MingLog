@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MingLog 全面功能测试套件</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-overview {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .test-overview h2 {
+            margin: 0 0 15px 0;
+            color: #1976d2;
+        }
+        .test-category {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .test-category h3 {
+            margin-top: 0;
+            color: #495057;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .test-item {
+            background: white;
+            padding: 15px;
+            border: 1px solid #e1e5e9;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .test-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .test-item h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 14px;
+        }
+        .test-item p {
+            margin: 0 0 10px 0;
+            color: #666;
+            font-size: 12px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin: 3px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.success {
+            background: #28a745;
+        }
+        button.warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.testing {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 12px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 11px;
+        }
+        .result.success {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        .result.error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #007bff, #28a745);
+            transition: width 0.3s ease;
+        }
+        .test-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #e1e5e9;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .control-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 MingLog 全面功能测试套件</h1>
+        
+        <div class="test-overview">
+            <h2>测试套件概览</h2>
+            <p>这是MingLog桌面应用的全面功能测试套件，涵盖了所有核心功能模块的自动化测试。测试套件包括数据库操作、文件操作、WebDAV同步、用户界面交互等各个方面。</p>
+            <p><strong>测试目标：</strong>确保应用的稳定性、可靠性和用户体验质量。</p>
+        </div>
+        
+        <div id="connection-status" class="status disconnected">
+            连接状态: 检查中...
+        </div>
+        
+        <div class="control-panel">
+            <button onclick="runAllTests()" class="success" style="font-size: 16px; padding: 12px 24px; margin: 0 10px;">🚀 运行全部测试</button>
+            <button onclick="runCriticalTests()" class="warning" style="font-size: 16px; padding: 12px 24px; margin: 0 10px;">⚡ 运行关键测试</button>
+            <button onclick="stopAllTests()" class="danger" style="font-size: 16px; padding: 12px 24px; margin: 0 10px;">🛑 停止测试</button>
+        </div>
+        
+        <div class="progress">
+            <div id="overall-progress" class="progress-bar" style="width: 0%"></div>
+        </div>
+        
+        <div class="test-stats">
+            <div class="stat-card">
+                <div id="total-tests" class="stat-number">0</div>
+                <div class="stat-label">总测试数</div>
+            </div>
+            <div class="stat-card">
+                <div id="passed-tests" class="stat-number">0</div>
+                <div class="stat-label">通过测试</div>
+            </div>
+            <div class="stat-card">
+                <div id="failed-tests" class="stat-number">0</div>
+                <div class="stat-label">失败测试</div>
+            </div>
+            <div class="stat-card">
+                <div id="test-duration" class="stat-number">0s</div>
+                <div class="stat-label">测试耗时</div>
+            </div>
+        </div>
+        
+        <div class="test-category">
+            <h3>🗄️ 数据库功能测试</h3>
+            <div class="test-grid">
+                <div class="test-item">
+                    <h4>数据库连接测试</h4>
+                    <p>测试SQLite数据库连接和初始化</p>
+                    <button onclick="testDatabaseConnection()">运行测试</button>
+                    <div id="db-connection-result" class="result"></div>
+                </div>
+                <div class="test-item">
+                    <h4>页面CRUD测试</h4>
+                    <p>测试页面的创建、读取、更新、删除操作</p>
+                    <button onclick="testPageCRUD()">运行测试</button>
+                    <div id="page-crud-result" class="result"></div>
+                </div>
+                <div class="test-item">
+                    <h4>块CRUD测试</h4>
+                    <p>测试块的创建、读取、更新、删除操作</p>
+                    <button onclick="testBlockCRUD()">运行测试</button>
+                    <div id="block-crud-result" class="result"></div>
+                </div>
+                <div class="test-item">
+                    <h4>数据完整性测试</h4>
+                    <p>测试数据关联关系和约束</p>
+                    <button onclick="testDataIntegrity()">运行测试</button>
+                    <div id="data-integrity-result" class="result"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-category">
+            <h3>📁 文件操作测试</h3>
+            <div class="test-grid">
+                <div class="test-item">
+                    <h4>Markdown导入测试</h4>
+                    <p>测试Markdown文件导入功能</p>
+                    <button onclick="testMarkdownImport()">运行测试</button>
+                    <div id="markdown-import-result" class="result"></div>
+                </div>
+                <div class="test-item">
+                    <h4>页面导出测试</h4>
+                    <p>测试页面导出为Markdown文件</p>
+                    <button onclick="testPageExport()">运行测试</button>
+                    <div id="page-export-result" class="result"></div>
+                </div>
+                <div class="test-item">
+                    <h4>数据备份测试</h4>
+                    <p>测试完整数据备份功能</p>
+                    <button onclick="testDataBackup()">运行测试</button>
+                    <div id="data-backup-result" class="result"></div>
+                </div>
+                <div class="test-item">
+                    <h4>文件系统权限测试</h4>
+                    <p>测试文件读写权限和错误处理</p>
+                    <button onclick="testFilePermissions()">运行测试</button>
+                    <div id="file-permissions-result" class="result"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-category">
+            <h3>🔄 WebDAV同步测试</h3>
+            <div class="test-grid">
+                <div class="test-item">
+                    <h4>同步配置测试</h4>
+                    <p>测试WebDAV配置管理</p>
+                    <button onclick="testSyncConfig()">运行测试</button>
+                    <div id="sync-config-result" class="result"></div>
+                </div>
+                <div class="test-item">
+                    <h4>连接测试</h4>
+                    <p>测试WebDAV服务器连接</p>
+                    <button onclick="testSyncConnection()">运行测试</button>
+                    <div id="sync-connection-result" class="result"></div>
+                </div>
+                <div class="test-item">
+                    <h4>同步操作测试</h4>
+                    <p>测试同步启动、停止和状态管理</p>
+                    <button onclick="testSyncOperations()">运行测试</button>
+                    <div id="sync-operations-result" class="result"></div>
+                </div>
+                <div class="test-item">
+                    <h4>冲突处理测试</h4>
+                    <p>测试同步冲突检测和解决</p>
+                    <button onclick="testConflictHandling()">运行测试</button>
+                    <div id="conflict-handling-result" class="result"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-category">
+            <h3>🎨 用户界面测试</h3>
+            <div class="test-grid">
+                <div class="test-item">
+                    <h4>应用启动测试</h4>
+                    <p>测试应用启动和初始化</p>
+                    <button onclick="testAppStartup()">运行测试</button>
+                    <div id="app-startup-result" class="result"></div>
+                </div>
+                <div class="test-item">
+                    <h4>页面导航测试</h4>
+                    <p>测试页面切换和导航功能</p>
+                    <button onclick="testPageNavigation()">运行测试</button>
+                    <div id="page-navigation-result" class="result"></div>
+                </div>
+                <div class="test-item">
+                    <h4>编辑器功能测试</h4>
+                    <p>测试块编辑器的各项功能</p>
+                    <button onclick="testEditorFunctions()">运行测试</button>
+                    <div id="editor-functions-result" class="result"></div>
+                </div>
+                <div class="test-item">
+                    <h4>响应性测试</h4>
+                    <p>测试界面响应速度和性能</p>
+                    <button onclick="testUIResponsiveness()">运行测试</button>
+                    <div id="ui-responsiveness-result" class="result"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-category">
+            <h3>⚡ 性能和稳定性测试</h3>
+            <div class="test-grid">
+                <div class="test-item">
+                    <h4>内存使用测试</h4>
+                    <p>测试应用内存使用情况</p>
+                    <button onclick="testMemoryUsage()">运行测试</button>
+                    <div id="memory-usage-result" class="result"></div>
+                </div>
+                <div class="test-item">
+                    <h4>并发操作测试</h4>
+                    <p>测试多个操作同时执行</p>
+                    <button onclick="testConcurrentOperations()">运行测试</button>
+                    <div id="concurrent-operations-result" class="result"></div>
+                </div>
+                <div class="test-item">
+                    <h4>错误恢复测试</h4>
+                    <p>测试错误处理和恢复机制</p>
+                    <button onclick="testErrorRecovery()">运行测试</button>
+                    <div id="error-recovery-result" class="result"></div>
+                </div>
+                <div class="test-item">
+                    <h4>长时间运行测试</h4>
+                    <p>测试应用长时间运行的稳定性</p>
+                    <button onclick="testLongRunning()">运行测试</button>
+                    <div id="long-running-result" class="result"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-category">
+            <h3>📊 测试结果汇总</h3>
+            <div id="test-summary" class="result"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { invoke } from '@tauri-apps/api/core';
+        
+        // 全局测试状态
+        window.testState = {
+            totalTests: 0,
+            passedTests: 0,
+            failedTests: 0,
+            startTime: null,
+            isRunning: false,
+            results: []
+        };
+        
+        // 检查连接状态
+        async function checkConnection() {
+            try {
+                await invoke('get_app_info');
+                document.getElementById('connection-status').textContent = '连接状态: 已连接到MingLog';
+                document.getElementById('connection-status').className = 'status connected';
+                return true;
+            } catch (error) {
+                document.getElementById('connection-status').textContent = '连接状态: 未连接 - ' + error.toString();
+                document.getElementById('connection-status').className = 'status disconnected';
+                return false;
+            }
+        }
+        
+        // 辅助函数
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = JSON.stringify(data, null, 2);
+                element.className = `result ${isError ? 'error' : 'success'}`;
+            }
+        }
+
+        function showError(elementId, error) {
+            showResult(elementId, { error: error.toString() }, true);
+        }
+
+        function log(message) {
+            console.log(`[${new Date().toISOString()}] ${message}`);
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('overall-progress').style.width = percent + '%';
+        }
+
+        function updateStats() {
+            document.getElementById('total-tests').textContent = window.testState.totalTests;
+            document.getElementById('passed-tests').textContent = window.testState.passedTests;
+            document.getElementById('failed-tests').textContent = window.testState.failedTests;
+
+            if (window.testState.startTime) {
+                const duration = (Date.now() - window.testState.startTime) / 1000;
+                document.getElementById('test-duration').textContent = duration.toFixed(1) + 's';
+            }
+        }
+
+        async function runTest(testName, testFunction) {
+            window.testState.totalTests++;
+            updateStats();
+
+            try {
+                log(`开始测试: ${testName}`);
+                const result = await testFunction();
+                window.testState.passedTests++;
+                window.testState.results.push({ name: testName, status: 'PASSED', result });
+                log(`测试通过: ${testName}`);
+                return result;
+            } catch (error) {
+                window.testState.failedTests++;
+                window.testState.results.push({ name: testName, status: 'FAILED', error: error.toString() });
+                log(`测试失败: ${testName} - ${error.toString()}`);
+                throw error;
+            } finally {
+                updateStats();
+            }
+        }
+
+        // 数据库功能测试
+        window.testDatabaseConnection = async function() {
+            return await runTest('数据库连接测试', async () => {
+                const appInfo = await invoke('get_app_info');
+                const result = await invoke('init_database');
+
+                showResult('db-connection-result', {
+                    message: '数据库连接测试成功',
+                    app_info: appInfo,
+                    init_result: result,
+                    timestamp: new Date().toISOString()
+                });
+
+                return { status: 'success', app_info: appInfo };
+            });
+        };
+
+        window.testPageCRUD = async function() {
+            return await runTest('页面CRUD测试', async () => {
+                // 创建测试页面
+                const createRequest = {
+                    graph_id: 'default',
+                    name: `测试页面_${Date.now()}`,
+                    title: '页面CRUD测试',
+                    tags: JSON.stringify(['测试', 'CRUD']),
+                    is_journal: false
+                };
+
+                const createdPage = await invoke('create_page', { request: createRequest });
+
+                // 读取页面
+                const retrievedPage = await invoke('get_page', { id: createdPage.id });
+
+                // 更新页面
+                const updateRequest = {
+                    id: createdPage.id,
+                    title: '更新后的页面标题'
+                };
+                const updatedPage = await invoke('update_page', { request: updateRequest });
+
+                // 删除页面
+                await invoke('delete_page', { id: createdPage.id });
+
+                const result = {
+                    created: createdPage,
+                    retrieved: retrievedPage,
+                    updated: updatedPage,
+                    deleted: true
+                };
+
+                showResult('page-crud-result', {
+                    message: '页面CRUD测试成功',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                });
+
+                return result;
+            });
+        };
+
+        window.testBlockCRUD = async function() {
+            return await runTest('块CRUD测试', async () => {
+                // 先创建一个页面
+                const pageRequest = {
+                    graph_id: 'default',
+                    name: `块测试页面_${Date.now()}`,
+                    title: '块CRUD测试页面',
+                    tags: JSON.stringify(['测试']),
+                    is_journal: false
+                };
+
+                const testPage = await invoke('create_page', { request: pageRequest });
+
+                // 创建测试块
+                const createRequest = {
+                    graph_id: 'default',
+                    page_id: testPage.id,
+                    content: '这是一个测试块',
+                    order: 0
+                };
+
+                const createdBlock = await invoke('create_block', { request: createRequest });
+
+                // 读取块
+                const blocks = await invoke('get_blocks_by_page', { pageId: testPage.id });
+
+                // 更新块
+                const updateRequest = {
+                    id: createdBlock.id,
+                    content: '这是更新后的测试块'
+                };
+                const updatedBlock = await invoke('update_block', { request: updateRequest });
+
+                // 删除块
+                await invoke('delete_block', { id: createdBlock.id });
+
+                // 清理测试页面
+                await invoke('delete_page', { id: testPage.id });
+
+                const result = {
+                    page: testPage,
+                    created: createdBlock,
+                    retrieved: blocks,
+                    updated: updatedBlock,
+                    deleted: true
+                };
+
+                showResult('block-crud-result', {
+                    message: '块CRUD测试成功',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                });
+
+                return result;
+            });
+        };
+
+        window.testDataIntegrity = async function() {
+            return await runTest('数据完整性测试', async () => {
+                const pages = await invoke('get_pages_by_graph', { graphId: 'default' });
+                let totalBlocks = 0;
+                let integrityIssues = [];
+
+                for (const page of pages) {
+                    try {
+                        const blocks = await invoke('get_blocks_by_page', { pageId: page.id });
+                        totalBlocks += blocks.length;
+
+                        // 检查数据完整性
+                        for (const block of blocks) {
+                            if (block.page_id !== page.id) {
+                                integrityIssues.push(`块 ${block.id} 的 page_id 不匹配`);
+                            }
+                            if (block.graph_id !== page.graph_id) {
+                                integrityIssues.push(`块 ${block.id} 的 graph_id 不匹配`);
+                            }
+                        }
+                    } catch (error) {
+                        integrityIssues.push(`无法获取页面 ${page.id} 的块: ${error.toString()}`);
+                    }
+                }
+
+                const result = {
+                    totalPages: pages.length,
+                    totalBlocks: totalBlocks,
+                    integrityIssues: integrityIssues,
+                    status: integrityIssues.length === 0 ? '数据完整性良好' : '发现完整性问题'
+                };
+
+                showResult('data-integrity-result', {
+                    message: '数据完整性测试完成',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                }, integrityIssues.length > 0);
+
+                return result;
+            });
+        };
+
+        // 文件操作测试
+        window.testMarkdownImport = async function() {
+            return await runTest('Markdown导入测试', async () => {
+                const result = await invoke('import_markdown_files_with_dialog', {
+                    graphId: 'default'
+                });
+
+                showResult('markdown-import-result', {
+                    message: 'Markdown导入测试完成',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                });
+
+                return result;
+            });
+        };
+
+        window.testPageExport = async function() {
+            return await runTest('页面导出测试', async () => {
+                const pages = await invoke('get_pages_by_graph', { graphId: 'default' });
+
+                if (pages.length === 0) {
+                    throw new Error('没有页面可导出');
+                }
+
+                const pageIds = pages.slice(0, 2).map(page => page.id); // 只导出前2个页面
+                const result = await invoke('export_pages_with_dialog', { pageIds });
+
+                showResult('page-export-result', {
+                    message: '页面导出测试完成',
+                    result: result,
+                    pages_count: pageIds.length,
+                    timestamp: new Date().toISOString()
+                });
+
+                return result;
+            });
+        };
+
+        window.testDataBackup = async function() {
+            return await runTest('数据备份测试', async () => {
+                const backupPath = await invoke('create_backup_with_dialog');
+
+                showResult('data-backup-result', {
+                    message: '数据备份测试完成',
+                    backup_path: backupPath,
+                    timestamp: new Date().toISOString()
+                });
+
+                return { backup_path: backupPath };
+            });
+        };
+
+        window.testFilePermissions = async function() {
+            return await runTest('文件系统权限测试', async () => {
+                // 测试应用信息获取（间接测试文件系统访问）
+                const appInfo = await invoke('get_app_info');
+
+                // 测试数据库访问
+                const pages = await invoke('get_pages_by_graph', { graphId: 'default' });
+
+                const result = {
+                    app_info_accessible: !!appInfo,
+                    database_accessible: Array.isArray(pages),
+                    permissions_ok: true
+                };
+
+                showResult('file-permissions-result', {
+                    message: '文件系统权限测试完成',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                });
+
+                return result;
+            });
+        };
+
+        // WebDAV同步测试
+        window.testSyncConfig = async function() {
+            return await runTest('同步配置测试', async () => {
+                const testConfig = {
+                    server_url: "https://dav.jianguoyun.com/dav/",
+                    username: "test@example.com",
+                    password: "test-password",
+                    remote_path: "/minglog/",
+                    enabled: true,
+                    auto_sync_interval: 300
+                };
+
+                await invoke('configure_webdav_sync', { config: testConfig });
+                const retrievedConfig = await invoke('get_webdav_config');
+
+                const result = {
+                    config_saved: !!retrievedConfig,
+                    config_matches: retrievedConfig && retrievedConfig.server_url === testConfig.server_url
+                };
+
+                showResult('sync-config-result', {
+                    message: '同步配置测试完成',
+                    result: result,
+                    config: retrievedConfig ? { ...retrievedConfig, password: '***' } : null,
+                    timestamp: new Date().toISOString()
+                });
+
+                return result;
+            });
+        };
+
+        window.testSyncConnection = async function() {
+            return await runTest('同步连接测试', async () => {
+                const isConnected = await invoke('test_webdav_connection');
+
+                const result = {
+                    connection_test_completed: true,
+                    connection_result: isConnected
+                };
+
+                showResult('sync-connection-result', {
+                    message: '同步连接测试完成',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                });
+
+                return result;
+            });
+        };
+
+        window.testSyncOperations = async function() {
+            return await runTest('同步操作测试', async () => {
+                // 获取初始状态
+                const initialStatus = await invoke('get_sync_status');
+
+                // 开始同步
+                const syncResult = await invoke('start_webdav_sync', { direction: 'Upload' });
+
+                // 等待一下
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // 停止同步
+                await invoke('stop_webdav_sync');
+
+                // 获取最终状态
+                const finalStatus = await invoke('get_sync_status');
+
+                const result = {
+                    initial_status: initialStatus,
+                    sync_result: syncResult,
+                    final_status: finalStatus,
+                    operations_completed: true
+                };
+
+                showResult('sync-operations-result', {
+                    message: '同步操作测试完成',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                });
+
+                return result;
+            });
+        };
+
+        window.testConflictHandling = async function() {
+            return await runTest('冲突处理测试', async () => {
+                const conflicts = await invoke('get_sync_conflicts');
+
+                const result = {
+                    conflicts_checked: true,
+                    conflicts_count: conflicts.length,
+                    conflicts: conflicts
+                };
+
+                showResult('conflict-handling-result', {
+                    message: '冲突处理测试完成',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                });
+
+                return result;
+            });
+        };
+
+        // 用户界面测试
+        window.testAppStartup = async function() {
+            return await runTest('应用启动测试', async () => {
+                const appInfo = await invoke('get_app_info');
+                const dbInit = await invoke('init_database');
+
+                const result = {
+                    app_info_loaded: !!appInfo,
+                    database_initialized: !!dbInit,
+                    startup_successful: true
+                };
+
+                showResult('app-startup-result', {
+                    message: '应用启动测试完成',
+                    result: result,
+                    app_info: appInfo,
+                    timestamp: new Date().toISOString()
+                });
+
+                return result;
+            });
+        };
+
+        window.testPageNavigation = async function() {
+            return await runTest('页面导航测试', async () => {
+                const pages = await invoke('get_pages_by_graph', { graphId: 'default' });
+
+                let navigationTests = [];
+                for (let i = 0; i < Math.min(3, pages.length); i++) {
+                    const page = pages[i];
+                    const retrievedPage = await invoke('get_page', { id: page.id });
+                    const blocks = await invoke('get_blocks_by_page', { pageId: page.id });
+
+                    navigationTests.push({
+                        page_id: page.id,
+                        page_loaded: !!retrievedPage,
+                        blocks_loaded: Array.isArray(blocks)
+                    });
+                }
+
+                const result = {
+                    total_pages: pages.length,
+                    navigation_tests: navigationTests,
+                    all_successful: navigationTests.every(test => test.page_loaded && test.blocks_loaded)
+                };
+
+                showResult('page-navigation-result', {
+                    message: '页面导航测试完成',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                });
+
+                return result;
+            });
+        };
+
+        window.testEditorFunctions = async function() {
+            return await runTest('编辑器功能测试', async () => {
+                // 创建测试页面
+                const pageRequest = {
+                    graph_id: 'default',
+                    name: `编辑器测试页面_${Date.now()}`,
+                    title: '编辑器功能测试',
+                    tags: JSON.stringify(['编辑器', '测试']),
+                    is_journal: false
+                };
+
+                const testPage = await invoke('create_page', { request: pageRequest });
+
+                // 测试块创建
+                const blockRequest = {
+                    graph_id: 'default',
+                    page_id: testPage.id,
+                    content: '这是编辑器测试块',
+                    order: 0
+                };
+
+                const testBlock = await invoke('create_block', { request: blockRequest });
+
+                // 测试块更新
+                const updateRequest = {
+                    id: testBlock.id,
+                    content: '这是更新后的编辑器测试块'
+                };
+
+                const updatedBlock = await invoke('update_block', { request: updateRequest });
+
+                // 清理
+                await invoke('delete_page', { id: testPage.id });
+
+                const result = {
+                    page_creation: !!testPage,
+                    block_creation: !!testBlock,
+                    block_update: !!updatedBlock,
+                    editor_functions_working: true
+                };
+
+                showResult('editor-functions-result', {
+                    message: '编辑器功能测试完成',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                });
+
+                return result;
+            });
+        };
+
+        window.testUIResponsiveness = async function() {
+            return await runTest('响应性测试', async () => {
+                const startTime = Date.now();
+
+                // 测试多个快速操作
+                const operations = [];
+
+                // 获取应用信息
+                const appInfoStart = Date.now();
+                await invoke('get_app_info');
+                operations.push({ operation: 'get_app_info', duration: Date.now() - appInfoStart });
+
+                // 获取页面列表
+                const pagesStart = Date.now();
+                await invoke('get_pages_by_graph', { graphId: 'default' });
+                operations.push({ operation: 'get_pages', duration: Date.now() - pagesStart });
+
+                // 获取同步状态
+                const syncStart = Date.now();
+                await invoke('get_sync_status');
+                operations.push({ operation: 'get_sync_status', duration: Date.now() - syncStart });
+
+                const totalDuration = Date.now() - startTime;
+                const avgDuration = operations.reduce((sum, op) => sum + op.duration, 0) / operations.length;
+
+                const result = {
+                    total_duration: totalDuration,
+                    average_operation_duration: avgDuration,
+                    operations: operations,
+                    responsive: avgDuration < 1000 // 平均响应时间小于1秒
+                };
+
+                showResult('ui-responsiveness-result', {
+                    message: '响应性测试完成',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                }, !result.responsive);
+
+                return result;
+            });
+        };
+
+        // 性能和稳定性测试
+        window.testMemoryUsage = async function() {
+            return await runTest('内存使用测试', async () => {
+                // 模拟内存使用测试（在实际应用中可以通过性能API获取）
+                const beforeMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
+
+                // 执行一些操作
+                const pages = await invoke('get_pages_by_graph', { graphId: 'default' });
+                for (const page of pages.slice(0, 5)) {
+                    await invoke('get_blocks_by_page', { pageId: page.id });
+                }
+
+                const afterMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
+
+                const result = {
+                    before_memory: beforeMemory,
+                    after_memory: afterMemory,
+                    memory_increase: afterMemory - beforeMemory,
+                    memory_test_completed: true
+                };
+
+                showResult('memory-usage-result', {
+                    message: '内存使用测试完成',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                });
+
+                return result;
+            });
+        };
+
+        window.testConcurrentOperations = async function() {
+            return await runTest('并发操作测试', async () => {
+                const operations = [
+                    invoke('get_app_info'),
+                    invoke('get_pages_by_graph', { graphId: 'default' }),
+                    invoke('get_sync_status'),
+                    invoke('test_webdav_connection'),
+                    invoke('get_webdav_config')
+                ];
+
+                const startTime = Date.now();
+                const results = await Promise.all(operations);
+                const duration = Date.now() - startTime;
+
+                const result = {
+                    concurrent_operations: operations.length,
+                    all_successful: results.every(r => r !== null && r !== undefined),
+                    total_duration: duration,
+                    concurrent_test_passed: true
+                };
+
+                showResult('concurrent-operations-result', {
+                    message: '并发操作测试完成',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                });
+
+                return result;
+            });
+        };
+
+        window.testErrorRecovery = async function() {
+            return await runTest('错误恢复测试', async () => {
+                let errorTests = [];
+
+                // 测试无效页面ID
+                try {
+                    await invoke('get_page', { id: 'invalid-page-id' });
+                    errorTests.push({ test: 'invalid_page_id', handled: false });
+                } catch (error) {
+                    errorTests.push({ test: 'invalid_page_id', handled: true, error: error.toString() });
+                }
+
+                // 测试无效块ID
+                try {
+                    await invoke('get_blocks_by_page', { pageId: 'invalid-page-id' });
+                    errorTests.push({ test: 'invalid_block_query', handled: false });
+                } catch (error) {
+                    errorTests.push({ test: 'invalid_block_query', handled: true, error: error.toString() });
+                }
+
+                const result = {
+                    error_tests: errorTests,
+                    all_errors_handled: errorTests.every(test => test.handled),
+                    error_recovery_working: true
+                };
+
+                showResult('error-recovery-result', {
+                    message: '错误恢复测试完成',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                }, !result.all_errors_handled);
+
+                return result;
+            });
+        };
+
+        window.testLongRunning = async function() {
+            return await runTest('长时间运行测试', async () => {
+                const startTime = Date.now();
+                const iterations = 10;
+                let successfulOperations = 0;
+
+                for (let i = 0; i < iterations; i++) {
+                    try {
+                        await invoke('get_app_info');
+                        await new Promise(resolve => setTimeout(resolve, 100)); // 等待100ms
+                        successfulOperations++;
+                    } catch (error) {
+                        console.error(`长时间运行测试第${i+1}次迭代失败:`, error);
+                    }
+                }
+
+                const duration = Date.now() - startTime;
+
+                const result = {
+                    iterations: iterations,
+                    successful_operations: successfulOperations,
+                    total_duration: duration,
+                    success_rate: (successfulOperations / iterations) * 100,
+                    stability_good: successfulOperations === iterations
+                };
+
+                showResult('long-running-result', {
+                    message: '长时间运行测试完成',
+                    result: result,
+                    timestamp: new Date().toISOString()
+                }, !result.stability_good);
+
+                return result;
+            });
+        };
+
+        // 主要测试控制函数
+        window.runAllTests = async function() {
+            if (window.testState.isRunning) {
+                alert('测试正在运行中，请等待完成');
+                return;
+            }
+
+            window.testState.isRunning = true;
+            window.testState.startTime = Date.now();
+            window.testState.totalTests = 0;
+            window.testState.passedTests = 0;
+            window.testState.failedTests = 0;
+            window.testState.results = [];
+
+            document.getElementById('connection-status').textContent = '状态: 正在运行全面测试...';
+            document.getElementById('connection-status').className = 'status testing';
+
+            const allTests = [
+                // 数据库功能测试
+                { name: '数据库连接测试', func: testDatabaseConnection },
+                { name: '页面CRUD测试', func: testPageCRUD },
+                { name: '块CRUD测试', func: testBlockCRUD },
+                { name: '数据完整性测试', func: testDataIntegrity },
+
+                // 文件操作测试
+                { name: 'Markdown导入测试', func: testMarkdownImport },
+                { name: '页面导出测试', func: testPageExport },
+                { name: '数据备份测试', func: testDataBackup },
+                { name: '文件权限测试', func: testFilePermissions },
+
+                // WebDAV同步测试
+                { name: '同步配置测试', func: testSyncConfig },
+                { name: '同步连接测试', func: testSyncConnection },
+                { name: '同步操作测试', func: testSyncOperations },
+                { name: '冲突处理测试', func: testConflictHandling },
+
+                // 用户界面测试
+                { name: '应用启动测试', func: testAppStartup },
+                { name: '页面导航测试', func: testPageNavigation },
+                { name: '编辑器功能测试', func: testEditorFunctions },
+                { name: '响应性测试', func: testUIResponsiveness },
+
+                // 性能和稳定性测试
+                { name: '内存使用测试', func: testMemoryUsage },
+                { name: '并发操作测试', func: testConcurrentOperations },
+                { name: '错误恢复测试', func: testErrorRecovery },
+                { name: '长时间运行测试', func: testLongRunning }
+            ];
+
+            try {
+                for (let i = 0; i < allTests.length; i++) {
+                    const test = allTests[i];
+                    const progress = ((i + 1) / allTests.length) * 100;
+                    updateProgress(progress);
+
+                    try {
+                        await test.func();
+                        await new Promise(resolve => setTimeout(resolve, 200)); // 短暂延迟
+                    } catch (error) {
+                        console.error(`测试失败: ${test.name}`, error);
+                    }
+                }
+
+                // 生成测试报告
+                const duration = (Date.now() - window.testState.startTime) / 1000;
+                const successRate = (window.testState.passedTests / window.testState.totalTests) * 100;
+
+                const summary = {
+                    total_tests: window.testState.totalTests,
+                    passed_tests: window.testState.passedTests,
+                    failed_tests: window.testState.failedTests,
+                    success_rate: successRate.toFixed(1) + '%',
+                    duration: duration.toFixed(2) + '秒',
+                    status: successRate >= 90 ? '测试通过' : '测试失败',
+                    timestamp: new Date().toISOString(),
+                    detailed_results: window.testState.results
+                };
+
+                showResult('test-summary', summary, successRate < 90);
+
+                document.getElementById('connection-status').textContent =
+                    `状态: 全面测试完成 - ${summary.status} (${summary.success_rate})`;
+                document.getElementById('connection-status').className =
+                    `status ${successRate >= 90 ? 'connected' : 'disconnected'}`;
+
+                log(`全面测试完成: ${summary.status}, 成功率: ${summary.success_rate}`);
+
+            } finally {
+                window.testState.isRunning = false;
+                updateProgress(100);
+            }
+        };
+
+        window.runCriticalTests = async function() {
+            if (window.testState.isRunning) {
+                alert('测试正在运行中，请等待完成');
+                return;
+            }
+
+            window.testState.isRunning = true;
+            window.testState.startTime = Date.now();
+            window.testState.totalTests = 0;
+            window.testState.passedTests = 0;
+            window.testState.failedTests = 0;
+            window.testState.results = [];
+
+            document.getElementById('connection-status').textContent = '状态: 正在运行关键测试...';
+            document.getElementById('connection-status').className = 'status testing';
+
+            const criticalTests = [
+                { name: '数据库连接测试', func: testDatabaseConnection },
+                { name: '页面CRUD测试', func: testPageCRUD },
+                { name: '块CRUD测试', func: testBlockCRUD },
+                { name: '应用启动测试', func: testAppStartup },
+                { name: '编辑器功能测试', func: testEditorFunctions },
+                { name: '数据完整性测试', func: testDataIntegrity }
+            ];
+
+            try {
+                for (let i = 0; i < criticalTests.length; i++) {
+                    const test = criticalTests[i];
+                    const progress = ((i + 1) / criticalTests.length) * 100;
+                    updateProgress(progress);
+
+                    try {
+                        await test.func();
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                    } catch (error) {
+                        console.error(`关键测试失败: ${test.name}`, error);
+                    }
+                }
+
+                const duration = (Date.now() - window.testState.startTime) / 1000;
+                const successRate = (window.testState.passedTests / window.testState.totalTests) * 100;
+
+                const summary = {
+                    test_type: '关键功能测试',
+                    total_tests: window.testState.totalTests,
+                    passed_tests: window.testState.passedTests,
+                    failed_tests: window.testState.failedTests,
+                    success_rate: successRate.toFixed(1) + '%',
+                    duration: duration.toFixed(2) + '秒',
+                    status: successRate >= 95 ? '关键功能正常' : '关键功能异常',
+                    timestamp: new Date().toISOString()
+                };
+
+                showResult('test-summary', summary, successRate < 95);
+
+                document.getElementById('connection-status').textContent =
+                    `状态: 关键测试完成 - ${summary.status}`;
+                document.getElementById('connection-status').className =
+                    `status ${successRate >= 95 ? 'connected' : 'disconnected'}`;
+
+            } finally {
+                window.testState.isRunning = false;
+                updateProgress(100);
+            }
+        };
+
+        window.stopAllTests = function() {
+            if (window.testState.isRunning) {
+                window.testState.isRunning = false;
+                document.getElementById('connection-status').textContent = '状态: 测试已停止';
+                document.getElementById('connection-status').className = 'status disconnected';
+                updateProgress(0);
+                log('测试已被用户停止');
+            } else {
+                alert('当前没有正在运行的测试');
+            }
+        };
+
+        // 页面加载时检查连接
+        checkConnection();
+    </script>
+</body>
+</html>

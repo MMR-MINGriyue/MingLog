@@ -1,5 +1,27 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Activity, Database, Clock, Zap, BarChart3, X } from 'lucide-react'
+import { invoke } from '@tauri-apps/api/tauri'
+import { Line } from 'react-chartjs-2'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js'
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+)
 
 interface PerformanceMetrics {
   memoryUsage: {
@@ -11,6 +33,14 @@ interface PerformanceMetrics {
   dbQueryTime: number
   componentCount: number
   lastUpdate: Date
+  cpuCores?: number
+  cpuUsage?: number
+  diskRead?: number
+  diskWrite?: number
+  pageLoadTime?: number
+  domNodes?: number
+  jsHeapSize?: number
+  networkRequests?: number
 }
 
 interface PerformanceMonitorProps {
@@ -29,51 +59,101 @@ const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({ isOpen, onClose
   const [history, setHistory] = useState<PerformanceMetrics[]>([])
   const [isMonitoring, setIsMonitoring] = useState(false)
 
-  // Simulate memory usage monitoring
-  const getMemoryUsage = useCallback(() => {
-    // In a real Tauri app, you would use Tauri commands to get actual memory usage
-    const used = Math.random() * 100 + 50 // 50-150 MB
-    const total = 200 // Simulated total available
-    return {
-      used: Math.round(used),
-      total,
-      percentage: Math.round((used / total) * 100)
+  // 实现真实的内存使用监控
+  const getMemoryUsage = useCallback(async () => {
+    try {
+      const memoryInfo = await invoke<{ used: number; total: number }>('get_memory_info')
+      return {
+        used: Math.round(memoryInfo.used / (1024 * 1024)), // 转换为MB
+        total: Math.round(memoryInfo.total / (1024 * 1024)),
+        percentage: Math.round((memoryInfo.used / memoryInfo.total) * 100)
+      }
+    } catch (error) {
+      console.error('Failed to get memory usage:', error)
+      return { used: 0, total: 0, percentage: 0 }
     }
   }, [])
 
-  // Simulate render time measurement
-  const measureRenderTime = useCallback(() => {
-    const start = performance.now()
-    // Simulate some work
-    setTimeout(() => {
-      const end = performance.now()
-      return end - start
-    }, 0)
-    return Math.random() * 20 + 5 // 5-25ms
+  // 实现真实的渲染时间测量
+  const measureRenderTime = useCallback(async () => {
+    const marks: Performance[] = []
+    const observer = new PerformanceObserver((list) => {
+      marks.push(...list.getEntries())
+    })
+    
+    observer.observe({ entryTypes: ['measure'] })
+    performance.mark('render-start')
+    
+    // 等待下一帧渲染完成
+    await new Promise(requestAnimationFrame)
+    
+    performance.mark('render-end')
+    performance.measure('render-time', 'render-start', 'render-end')
+    
+    const measurements = performance.getEntriesByName('render-time')
+    observer.disconnect()
+    
+    return measurements[0]?.duration || 0
   }, [])
 
-  // Simulate database query time
-  const measureDbQueryTime = useCallback(() => {
-    return Math.random() * 10 + 1 // 1-11ms
+  // 实现真实的数据库查询时间监控
+  const measureDbQueryTime = useCallback(async () => {
+    try {
+      const startTime = performance.now()
+      await invoke('measure_db_performance')
+      const endTime = performance.now()
+      return endTime - startTime
+    } catch (error) {
+      console.error('Failed to measure DB performance:', error)
+      return 0
+    }
   }, [])
 
-  // Count React components (simplified)
+  // 实现准确的组件计数
   const countComponents = useCallback(() => {
-    return document.querySelectorAll('[data-reactroot] *').length || Math.floor(Math.random() * 100) + 50
+    let count = 0
+    const walker = document.createTreeWalker(
+      document.querySelector('#root') || document.body,
+      NodeFilter.SHOW_ELEMENT,
+      {
+        acceptNode: (node) => {
+          if (node.hasAttribute('data-reactroot') || 
+              node.getAttribute('data-testid')?.startsWith('react-') ||
+              node._reactRootContainer) {
+            return NodeFilter.FILTER_ACCEPT
+          }
+          return NodeFilter.FILTER_SKIP
+        }
+      }
+    )
+    
+    while (walker.nextNode()) count++
+    return count
   }, [])
 
-  // Update metrics
-  const updateMetrics = useCallback(() => {
-    const newMetrics: PerformanceMetrics = {
-      memoryUsage: getMemoryUsage(),
-      renderTime: measureRenderTime(),
-      dbQueryTime: measureDbQueryTime(),
-      componentCount: countComponents(),
-      lastUpdate: new Date()
-    }
+  // 更新指标收集逻辑
+  const updateMetrics = useCallback(async () => {
+    try {
+      const [memUsage, renderTime, dbTime, compCount] = await Promise.all([
+        getMemoryUsage(),
+        measureRenderTime(),
+        measureDbQueryTime(),
+        countComponents()
+      ])
 
-    setMetrics(newMetrics)
-    setHistory(prev => [...prev.slice(-19), newMetrics]) // Keep last 20 entries
+      const newMetrics: PerformanceMetrics = {
+        memoryUsage: memUsage,
+        renderTime: renderTime,
+        dbQueryTime: dbTime,
+        componentCount: compCount,
+        lastUpdate: new Date()
+      }
+
+      setMetrics(newMetrics)
+      setHistory(prev => [...prev.slice(-19), newMetrics])
+    } catch (error) {
+      console.error('Failed to update metrics:', error)
+    }
   }, [getMemoryUsage, measureRenderTime, measureDbQueryTime, countComponents])
 
   // Start/stop monitoring
@@ -120,6 +200,58 @@ const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({ isOpen, onClose
       case 'poor': return 'text-red-600 bg-red-100'
       default: return 'text-gray-600 bg-gray-100'
     }
+  }
+
+  // 准备图表数据
+  const chartData = useMemo(() => {
+    const labels = history.map(h => 
+      new Date(h.lastUpdate).toLocaleTimeString()
+    ).slice(-20)
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: '内存使用 (%)',
+          data: history.map(h => h.memoryUsage.percentage).slice(-20),
+          borderColor: 'rgb(53, 162, 235)',
+          backgroundColor: 'rgba(53, 162, 235, 0.5)',
+        },
+        {
+          label: '渲染时间 (ms)',
+          data: history.map(h => h.renderTime).slice(-20),
+          borderColor: 'rgb(255, 99, 132)',
+          backgroundColor: 'rgba(255, 99, 132, 0.5)',
+        },
+        {
+          label: '数据库查询时间 (ms)',
+          data: history.map(h => h.dbQueryTime).slice(-20),
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.5)',
+        },
+      ],
+    }
+  }, [history])
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: '性能监控趋势',
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+      },
+    },
+    animation: {
+      duration: 0, // 禁用动画以提高性能
+    },
   }
 
   if (!isOpen) return null

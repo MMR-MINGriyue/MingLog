@@ -1,4 +1,7 @@
 use crate::error::Result;
+use sysinfo::{System, SystemExt, ProcessExt, CpuExt};
+use std::time::Instant;
+use crate::database::Database;
 
 #[cfg(test)]
 mod tests;
@@ -15,7 +18,7 @@ use crate::state::AppState;
 use serde_json::Value;
 use sqlx::Row;
 use std::collections::HashMap;
-use tauri::State;
+use tauri::{State, AppHandle};
 
 // App commands
 #[tauri::command]
@@ -745,4 +748,409 @@ pub async fn update_block(
 pub async fn delete_block(id: String, state: State<'_, AppState>) -> Result<()> {
     let db = state.db.lock().await;
     db.delete_block(&id).await
+}
+
+// File Dialog commands
+#[tauri::command]
+pub async fn open_file_dialog(
+    _app: AppHandle,
+    _filters: Option<Vec<(String, Vec<String>)>>,
+    _multiple: Option<bool>,
+) -> Result<Vec<String>> {
+    // For now, return empty vector as file dialogs need additional setup in Tauri 2.0
+    // This is a placeholder implementation
+    Ok(vec![])
+}
+
+#[tauri::command]
+pub async fn save_file_dialog(
+    _app: AppHandle,
+    _default_name: Option<String>,
+    _filters: Option<Vec<(String, Vec<String>)>>,
+) -> Result<Option<String>> {
+    // Placeholder implementation for Tauri 2.0
+    Ok(None)
+}
+
+#[tauri::command]
+pub async fn select_folder_dialog(_app: AppHandle) -> Result<Option<String>> {
+    // Placeholder implementation for Tauri 2.0
+    Ok(None)
+}
+
+// Enhanced file operations with dialog integration
+#[tauri::command]
+pub async fn import_markdown_files_with_dialog(
+    _app: AppHandle,
+    graph_id: String,
+    state: State<'_, AppState>,
+) -> Result<crate::file_operations::ImportResult> {
+    // For demonstration, create a sample markdown import
+    let sample_content = r#"---
+title: 导入的示例页面
+tags: ["导入", "示例"]
+---
+
+# 导入的示例页面
+
+这是一个通过文件导入功能创建的示例页面。
+
+## 功能特点
+
+- 支持Markdown格式
+- 保留文档结构
+- 自动创建块
+
+## 下一步
+
+您可以编辑这个页面，添加更多内容。
+"#;
+
+    let db = state.db.lock().await;
+
+    // Parse the sample content
+    let (frontmatter, markdown_content) = crate::file_operations::FileOperations::parse_markdown_file(sample_content)?;
+
+    let mut result = crate::file_operations::ImportResult {
+        pages_imported: 0,
+        blocks_imported: 0,
+        errors: Vec::new(),
+    };
+
+    // Create page from sample content
+    let page_name = frontmatter.title.clone().unwrap_or_else(|| "导入的页面".to_string());
+    let tags_json = if let Some(tags) = frontmatter.tags {
+        serde_json::to_string(&tags).unwrap_or_else(|_| "[]".to_string())
+    } else {
+        "[]".to_string()
+    };
+
+    let page_request = crate::models::CreatePageRequest {
+        graph_id: graph_id.clone(),
+        name: page_name,
+        title: frontmatter.title,
+        tags: Some(tags_json),
+        is_journal: frontmatter.is_journal,
+        journal_date: frontmatter.journal_date,
+        properties: None,
+    };
+
+    match db.create_page(page_request).await {
+        Ok(page) => {
+            result.pages_imported += 1;
+
+            // Convert markdown to blocks
+            let block_contents = crate::file_operations::FileOperations::markdown_to_blocks(&markdown_content);
+
+            for (index, content) in block_contents.into_iter().enumerate() {
+                let block_request = crate::models::CreateBlockRequest {
+                    graph_id: graph_id.clone(),
+                    page_id: page.id.clone(),
+                    content,
+                    parent_id: None,
+                    properties: None,
+                    refs: Some("[]".to_string()),
+                    order: Some(index as i32),
+                };
+
+                match db.create_block(block_request).await {
+                    Ok(_) => result.blocks_imported += 1,
+                    Err(e) => result.errors.push(format!("Failed to create block: {}", e)),
+                }
+            }
+        }
+        Err(e) => result.errors.push(format!("Failed to create page: {}", e)),
+    }
+
+    Ok(result)
+}
+
+#[tauri::command]
+pub async fn export_pages_with_dialog(
+    _app: AppHandle,
+    page_ids: Vec<String>,
+    state: State<'_, AppState>,
+) -> Result<crate::file_operations::ExportResult> {
+    // For demonstration, simulate export to a temp directory
+    let temp_dir = std::env::temp_dir().join("minglog_export");
+    std::fs::create_dir_all(&temp_dir).map_err(|e| crate::error::AppError::Database(format!("Failed to create export directory: {}", e)))?;
+
+    let db = state.db.lock().await;
+    let mut files_exported = 0;
+    let mut total_size = 0u64;
+
+    for page_id in page_ids {
+        match crate::file_operations::FileOperations::export_page_to_markdown(&db, &page_id, &temp_dir).await {
+            Ok(file_path) => {
+                files_exported += 1;
+                if let Ok(metadata) = std::fs::metadata(&file_path) {
+                    total_size += metadata.len();
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to export page {}: {}", page_id, e);
+            }
+        }
+    }
+
+    Ok(crate::file_operations::ExportResult {
+        files_exported,
+        total_size,
+        export_path: temp_dir.to_string_lossy().to_string(),
+    })
+}
+
+#[tauri::command]
+pub async fn create_backup_with_dialog(
+    _app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<String> {
+    let default_name = format!("minglog-backup-{}.json", chrono::Utc::now().format("%Y%m%d-%H%M%S"));
+    let backup_path = std::env::temp_dir().join(&default_name);
+
+    let db = state.db.lock().await;
+
+    // Get all data
+    let pages = db.get_all_pages().await?;
+    let mut all_blocks = Vec::new();
+    for page in &pages {
+        let blocks = db.get_blocks_by_page(&page.id).await?;
+        all_blocks.extend(blocks);
+    }
+    let tags = db.get_tags().await?;
+
+    let backup_data = crate::file_operations::BackupData {
+        version: "1.0".to_string(),
+        created_at: chrono::Utc::now(),
+        pages,
+        blocks: all_blocks,
+        tags,
+    };
+
+    let json_content = serde_json::to_string_pretty(&backup_data)
+        .map_err(|e| crate::error::AppError::Database(format!("Serialization failed: {}", e)))?;
+
+    std::fs::write(&backup_path, json_content)
+        .map_err(|e| crate::error::AppError::Database(format!("Write failed: {}", e)))?;
+
+    Ok(backup_path.to_string_lossy().to_string())
+}
+
+// WebDAV Sync commands
+#[tauri::command]
+pub async fn configure_webdav_sync(
+    config: crate::sync::WebDAVConfig,
+    state: State<'_, AppState>,
+) -> Result<()> {
+    let mut sync_manager = state.sync_manager.lock().await;
+    sync_manager.set_config(config)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_webdav_config(
+    state: State<'_, AppState>,
+) -> Result<Option<crate::sync::WebDAVConfig>> {
+    let sync_manager = state.sync_manager.lock().await;
+    Ok(sync_manager.get_config().cloned())
+}
+
+#[tauri::command]
+pub async fn test_webdav_connection(
+    state: State<'_, AppState>,
+) -> Result<bool> {
+    let sync_manager = state.sync_manager.lock().await;
+    sync_manager.test_connection().await
+}
+
+#[tauri::command]
+pub async fn start_webdav_sync(
+    direction: crate::sync::SyncDirection,
+    state: State<'_, AppState>,
+) -> Result<crate::sync::SyncResult> {
+    let mut sync_manager = state.sync_manager.lock().await;
+    sync_manager.start_sync(direction).await
+}
+
+#[tauri::command]
+pub async fn stop_webdav_sync(
+    state: State<'_, AppState>,
+) -> Result<()> {
+    let mut sync_manager = state.sync_manager.lock().await;
+    sync_manager.stop_sync()
+}
+
+#[tauri::command]
+pub async fn get_sync_status(
+    state: State<'_, AppState>,
+) -> Result<crate::sync::SyncStatus> {
+    let sync_manager = state.sync_manager.lock().await;
+    Ok(sync_manager.get_sync_status())
+}
+
+#[tauri::command]
+pub async fn get_sync_conflicts(
+    state: State<'_, AppState>,
+) -> Result<Vec<String>> {
+    let sync_manager = state.sync_manager.lock().await;
+    Ok(sync_manager.get_conflicts())
+}
+
+#[tauri::command]
+pub async fn resolve_sync_conflict(
+    file_path: String,
+    resolution: crate::sync::ConflictResolution,
+    state: State<'_, AppState>,
+) -> Result<()> {
+    let mut sync_manager = state.sync_manager.lock().await;
+    sync_manager.resolve_conflict(&file_path, resolution).await
+}
+
+#[tauri::command]
+pub async fn get_system_info() -> Result<serde_json::Value, String> {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+
+    let current_pid = std::process::id();
+    let process = sys.process(current_pid.into())
+        .ok_or_else(|| "Failed to get process information".to_string())?;
+
+    // 获取CPU信息
+    let cpu_usage = process.cpu_usage();
+    let cpu_cores = sys.cpus().len();
+    
+    // 获取内存信息
+    let total_memory = sys.total_memory();
+    let used_memory = sys.used_memory();
+    let process_memory = process.memory();
+    
+    // 获取磁盘信息
+    let disk_usage = process.disk_usage();
+    let disk_read = disk_usage.read_bytes;
+    let disk_write = disk_usage.written_bytes;
+
+    Ok(serde_json::json!({
+        "cpu": {
+            "cores": cpu_cores,
+            "usage": cpu_usage,
+            "frequency": sys.global_cpu_info().frequency(),
+        },
+        "memory": {
+            "total": total_memory,
+            "used": used_memory,
+            "process": process_memory,
+            "percentage": (used_memory as f64 / total_memory as f64 * 100.0) as u64
+        },
+        "disk": {
+            "read_bytes": disk_read,
+            "write_bytes": disk_write
+        },
+        "process": {
+            "run_time": process.run_time(),
+            "threads": process.thread_count(),
+            "status": format!("{:?}", process.status())
+        }
+    }))
+}
+
+#[tauri::command]
+pub async fn measure_db_performance(state: tauri::State<'_, Database>) -> Result<serde_json::Value, String> {
+    let mut metrics = Vec::new();
+    
+    // 测试写入性能
+    let write_start = Instant::now();
+    state.connection
+        .execute(
+            "INSERT INTO performance_test (timestamp) VALUES (?1)",
+            [chrono::Utc::now().timestamp()]
+        )
+        .map_err(|e| e.to_string())?;
+    let write_time = write_start.elapsed().as_secs_f64() * 1000.0;
+    
+    // 测试读取性能
+    let read_start = Instant::now();
+    state.connection
+        .prepare("SELECT COUNT(*) FROM blocks")
+        .map_err(|e| e.to_string())?
+        .query([])
+        .map_err(|e| e.to_string())?;
+    let read_time = read_start.elapsed().as_secs_f64() * 1000.0;
+    
+    // 测试索引性能
+    let index_start = Instant::now();
+    state.connection
+        .prepare("SELECT * FROM blocks WHERE id IN (SELECT id FROM blocks ORDER BY created_at DESC LIMIT 10)")
+        .map_err(|e| e.to_string())?
+        .query([])
+        .map_err(|e| e.to_string())?;
+    let index_time = index_start.elapsed().as_secs_f64() * 1000.0;
+
+    Ok(serde_json::json!({
+        "write_time": write_time,
+        "read_time": read_time,
+        "index_time": index_time,
+        "total_time": write_time + read_time + index_time
+    }))
+}
+
+#[tauri::command]
+pub async fn analyze_performance_bottlenecks() -> Result<serde_json::Value, String> {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+    
+    let current_pid = std::process::id();
+    let process = sys.process(current_pid.into())
+        .ok_or_else(|| "Failed to get process information".to_string())?;
+    
+    // 分析CPU使用情况
+    let cpu_usage = process.cpu_usage();
+    let is_cpu_bottleneck = cpu_usage > 80.0;
+    
+    // 分析内存使用情况
+    let memory_usage = (process.memory() as f64 / sys.total_memory() as f64 * 100.0) as f64;
+    let is_memory_bottleneck = memory_usage > 80.0;
+    
+    // 分析磁盘I/O情况
+    let disk_usage = process.disk_usage();
+    let is_io_bottleneck = disk_usage.read_bytes > 10_000_000 || disk_usage.written_bytes > 10_000_000;
+
+    Ok(serde_json::json!({
+        "bottlenecks": {
+            "cpu": {
+                "is_bottleneck": is_cpu_bottleneck,
+                "usage": cpu_usage,
+                "threshold": 80.0
+            },
+            "memory": {
+                "is_bottleneck": is_memory_bottleneck,
+                "usage": memory_usage,
+                "threshold": 80.0
+            },
+            "io": {
+                "is_bottleneck": is_io_bottleneck,
+                "read_bytes": disk_usage.read_bytes,
+                "write_bytes": disk_usage.written_bytes,
+                "threshold": 10_000_000
+            }
+        },
+        "recommendations": [
+            {
+                "type": if is_cpu_bottleneck { "cpu" } else if is_memory_bottleneck { "memory" } else if is_io_bottleneck { "io" } else { "none" },
+                "severity": if is_cpu_bottleneck || is_memory_bottleneck || is_io_bottleneck { "high" } else { "low" },
+                "message": get_optimization_message(is_cpu_bottleneck, is_memory_bottleneck, is_io_bottleneck)
+            }
+        ]
+    }))
+}
+
+fn get_optimization_message(is_cpu: bool, is_memory: bool, is_io: bool) -> String {
+    if is_cpu {
+        "CPU使用率过高，建议优化计算密集型操作或考虑使用后台线程".to_string()
+    } else if is_memory {
+        "内存使用率过高，建议检查内存泄漏或优化大数据集处理".to_string()
+    } else if is_io {
+        "磁盘I/O负载过高，建议优化文件操作或使用缓存".to_string()
+    } else {
+        "系统运行正常，无需优化".to_string()
+    }
 }

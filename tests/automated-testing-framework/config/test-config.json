@@ -1,0 +1,120 @@
+{
+  "app": {
+    "name": "MingLog Desktop",
+    "version": "1.0.0",
+    "executable": "../../apps/tauri-desktop/src-tauri/target/release/minglog-desktop.exe",
+    "debug_executable": "../../apps/tauri-desktop/src-tauri/target/debug/minglog-desktop.exe",
+    "startup_timeout": 30000,
+    "shutdown_timeout": 10000,
+    "retries": 3,
+    "window_title": "MingLog Desktop",
+    "expected_processes": ["minglog-desktop.exe"]
+  },
+  "testing": {
+    "screenshot_on_failure": true,
+    "video_recording": false,
+    "log_level": "info",
+    "parallel_execution": false,
+    "test_data_cleanup": true,
+    "mock_data_enabled": true
+  },
+  "monitoring": {
+    "enabled": true,
+    "interval": 5000,
+    "duration": 3600000,
+    "continuous_mode": false,
+    "alert_threshold": 3,
+    "health_check_interval": 30000
+  },
+  "thresholds": {
+    "startup_time": 5000,
+    "ui_render_time": 2000,
+    "memory_usage_mb": 512,
+    "cpu_usage_percent": 50,
+    "response_time_ms": 1000,
+    "error_rate_percent": 1
+  },
+  "ui_testing": {
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "wait_timeout": 10000,
+    "animation_timeout": 1000,
+    "screenshot_comparison_threshold": 0.1,
+    "element_wait_timeout": 5000
+  },
+  "database": {
+    "test_db_path": "./test_data/test.db",
+    "backup_before_test": true,
+    "reset_after_test": true,
+    "seed_data_enabled": true
+  },
+  "network": {
+    "mock_webdav": true,
+    "timeout": 10000,
+    "retry_attempts": 3,
+    "offline_mode_test": true
+  },
+  "performance": {
+    "memory_leak_detection": true,
+    "cpu_profiling": true,
+    "startup_profiling": true,
+    "gc_monitoring": true,
+    "benchmark_iterations": 5
+  },
+  "error_handling": {
+    "auto_recovery": true,
+    "error_classification": true,
+    "crash_dump_analysis": true,
+    "log_aggregation": true,
+    "notification_enabled": true
+  },
+  "reporting": {
+    "format": ["json", "html", "xml"],
+    "output_directory": "./tests/automated-testing-framework/reports",
+    "include_screenshots": true,
+    "include_logs": true,
+    "email_notifications": false,
+    "slack_webhook": null
+  },
+  "environments": {
+    "development": {
+      "executable": "./apps/tauri-desktop/src-tauri/target/debug/minglog-desktop.exe",
+      "log_level": "debug",
+      "mock_data_enabled": true
+    },
+    "staging": {
+      "executable": "./apps/tauri-desktop/src-tauri/target/release/minglog-desktop.exe",
+      "log_level": "info",
+      "performance_testing": true
+    },
+    "production": {
+      "executable": "./minglog-desktop.exe",
+      "log_level": "warn",
+      "monitoring_only": true
+    }
+  },
+  "test_suites": {
+    "smoke": {
+      "enabled": true,
+      "timeout": 60000,
+      "tests": ["startup", "basic_ui", "core_functions"]
+    },
+    "regression": {
+      "enabled": true,
+      "timeout": 300000,
+      "tests": ["all_ui", "all_functions", "performance"]
+    },
+    "stress": {
+      "enabled": false,
+      "timeout": 1800000,
+      "tests": ["memory_stress", "cpu_stress", "concurrent_operations"]
+    },
+    "security": {
+      "enabled": true,
+      "timeout": 600000,
+      "tests": ["data_validation", "file_access", "network_security"]
+    }
+  }
+}

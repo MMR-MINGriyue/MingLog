@@ -11,7 +11,7 @@ use crate::models::{
     SearchRequest, SearchResult
 };
 use chrono::Utc;
-use sqlx::{sqlite::{SqlitePool, SqlitePoolOptions, SqliteConnectOptions}, Row};
+use sqlx::{sqlite::{SqlitePool, SqlitePoolOptions}, Row};
 use std::str::FromStr;
 use std::path::PathBuf;
 

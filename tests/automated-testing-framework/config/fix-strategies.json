@@ -1,0 +1,307 @@
+{
+  "fix_strategies": {
+    "restart_with_safe_mode": {
+      "name": "安全模式重启",
+      "description": "以安全模式重启应用程序",
+      "steps": [
+        {
+          "action": "kill_process",
+          "params": {"force": true, "timeout": 5000}
+        },
+        {
+          "action": "backup_user_data",
+          "params": {"location": "./backup/emergency"}
+        },
+        {
+          "action": "start_app",
+          "params": {"safe_mode": true, "reset_config": false}
+        },
+        {
+          "action": "verify_startup",
+          "params": {"timeout": 30000}
+        }
+      ],
+      "rollback": [
+        {
+          "action": "restore_user_data",
+          "params": {"from": "./backup/emergency"}
+        }
+      ],
+      "success_criteria": ["app_running", "ui_responsive"],
+      "max_attempts": 3,
+      "timeout": 60000
+    },
+    "recreate_database": {
+      "name": "重建数据库",
+      "description": "备份并重新创建数据库",
+      "steps": [
+        {
+          "action": "backup_database",
+          "params": {"location": "./backup/db_emergency"}
+        },
+        {
+          "action": "delete_corrupted_db",
+          "params": {"confirm": true}
+        },
+        {
+          "action": "initialize_new_db",
+          "params": {"schema_version": "latest"}
+        },
+        {
+          "action": "restore_data_if_possible",
+          "params": {"from_backup": true}
+        },
+        {
+          "action": "verify_db_integrity",
+          "params": {"run_checks": true}
+        }
+      ],
+      "rollback": [
+        {
+          "action": "restore_database",
+          "params": {"from": "./backup/db_emergency"}
+        }
+      ],
+      "success_criteria": ["db_accessible", "data_integrity_ok"],
+      "max_attempts": 2,
+      "timeout": 120000
+    },
+    "reload_webview": {
+      "name": "重新加载WebView",
+      "description": "刷新UI渲染引擎",
+      "steps": [
+        {
+          "action": "capture_current_state",
+          "params": {"include_screenshot": true}
+        },
+        {
+          "action": "reload_webview",
+          "params": {"clear_cache": true}
+        },
+        {
+          "action": "wait_for_render",
+          "params": {"timeout": 10000}
+        },
+        {
+          "action": "verify_ui_elements",
+          "params": {"critical_elements": ["sidebar", "main_content", "toolbar"]}
+        }
+      ],
+      "rollback": [
+        {
+          "action": "restart_app",
+          "params": {"preserve_state": true}
+        }
+      ],
+      "success_criteria": ["ui_rendered", "elements_interactive"],
+      "max_attempts": 3,
+      "timeout": 30000
+    },
+    "rebuild_search_index": {
+      "name": "重建搜索索引",
+      "description": "重新构建搜索索引",
+      "steps": [
+        {
+          "action": "backup_search_index",
+          "params": {"location": "./backup/search_index"}
+        },
+        {
+          "action": "clear_search_index",
+          "params": {"confirm": true}
+        },
+        {
+          "action": "rebuild_index",
+          "params": {"full_rebuild": true, "optimize": true}
+        },
+        {
+          "action": "test_search_functionality",
+          "params": {"sample_queries": ["test", "明志", "笔记"]}
+        }
+      ],
+      "rollback": [
+        {
+          "action": "restore_search_index",
+          "params": {"from": "./backup/search_index"}
+        }
+      ],
+      "success_criteria": ["search_responsive", "results_accurate"],
+      "max_attempts": 2,
+      "timeout": 180000
+    },
+    "force_garbage_collection": {
+      "name": "强制垃圾回收",
+      "description": "释放内存并优化性能",
+      "steps": [
+        {
+          "action": "monitor_memory_before",
+          "params": {"duration": 5000}
+        },
+        {
+          "action": "trigger_gc",
+          "params": {"aggressive": true}
+        },
+        {
+          "action": "clear_caches",
+          "params": {"ui_cache": true, "data_cache": true}
+        },
+        {
+          "action": "monitor_memory_after",
+          "params": {"duration": 10000}
+        },
+        {
+          "action": "verify_memory_reduction",
+          "params": {"min_reduction_percent": 20}
+        }
+      ],
+      "rollback": [],
+      "success_criteria": ["memory_reduced", "performance_improved"],
+      "max_attempts": 2,
+      "timeout": 30000
+    },
+    "wait_and_retry": {
+      "name": "等待并重试",
+      "description": "等待元素加载完成后重试操作",
+      "steps": [
+        {
+          "action": "wait_for_element",
+          "params": {"timeout": 10000, "poll_interval": 500}
+        },
+        {
+          "action": "retry_last_operation",
+          "params": {"max_retries": 3}
+        },
+        {
+          "action": "verify_operation_success",
+          "params": {"check_result": true}
+        }
+      ],
+      "rollback": [],
+      "success_criteria": ["element_found", "operation_successful"],
+      "max_attempts": 5,
+      "timeout": 60000
+    },
+    "cleanup_temp_files": {
+      "name": "清理临时文件",
+      "description": "清理临时文件释放磁盘空间",
+      "steps": [
+        {
+          "action": "scan_temp_directories",
+          "params": {"locations": ["./temp", "./cache", "./logs"]}
+        },
+        {
+          "action": "calculate_space_to_free",
+          "params": {"min_required_mb": 100}
+        },
+        {
+          "action": "delete_old_files",
+          "params": {"older_than_days": 7, "safe_delete": true}
+        },
+        {
+          "action": "compress_logs",
+          "params": {"keep_recent_days": 3}
+        },
+        {
+          "action": "verify_space_freed",
+          "params": {"min_freed_mb": 50}
+        }
+      ],
+      "rollback": [
+        {
+          "action": "restore_from_recycle_bin",
+          "params": {"if_needed": true}
+        }
+      ],
+      "success_criteria": ["space_freed", "app_functional"],
+      "max_attempts": 1,
+      "timeout": 300000
+    },
+    "retry_connection": {
+      "name": "重试网络连接",
+      "description": "重新尝试网络连接",
+      "steps": [
+        {
+          "action": "check_network_connectivity",
+          "params": {"test_urls": ["https://www.baidu.com", "https://www.google.com"]}
+        },
+        {
+          "action": "reset_network_config",
+          "params": {"clear_dns_cache": true}
+        },
+        {
+          "action": "retry_webdav_connection",
+          "params": {"timeout": 15000, "max_retries": 3}
+        },
+        {
+          "action": "test_sync_operation",
+          "params": {"small_file_test": true}
+        }
+      ],
+      "rollback": [
+        {
+          "action": "enable_offline_mode",
+          "params": {"temporary": true}
+        }
+      ],
+      "success_criteria": ["connection_established", "sync_working"],
+      "max_attempts": 3,
+      "timeout": 90000
+    }
+  },
+  "fix_actions": {
+    "kill_process": {
+      "description": "终止应用程序进程",
+      "implementation": "process_manager.kill",
+      "params": {
+        "force": "boolean",
+        "timeout": "number"
+      }
+    },
+    "start_app": {
+      "description": "启动应用程序",
+      "implementation": "app_launcher.start",
+      "params": {
+        "safe_mode": "boolean",
+        "reset_config": "boolean"
+      }
+    },
+    "backup_database": {
+      "description": "备份数据库文件",
+      "implementation": "db_manager.backup",
+      "params": {
+        "location": "string"
+      }
+    },
+    "reload_webview": {
+      "description": "重新加载WebView",
+      "implementation": "ui_manager.reload",
+      "params": {
+        "clear_cache": "boolean"
+      }
+    },
+    "trigger_gc": {
+      "description": "触发垃圾回收",
+      "implementation": "memory_manager.gc",
+      "params": {
+        "aggressive": "boolean"
+      }
+    }
+  },
+  "success_criteria_definitions": {
+    "app_running": "应用程序进程正在运行",
+    "ui_responsive": "用户界面响应用户交互",
+    "db_accessible": "数据库可以正常访问",
+    "data_integrity_ok": "数据完整性检查通过",
+    "ui_rendered": "用户界面正确渲染",
+    "elements_interactive": "界面元素可以交互",
+    "search_responsive": "搜索功能响应正常",
+    "results_accurate": "搜索结果准确",
+    "memory_reduced": "内存使用量减少",
+    "performance_improved": "性能指标改善",
+    "element_found": "目标元素已找到",
+    "operation_successful": "操作执行成功",
+    "space_freed": "磁盘空间已释放",
+    "app_functional": "应用程序功能正常",
+    "connection_established": "网络连接已建立",
+    "sync_working": "同步功能正常工作"
+  }
+}

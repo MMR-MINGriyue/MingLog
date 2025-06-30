@@ -44,12 +44,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [])
 
   const navigation = [
-    { name: t('navigation.home'), href: '/', icon: Home },
-    { name: t('editor.title'), href: '/editor', icon: Edit3 },
-    { name: t('block.title'), href: '/blocks', icon: BookOpen },
-    { name: t('graph.title'), href: '/graph', icon: Network },
-    { name: t('navigation.search'), href: '/search', icon: Search },
-    { name: t('navigation.settings'), href: '/settings', icon: Settings },
+    { name: '首页', href: '/', icon: Home, description: '工作空间概览' },
+    { name: '智能编辑器', href: '/editor', icon: Edit3, description: '创建和编辑笔记' },
+    { name: '块编辑器', href: '/blocks', icon: BookOpen, description: 'Notion风格编辑' },
+    { name: '知识图谱', href: '/graph', icon: Network, description: '可视化关联' },
+    { name: '全局搜索', href: '/search', icon: Search, description: 'Ctrl+K 快速搜索' },
+    { name: '设置', href: '/settings', icon: Settings, description: '个性化配置' },
   ]
 
   const isActive = (href: string) => {
@@ -60,21 +60,27 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="h-full flex bg-gray-50">
-      {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-16'} transition-all duration-300 bg-white border-r border-gray-200 flex flex-col`}>
-        {/* Sidebar Header */}
-        <div className="px-4 py-4 border-b border-gray-200">
+    <div className="h-full flex bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* 现代化侧边栏 */}
+      <div className={`${sidebarOpen ? 'w-72' : 'w-16'} transition-all duration-300 bg-white/80 backdrop-blur-sm border-r border-gray-200/50 flex flex-col shadow-lg`}>
+        {/* 侧边栏头部 */}
+        <div className="px-4 py-6 border-b border-gray-200/50">
           <div className="flex items-center justify-between">
             {sidebarOpen && (
-              <div className="flex items-center space-x-2">
-                <BookOpen className="w-8 h-8 text-primary-600" />
-                <span className="text-xl font-bold text-gray-900">MingLog</span>
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <BookOpen className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">明志</span>
+                  <p className="text-xs text-gray-500 -mt-1">桌面版</p>
+                </div>
               </div>
             )}
             <button
+              type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
             >
               {sidebarOpen ? (
                 <X className="w-5 h-5 text-gray-600" />
@@ -85,67 +91,79 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-4 py-4 space-y-2">
+        {/* 导航菜单 */}
+        <nav className="flex-1 px-4 py-6 space-y-3">
           {navigation.map((item) => {
             const Icon = item.icon
             const active = isActive(item.href)
-            
+
             return (
               <Link
                 key={item.name}
                 to={item.href}
                 className={`${
                   active
-                    ? 'bg-primary-100 text-primary-700 border-primary-200'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 border-transparent'
-                } group flex items-center px-3 py-2 text-sm font-medium rounded-lg border transition-colors`}
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                } group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 hover:shadow-md`}
                 title={!sidebarOpen ? item.name : undefined}
               >
-                <Icon className={`${sidebarOpen ? 'mr-3' : ''} w-5 h-5 flex-shrink-0`} />
-                {sidebarOpen && <span>{item.name}</span>}
+                <Icon className={`${sidebarOpen ? 'mr-4' : ''} w-5 h-5 flex-shrink-0 ${active ? 'text-white' : ''}`} />
+                {sidebarOpen && (
+                  <div className="flex-1">
+                    <div className="font-medium">{item.name}</div>
+                    <div className={`text-xs ${active ? 'text-blue-100' : 'text-gray-500'} mt-0.5`}>
+                      {item.description}
+                    </div>
+                  </div>
+                )}
               </Link>
             )
           })}
         </nav>
 
-        {/* Quick Actions */}
+        {/* 快速操作区 */}
         {sidebarOpen && (
-          <div className="px-4 py-4 border-t border-gray-200 space-y-2">
+          <div className="px-4 py-6 border-t border-gray-200/50 space-y-4">
             <Link
               to="/editor"
-              className="w-full btn-primary flex items-center justify-center space-x-2"
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl py-3 px-4 flex items-center justify-center space-x-2 hover:shadow-lg hover:scale-105 transition-all duration-200 font-medium"
             >
-              <Plus className="w-4 h-4" />
-              <span>{t('page.newPage')}</span>
+              <Plus className="w-5 h-5" />
+              <span>新建笔记</span>
             </Link>
 
             <button
+              type="button"
               onClick={() => setShowShortcutsHelp(true)}
-              className="w-full btn-ghost flex items-center justify-center space-x-2 text-sm"
-              title={t('shortcuts.title')}
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl py-2.5 px-4 flex items-center justify-center space-x-2 text-sm transition-all duration-200 hover:shadow-md"
+              title="快捷键帮助"
             >
               <HelpCircle className="w-4 h-4" />
-              <span>{t('shortcuts.title')}</span>
+              <span>快捷键帮助</span>
             </button>
 
-            {/* Language Switcher */}
+            {/* 语言切换器 */}
             <div className="pt-2">
               <LanguageSwitcher className="w-full" showLabel={true} />
             </div>
           </div>
         )}
 
-        {/* Sidebar Footer */}
-        <div className="px-4 py-4 border-t border-gray-200">
+        {/* 侧边栏底部信息 */}
+        <div className="px-4 py-4 border-t border-gray-200/50">
           {sidebarOpen ? (
-            <div className="text-xs text-gray-500 text-center">
-              <div>{t('app.name')} v1.0.0</div>
-              <div className="mt-1">{t('app.description')}</div>
+            <div className="text-center space-y-2">
+              <div className="text-xs text-gray-600 font-medium">明志桌面版 v1.0.0</div>
+              <div className="text-xs text-gray-500">本地优先 • 隐私安全</div>
+              <div className="flex items-center justify-center space-x-1 text-xs text-gray-400">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span>运行正常</span>
+              </div>
             </div>
           ) : (
-            <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center mx-auto">
-              <BookOpen className="w-4 h-4 text-primary-600" />
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto shadow-lg">
+              <BookOpen className="w-5 h-5 text-white" />
             </div>
           )}
         </div>
@@ -153,18 +171,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Title Bar (for desktop app feel) */}
-        <div className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-6 drag-region">
+        {/* 现代化标题栏 */}
+        <div className="h-14 bg-white/80 backdrop-blur-sm border-b border-gray-200/50 flex items-center justify-between px-6 drag-region shadow-sm">
           <div className="flex items-center space-x-4">
-            <h1 className="text-lg font-semibold text-gray-900 drag-none">
-              {navigation.find(item => isActive(item.href))?.name || 'MingLog Desktop'}
-            </h1>
+            <div className="flex items-center space-x-3">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <h1 className="text-lg font-semibold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent drag-none">
+                {navigation.find(item => isActive(item.href))?.name || '明志桌面版'}
+              </h1>
+            </div>
           </div>
-          
-          {/* Window Controls Placeholder */}
-          <div className="flex items-center space-x-2 drag-none">
+
+          {/* 状态信息和控制区 */}
+          <div className="flex items-center space-x-4 drag-none">
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span>已同步</span>
+            </div>
             <div className="text-sm text-gray-500">
-              {new Date().toLocaleDateString()}
+              {new Date().toLocaleDateString('zh-CN', {
+                month: 'long',
+                day: 'numeric',
+                weekday: 'short'
+              })}
             </div>
           </div>
         </div>

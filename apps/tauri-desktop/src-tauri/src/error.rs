@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use std::fmt;
+use std::fs::{self, File};
+use std::io::Write;
+use std::path::PathBuf;
+use chrono::Utc;
 
 #[derive(Error, Debug, Serialize, Deserialize)]
 pub enum AppError {
@@ -23,6 +28,9 @@ pub enum AppError {
     
     #[error("Internal error: {0}")]
     Internal(String),
+
+    #[error("Sync error: {0}")]
+    Sync(String),
 }
 
 impl From<sqlx::Error> for AppError {
@@ -50,6 +58,88 @@ impl From<anyhow::Error> for AppError {
     fn from(err: anyhow::Error) -> Self {
         AppError::Internal(err.to_string())
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ErrorData {
+    pub error_type: String,
+    pub message: String,
+    pub stack: Option<String>,
+    pub component_stack: Option<String>,
+    pub timestamp: String,
+    pub recovery_attempts: i32,
+}
+
+impl fmt::Display for AppError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AppError::Database(e) => write!(f, "Database error: {}", e),
+            AppError::Io(e) => write!(f, "IO error: {}", e),
+            AppError::Serialization(e) => write!(f, "Serialization error: {}", e),
+            AppError::NotFound(e) => write!(f, "Not found: {}", e),
+            AppError::InvalidInput(e) => write!(f, "Invalid input: {}", e),
+            AppError::PermissionDenied(e) => write!(f, "Permission denied: {}", e),
+            AppError::Internal(e) => write!(f, "Internal error: {}", e),
+            AppError::Sync(e) => write!(f, "Sync error: {}", e),
+        }
+    }
+}
+
+impl std::error::Error for AppError {}
+
+impl From<rusqlite::Error> for AppError {
+    fn from(err: rusqlite::Error) -> Self {
+        AppError::Database(err.to_string())
+    }
+}
+
+impl From<reqwest::Error> for AppError {
+    fn from(err: reqwest::Error) -> Self {
+        AppError::Io(err.to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn log_error(error: ErrorData) -> Result<(), String> {
+    let log_dir = PathBuf::from("logs");
+    if !log_dir.exists() {
+        fs::create_dir_all(&log_dir).map_err(|e| e.to_string())?;
+    }
+
+    let log_file = log_dir.join(format!("error_log_{}.json", Utc::now().format("%Y%m%d")));
+    let mut file = if log_file.exists() {
+        File::options()
+            .append(true)
+            .open(log_file)
+            .map_err(|e| e.to_string())?
+    } else {
+        File::create(log_file).map_err(|e| e.to_string())?
+    };
+
+    let log_entry = serde_json::to_string_pretty(&error).map_err(|e| e.to_string())?;
+    writeln!(file, "{}", log_entry).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn report_critical_error(error: ErrorData) -> Result<(), String> {
+    // 这里可以实现发送错误到远程服务器的逻辑
+    // 例如: Sentry, LogRocket等
+    println!("Critical error reported: {:?}", error);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn retry_network_requests() -> Result<(), String> {
+    // 实现重试失败的网络请求的逻辑
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn reset_app_state() -> Result<(), String> {
+    // 实现重置应用状态的逻辑
+    Ok(())
 }
 
 pub type Result<T> = std::result::Result<T, AppError>;
