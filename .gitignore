@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
 
 # Build outputs
 dist/
@@ -115,14 +118,31 @@ src-tauri/target/
 **/target/
 **/Cargo.lock
 
+# Tauri build outputs
+**/bundle/
+**/WixTools/
+**/gen/
+
 # Production builds (keep source but exclude large binaries)
 apps/dist/desktop/*.exe
 apps/dist/desktop/*.app
 apps/dist/desktop/*.dmg
 apps/dist/desktop/*.deb
 apps/dist/desktop/*.rpm
+*.msi
+*.dmg
+*.deb
+*.rpm
+*.AppImage
 
-# Test results
+# Test results and reports
 test-results/
 playwright-report/
 playwright/.cache/
+test-report-*.json
+
+# Temporary and cache files
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
