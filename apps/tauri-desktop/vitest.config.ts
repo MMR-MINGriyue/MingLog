@@ -8,7 +8,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    // setupFiles: ['./src/test/setup.ts'], // Temporarily disabled to debug hanging
+    setupFiles: ['./src/test/vitest-setup.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -36,6 +36,7 @@ export default defineConfig({
       'node_modules/',
       'dist/',
       'src-tauri/',
+      'src/test/e2e/**', // E2E tests should use Playwright
       '.{idea,git,cache,output,temp}/',
     ],
   },

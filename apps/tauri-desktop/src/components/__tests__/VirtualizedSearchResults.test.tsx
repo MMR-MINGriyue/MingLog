@@ -1,9 +1,4 @@
-// 兼容Jest和Vitest
-const isJest = typeof jest !== 'undefined'
-const { describe, it, expect, beforeEach } = isJest
-  ? { describe, it, expect, beforeEach }
-  : require('vitest')
-const mockFn = isJest ? jest.fn : require('vitest').vi.fn
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import VirtualizedSearchResults from '../VirtualizedSearchResults'
@@ -28,19 +23,14 @@ const mockProps = {
   results: mockResults,
   selectedIndex: 0,
   query: 'test',
-  onResultClick: mockFn(),
-  highlightText: mockFn((text: string) => text),
-  formatDate: mockFn((timestamp: number) => new Date(timestamp * 1000).toLocaleDateString()),
+  onResultClick: vi.fn(),
+  highlightText: vi.fn((text: string) => text),
+  formatDate: vi.fn((timestamp: number) => new Date(timestamp * 1000).toLocaleDateString()),
 }
 
 describe('VirtualizedSearchResults', () => {
   beforeEach(() => {
-    if (isJest) {
-      jest.clearAllMocks()
-    } else {
-      const { vi } = require('vitest')
-      vi.clearAllMocks()
-    }
+    vi.clearAllMocks()
   })
 
   it('renders virtualized list container', () => {
@@ -61,7 +51,7 @@ describe('VirtualizedSearchResults', () => {
   })
 
   it('calls onResultClick when item is clicked', async () => {
-    const onResultClick = mockFn()
+    const onResultClick = vi.fn()
     render(<VirtualizedSearchResults {...mockProps} onResultClick={onResultClick} />)
 
     const firstResult = screen.getByTestId('search-result-0')
