@@ -139,14 +139,17 @@ git checkout -b feature/your-feature-name
 
 3. **Test your changes**:
 ```bash
-# Run unit tests
+# Run all tests with coverage
+npm run test:ci
+
+# Run unit tests only
 npm run test
 
-# Run integration tests
-npm run test:integration
-
-# Run end-to-end tests
+# Run end-to-end tests only
 npm run test:e2e
+
+# Run tests with UI
+npm run test:ui
 
 # Build and test the application
 npm run build
@@ -165,6 +168,13 @@ git push origin feature/your-feature-name
 ```
 
 ### Commit Message Convention
+
+> **Note**: Our repository uses Husky pre-commit hooks that automatically run linting and tests before commits. Commits will be blocked if:
+> - Linting errors are found
+> - Tests fail
+> - Test coverage falls below 90%
+
+
 
 We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
 
@@ -196,6 +206,10 @@ test(graph): add unit tests for node rendering
 ## Code Style and Standards
 
 ### TypeScript/JavaScript
+
+We use `lint-staged` to automatically lint and format code before commits:
+- TypeScript/TSX files: ESLint + Prettier
+- CSS/SCSS files: Prettier
 
 #### Style Guidelines
 - Use TypeScript for all new code
