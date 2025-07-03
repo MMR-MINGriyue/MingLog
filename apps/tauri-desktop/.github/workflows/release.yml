@@ -1,0 +1,279 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Is this a pre-release?'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # 创建发布
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create_release.outputs.id }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # 生成变更日志
+          if [ -f "CHANGELOG.md" ]; then
+            # 提取当前版本的变更日志
+            awk '/^## \[${{ steps.get_version.outputs.VERSION }}\]/{flag=1; next} /^## \[/{flag=0} flag' CHANGELOG.md > release_notes.md
+          else
+            echo "Release ${{ steps.get_version.outputs.VERSION }}" > release_notes.md
+            echo "" >> release_notes.md
+            echo "### Changes" >> release_notes.md
+            git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> release_notes.md
+          fi
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          release_name: MingLog Desktop ${{ steps.get_version.outputs.VERSION }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease || contains(steps.get_version.outputs.VERSION, '-') }}
+
+  # 多平台构建和发布
+  build-and-release:
+    name: Build and Release
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            arch: x64
+            ext: .exe
+            bundle_ext: .msi
+          - os: macos-latest
+            platform: macos
+            arch: x64
+            ext: ''
+            bundle_ext: .dmg
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            ext: ''
+            bundle_ext: .AppImage
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: apps/tauri-desktop/package-lock.json
+
+      - name: Install system dependencies (Ubuntu)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        working-directory: apps/tauri-desktop
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: apps/tauri-desktop
+        run: npm run build
+
+      - name: Import signing certificate (Windows)
+        if: matrix.platform == 'windows'
+        run: |
+          echo "${{ secrets.WINDOWS_CERTIFICATE }}" | base64 -d > certificate.pfx
+          echo "WINDOWS_CERTIFICATE_PATH=$PWD/certificate.pfx" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Import signing certificate (macOS)
+        if: matrix.platform == 'macos'
+        run: |
+          echo "${{ secrets.MACOS_CERTIFICATE }}" | base64 -d > certificate.p12
+          security create-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
+          security import certificate.p12 -k build.keychain -P "${{ secrets.MACOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
+
+      - name: Build Tauri app
+        working-directory: apps/tauri-desktop
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npm run tauri build
+
+      - name: Code sign (Windows)
+        if: matrix.platform == 'windows'
+        run: |
+          powershell -ExecutionPolicy Bypass -File scripts/code-signing.ps1 `
+            -FilePath "src-tauri/target/release/明志桌面版.exe" `
+            -CertificatePath "$env:WINDOWS_CERTIFICATE_PATH" `
+            -CertificatePassword "${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}"
+        working-directory: apps/tauri-desktop
+
+      - name: Notarize app (macOS)
+        if: matrix.platform == 'macos'
+        run: |
+          xcrun notarytool submit "src-tauri/target/release/bundle/dmg/明志桌面版_*.dmg" \
+            --apple-id "${{ secrets.APPLE_ID }}" \
+            --password "${{ secrets.APPLE_PASSWORD }}" \
+            --team-id "${{ secrets.APPLE_TEAM_ID }}" \
+            --wait
+        working-directory: apps/tauri-desktop
+
+      - name: Get artifact paths
+        id: artifact_paths
+        run: |
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            echo "MAIN_BUNDLE=$(find apps/tauri-desktop/src-tauri/target/release/bundle/msi -name '*.msi' | head -1)" >> $GITHUB_OUTPUT
+            echo "EXECUTABLE=$(find apps/tauri-desktop/src-tauri/target/release -name '*.exe' | head -1)" >> $GITHUB_OUTPUT
+          elif [ "${{ matrix.platform }}" = "macos" ]; then
+            echo "MAIN_BUNDLE=$(find apps/tauri-desktop/src-tauri/target/release/bundle/dmg -name '*.dmg' | head -1)" >> $GITHUB_OUTPUT
+            echo "EXECUTABLE=$(find apps/tauri-desktop/src-tauri/target/release -name 'minglog-desktop' | head -1)" >> $GITHUB_OUTPUT
+          else
+            echo "MAIN_BUNDLE=$(find apps/tauri-desktop/src-tauri/target/release/bundle/appimage -name '*.AppImage' | head -1)" >> $GITHUB_OUTPUT
+            echo "EXECUTABLE=$(find apps/tauri-desktop/src-tauri/target/release -name 'minglog-desktop' | head -1)" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      - name: Upload installer to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ steps.artifact_paths.outputs.MAIN_BUNDLE }}
+          asset_name: minglog-desktop-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.bundle_ext }}
+          asset_content_type: application/octet-stream
+
+      - name: Upload executable to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ steps.artifact_paths.outputs.EXECUTABLE }}
+          asset_name: minglog-desktop-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.ext }}
+          asset_content_type: application/octet-stream
+
+      - name: Generate checksums
+        id: checksums
+        run: |
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            certutil -hashfile "${{ steps.artifact_paths.outputs.MAIN_BUNDLE }}" SHA256 > installer.sha256
+            certutil -hashfile "${{ steps.artifact_paths.outputs.EXECUTABLE }}" SHA256 > executable.sha256
+          else
+            shasum -a 256 "${{ steps.artifact_paths.outputs.MAIN_BUNDLE }}" > installer.sha256
+            shasum -a 256 "${{ steps.artifact_paths.outputs.EXECUTABLE }}" > executable.sha256
+          fi
+        shell: bash
+
+      - name: Upload checksums
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: installer.sha256
+          asset_name: minglog-desktop-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.bundle_ext }}.sha256
+          asset_content_type: text/plain
+
+  # 更新服务器部署
+  deploy-update-server:
+    name: Deploy to Update Server
+    needs: [create-release, build-and-release]
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download release assets
+        run: |
+          gh release download ${{ github.ref_name }} --dir release-assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy to update server
+        run: |
+          # 这里实现部署到更新服务器的逻辑
+          echo "Deploying to update server..."
+          # 可以使用 rsync, scp, 或者 API 调用
+        env:
+          UPDATE_SERVER_HOST: ${{ secrets.UPDATE_SERVER_HOST }}
+          UPDATE_SERVER_USER: ${{ secrets.UPDATE_SERVER_USER }}
+          UPDATE_SERVER_KEY: ${{ secrets.UPDATE_SERVER_KEY }}
+
+  # 通知
+  notify:
+    name: Notify Release
+    needs: [create-release, build-and-release, deploy-update-server]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Notify Slack
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: "🎉 MingLog Desktop ${{ github.ref_name }} has been released successfully!"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: "❌ MingLog Desktop ${{ github.ref_name }} release failed!"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

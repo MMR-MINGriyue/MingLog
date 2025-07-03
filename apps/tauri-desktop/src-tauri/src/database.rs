@@ -32,7 +32,7 @@ impl Database {
         let database_url = format!("sqlite:{}", db_path.display());
 
         // Optimized connection pool settings for performance
-        let pool = SqlitePoolOptions::new()
+        let pool = SqlitePoolOptions::new().max_connections(10)
             .max_connections(20)  // Increased for better concurrency
             .min_connections(5)   // Keep minimum connections alive
             .acquire_timeout(std::time::Duration::from_secs(30))
@@ -59,6 +59,7 @@ impl Database {
         Ok(db)
     }
 
+    #[allow(dead_code)]
     pub async fn new_with_path(db_path: &str) -> Result<Self> {
         let database_url = format!("sqlite:{}", db_path);
         let pool = SqlitePool::connect(&database_url).await?;
@@ -636,6 +637,7 @@ impl Database {
     }
     
     // Settings operations
+    #[allow(dead_code)]
     pub async fn get_setting(&self, key: &str) -> Result<Option<String>> {
         let row = sqlx::query("SELECT value FROM settings WHERE key = ?")
             .bind(key)

@@ -4,6 +4,7 @@
 pub mod database;
 pub mod models;
 pub mod error;
+// pub mod monitoring; // 暂时禁用监控模块，避免兼容性问题
 
 // Re-export commonly used types
 pub use database::Database;

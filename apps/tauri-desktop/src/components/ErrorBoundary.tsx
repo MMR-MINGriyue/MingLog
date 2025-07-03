@@ -71,12 +71,20 @@ class ErrorBoundary extends Component<Props, State> {
 
   private async persistError(errorData: ErrorData): Promise<void> {
     try {
-      await invoke('log_error', { error: errorData })
-      
-      // 如果错误很严重，发送到错误跟踪服务
-      if (errorData.type === ErrorType.DATABASE || 
-          errorData.recoveryAttempts >= this.MAX_RECOVERY_ATTEMPTS) {
-        await invoke('report_critical_error', { error: errorData })
+      // 检查错误报告是否启用
+      const isErrorReportingEnabled = await invoke<boolean>('get_error_reporting_status')
+
+      if (isErrorReportingEnabled) {
+        await invoke('log_error', { error: errorData })
+
+        // 如果错误很严重，发送到错误跟踪服务
+        if (errorData.type === ErrorType.DATABASE ||
+            errorData.recoveryAttempts >= this.MAX_RECOVERY_ATTEMPTS) {
+          await invoke('report_critical_error', { error: errorData })
+        }
+      } else {
+        // 即使错误报告被禁用，也在本地记录错误
+        console.error('Error occurred (reporting disabled):', errorData)
       }
     } catch (e) {
       console.error('Failed to persist error:', e)

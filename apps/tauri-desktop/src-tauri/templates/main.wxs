@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" 
+           Name="明志桌面版" 
+           Language="2052" 
+           Version="$(var.Version)" 
+           Manufacturer="MingLog Team" 
+           UpgradeCode="12345678-1234-1234-1234-123456789012">
+    
+    <Package InstallerVersion="200" 
+             Compressed="yes" 
+             InstallScope="perMachine" 
+             Description="明志桌面版安装程序"
+             Comments="现代化知识管理工具"
+             Manufacturer="MingLog Team" />
+
+    <!-- 升级策略 -->
+    <MajorUpgrade DowngradeErrorMessage="已安装更新版本的明志桌面版。安装程序将退出。" />
+    
+    <!-- 媒体定义 -->
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- 功能定义 -->
+    <Feature Id="MainFeature" Title="主程序" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+      <ComponentRef Id="RegistryEntries" />
+      <ComponentRef Id="StartMenuShortcuts" />
+      <ComponentRef Id="DesktopShortcut" />
+      <ComponentRef Id="FileAssociations" />
+    </Feature>
+
+    <!-- 安装目录结构 -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="明志桌面版" />
+      </Directory>
+      
+      <!-- 开始菜单 -->
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="明志桌面版" />
+      </Directory>
+      
+      <!-- 桌面 -->
+      <Directory Id="DesktopFolder" Name="Desktop" />
+      
+      <!-- 应用数据目录 -->
+      <Directory Id="CommonAppDataFolder">
+        <Directory Id="AppDataFolder" Name="MingLog" />
+      </Directory>
+    </Directory>
+
+    <!-- 主程序组件 -->
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <Component Id="MainExecutable" Guid="*">
+        <File Id="MainExe" 
+              Source="$(var.SourceDir)\明志桌面版.exe" 
+              KeyPath="yes" 
+              Checksum="yes">
+          <Shortcut Id="StartMenuShortcut"
+                    Directory="ApplicationProgramsFolder"
+                    Name="明志桌面版"
+                    Description="现代化知识管理工具"
+                    WorkingDirectory="INSTALLFOLDER"
+                    Icon="AppIcon" />
+        </File>
+      </Component>
+      
+      <!-- 依赖文件 -->
+      <Component Id="Dependencies" Guid="*">
+        <File Source="$(var.SourceDir)\WebView2Loader.dll" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- 注册表项 -->
+    <Component Id="RegistryEntries" Directory="INSTALLFOLDER" Guid="*">
+      <!-- 应用程序注册 -->
+      <RegistryKey Root="HKLM" Key="SOFTWARE\MingLog\Desktop">
+        <RegistryValue Name="InstallPath" Type="string" Value="[INSTALLFOLDER]" />
+        <RegistryValue Name="Version" Type="string" Value="$(var.Version)" />
+        <RegistryValue Name="DisplayName" Type="string" Value="明志桌面版" />
+      </RegistryKey>
+      
+      <!-- 卸载信息 -->
+      <RegistryKey Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{$(var.ProductCode)}">
+        <RegistryValue Name="DisplayName" Type="string" Value="明志桌面版" />
+        <RegistryValue Name="DisplayVersion" Type="string" Value="$(var.Version)" />
+        <RegistryValue Name="Publisher" Type="string" Value="MingLog Team" />
+        <RegistryValue Name="InstallLocation" Type="string" Value="[INSTALLFOLDER]" />
+        <RegistryValue Name="UninstallString" Type="string" Value="[SystemFolder]msiexec.exe /x {$(var.ProductCode)}" />
+        <RegistryValue Name="DisplayIcon" Type="string" Value="[INSTALLFOLDER]明志桌面版.exe" />
+        <RegistryValue Name="NoModify" Type="integer" Value="1" />
+        <RegistryValue Name="NoRepair" Type="integer" Value="1" />
+        <RegistryValue Name="EstimatedSize" Type="integer" Value="50000" />
+      </RegistryKey>
+      
+      <!-- URL协议注册 -->
+      <RegistryKey Root="HKLM" Key="SOFTWARE\Classes\minglog">
+        <RegistryValue Type="string" Value="MingLog Protocol" />
+        <RegistryValue Name="URL Protocol" Type="string" Value="" />
+        <RegistryKey Key="DefaultIcon">
+          <RegistryValue Type="string" Value="[INSTALLFOLDER]明志桌面版.exe,0" />
+        </RegistryKey>
+        <RegistryKey Key="shell\open\command">
+          <RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]明志桌面版.exe&quot; &quot;%1&quot;" />
+        </RegistryKey>
+      </RegistryKey>
+    </Component>
+
+    <!-- 开始菜单快捷方式 -->
+    <Component Id="StartMenuShortcuts" Directory="ApplicationProgramsFolder" Guid="*">
+      <Shortcut Id="UninstallShortcut"
+                Name="卸载明志桌面版"
+                Description="卸载明志桌面版"
+                Target="[SystemFolder]msiexec.exe"
+                Arguments="/x {$(var.ProductCode)}" />
+      <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
+      <RegistryValue Root="HKCU" Key="Software\MingLog\Desktop" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <!-- 桌面快捷方式 -->
+    <Component Id="DesktopShortcut" Directory="DesktopFolder" Guid="*">
+      <Shortcut Id="DesktopShortcut"
+                Name="明志桌面版"
+                Description="现代化知识管理工具"
+                Target="[INSTALLFOLDER]明志桌面版.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="AppIcon" />
+      <RegistryValue Root="HKCU" Key="Software\MingLog\Desktop" Name="desktop_shortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <!-- 文件关联 -->
+    <Component Id="FileAssociations" Directory="INSTALLFOLDER" Guid="*">
+      <!-- .minglog 文件关联 -->
+      <RegistryKey Root="HKLM" Key="SOFTWARE\Classes\.minglog">
+        <RegistryValue Type="string" Value="MingLog.Document" />
+      </RegistryKey>
+      <RegistryKey Root="HKLM" Key="SOFTWARE\Classes\MingLog.Document">
+        <RegistryValue Type="string" Value="MingLog 文档" />
+        <RegistryKey Key="DefaultIcon">
+          <RegistryValue Type="string" Value="[INSTALLFOLDER]明志桌面版.exe,0" />
+        </RegistryKey>
+        <RegistryKey Key="shell\open\command">
+          <RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]明志桌面版.exe&quot; &quot;%1&quot;" />
+        </RegistryKey>
+      </RegistryKey>
+      
+      <!-- .md 文件关联（可选） -->
+      <RegistryKey Root="HKLM" Key="SOFTWARE\Classes\.md\OpenWithProgids">
+        <RegistryValue Name="MingLog.Document" Type="string" Value="" />
+      </RegistryKey>
+    </Component>
+
+    <!-- 图标定义 -->
+    <Icon Id="AppIcon" SourceFile="$(var.SourceDir)\明志桌面版.exe" />
+
+    <!-- 自定义操作 -->
+    <CustomAction Id="LaunchApplication" 
+                  FileKey="MainExe" 
+                  ExeCommand="" 
+                  Execute="immediate" 
+                  Impersonate="yes" 
+                  Return="asyncNoWait" />
+
+    <!-- 安装序列 -->
+    <InstallExecuteSequence>
+      <Custom Action="LaunchApplication" After="InstallFinalize">NOT Installed</Custom>
+    </InstallExecuteSequence>
+
+    <!-- UI定义 -->
+    <UI>
+      <UIRef Id="WixUI_InstallDir" />
+      <Publish Dialog="ExitDialog" 
+               Control="Finish" 
+               Event="DoAction" 
+               Value="LaunchApplication">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>
+    </UI>
+
+    <!-- 许可证 -->
+    <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
+    
+    <!-- 安装目录选择 -->
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    
+    <!-- 启动应用程序选项 -->
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="启动明志桌面版" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+
+    <!-- 系统要求检查 -->
+    <Condition Message="此应用程序需要 Windows 10 或更高版本。">
+      <![CDATA[Installed OR (VersionNT >= 1000)]]>
+    </Condition>
+
+  </Product>
+</Wix>

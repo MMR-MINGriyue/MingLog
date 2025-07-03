@@ -119,9 +119,9 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
 
   const handleResultClick = useCallback((result: BlockSearchResult) => {
     if (result.result_type === 'page') {
-      navigate(`/blocks/${result.id}`)
+      navigate(`/page/${result.id}`)
     } else if (result.result_type === 'block' && result.page_id) {
-      navigate(`/blocks/${result.page_id}#${result.id}`)
+      navigate(`/page/${result.page_id}#${result.id}`)
     }
     onClose()
   }, [navigate, onClose])
@@ -169,6 +169,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
             <button
               onClick={onClose}
               className="p-1 text-gray-400 hover:text-gray-600 rounded"
+              aria-label="Close search"
             >
               <X className="w-5 h-5" />
             </button>

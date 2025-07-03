@@ -1,14 +1,113 @@
 {
-  "$schema": "https://schema.tauri.app/config/2.0.0",
-  "productName": "明志桌面版",
-  "version": "1.0.0",
-  "identifier": "com.minglog.desktop",
+  "$schema": "https://schema.tauri.app/config/1.0",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist"
+    "devPath": "http://localhost:1420",
+    "distDir": "../dist"
   },
-  "app": {
+  "package": {
+    "productName": "明志桌面版",
+    "version": "1.0.0"
+  },
+  "tauri": {
+    "bundle": {
+      "active": true,
+      "targets": "all",
+      "identifier": "com.minglog.desktop",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "resources": [],
+      "externalBin": [],
+      "copyright": "Copyright © 2024 MingLog Team. All rights reserved.",
+      "category": "Productivity",
+      "shortDescription": "现代化知识管理工具",
+      "longDescription": "明志桌面版是一个现代化、快速、安全的知识管理应用程序，使用 Tauri 和 React 构建。整理您的想法，创建连接，并通过高级搜索、图形可视化和文件操作构建您的个人知识库。",
+      "deb": {
+        "depends": ["libwebkit2gtk-4.0-37", "libgtk-3-0", "libayatana-appindicator3-1"]
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      },
+      "macOS": {
+        "frameworks": [],
+        "minimumSystemVersion": "10.15",
+        "exceptionDomain": "",
+        "signingIdentity": null,
+        "providerShortName": null,
+        "entitlements": "entitlements.plist"
+      },
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": "",
+        "wix": {
+          "language": "zh-CN",
+          "template": "main.wxs",
+          "fragmentPaths": ["fragments/install.wxs"],
+          "componentGroupRefs": ["CustomComponents"],
+          "componentRefs": ["RegistryEntries"],
+          "featureGroupRefs": ["ProductFeatures"],
+          "featureRefs": ["MainFeature"],
+          "mergeRefs": ["VCRedist"],
+          "skipWebviewInstall": false,
+          "license": "license.rtf",
+          "enableElevatedUpdateTask": true,
+          "bannerPath": "banner.bmp",
+          "dialogImagePath": "dialog.bmp"
+        },
+        "nsis": {
+          "template": "installer.nsi",
+          "license": "license.txt",
+          "headerImage": "header.bmp",
+          "sidebarImage": "sidebar.bmp",
+          "installerIcon": "installer.ico",
+          "installMode": "perMachine",
+          "languages": ["SimpChinese", "English"],
+          "displayLanguageSelector": true,
+          "compression": "lzma"
+        }
+      }
+    },
+    "allowlist": {
+      "all": true,
+      "fs": {
+        "all": true,
+        "readFile": true,
+        "writeFile": true,
+        "readDir": true,
+        "copyFile": true,
+        "createDir": true,
+        "removeDir": true,
+        "removeFile": true,
+        "renameFile": true,
+        "exists": true,
+        "scope": ["**"]
+      },
+      "dialog": {
+        "all": true,
+        "ask": true,
+        "confirm": true,
+        "message": true,
+        "open": true,
+        "save": true
+      },
+      "shell": {
+        "all": false,
+        "execute": false,
+        "sidecar": false,
+        "open": false
+      },
+      "protocol": {
+        "asset": true,
+        "assetScope": ["**"]
+      }
+    },
     "windows": [
       {
         "fullscreen": false,
@@ -24,78 +123,16 @@
         "skipTaskbar": false,
         "maximized": false,
         "visible": true,
-        "transparent": false,
-        "shadow": true
+        "transparent": false
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'unsafe-eval'; connect-src 'self' asset: https://asset.localhost",
-      "dangerousDisableAssetCspModification": false,
-      "assetProtocol": {
-        "enable": true,
-        "scope": ["**"]
-      }
+      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'unsafe-eval'; connect-src 'self' asset: https://asset.localhost"
     },
-    "trayIcon": {
-      "iconPath": "icons/32x32.png",
+    "systemTray": {
+      "iconPath": "icons/icon.ico",
       "iconAsTemplate": true,
       "menuOnLeftClick": false
     }
-  },
-  "bundle": {
-    "active": true,
-    "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ],
-    "resources": [],
-    "externalBin": [],
-    "copyright": "Copyright © 2024 MingLog Team. All rights reserved.",
-    "category": "Productivity",
-    "shortDescription": "现代化知识管理工具",
-    "longDescription": "明志桌面版是一个现代化、快速、安全的知识管理应用程序，使用 Tauri 和 React 构建。整理您的想法，创建连接，并通过高级搜索、图形可视化和文件操作构建您的个人知识库。",
-    "publisher": "MingLog Team",
-    "homepage": "https://minglog.app",
-    "license": "MIT",
-    "linux": {
-      "deb": {
-        "depends": ["libwebkit2gtk-4.0-37", "libgtk-3-0", "libayatana-appindicator3-1"]
-      },
-      "appimage": {
-        "bundleMediaFramework": false
-      }
-    },
-    "macOS": {
-      "frameworks": [],
-      "minimumSystemVersion": "10.15",
-      "exceptionDomain": "",
-      "signingIdentity": null,
-      "providerShortName": null,
-      "entitlements": "entitlements.plist",
-      "dmg": {
-        "appPosition": {
-          "x": 180,
-          "y": 170
-        },
-        "applicationFolderPosition": {
-          "x": 480,
-          "y": 170
-        },
-        "windowSize": {
-          "width": 660,
-          "height": 400
-        }
-      }
-    },
-    "windows": {
-      "certificateThumbprint": null,
-      "digestAlgorithm": "sha256",
-      "timestampUrl": ""
-    }
-  },
-  "plugins": {}
+  }
 }

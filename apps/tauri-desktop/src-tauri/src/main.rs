@@ -4,7 +4,10 @@
 mod commands;
 mod database;
 mod error;
+// mod error_reporting; // 暂时禁用，避免Sentry依赖问题
+// mod error_testing; // 暂时禁用，避免Sentry依赖问题
 mod models;
+// mod updater; // 暂时禁用，避免tokio process依赖问题
 mod state;
 mod file_operations;
 mod sync;
@@ -13,7 +16,7 @@ use commands::*;
 use database::Database;
 use state::AppState;
 use std::sync::Arc;
-use tauri::{Manager, tray::{TrayIconBuilder, TrayIconEvent}, menu::{MenuBuilder, MenuItemBuilder}};
+use tauri::{Manager, SystemTray, SystemTrayMenu, SystemTrayMenuItem, SystemTrayEvent, CustomMenuItem};
 use tokio::sync::Mutex;
 
 #[tokio::main]
@@ -46,55 +49,44 @@ async fn main() {
                 }
             });
 
-            // Create tray menu
-            let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
-            let show = MenuItemBuilder::with_id("show", "Show").build(app)?;
-            let hide = MenuItemBuilder::with_id("hide", "Hide").build(app)?;
-
-            let menu = MenuBuilder::new(app)
-                .item(&show)
-                .item(&hide)
-                .separator()
-                .item(&quit)
-                .build()?;
-
-            // Create tray icon
-            let app_handle = app.handle().clone();
-            let _tray = TrayIconBuilder::with_id("main")
-                .menu(&menu)
-                .tooltip("MingLog Desktop")
-                .on_menu_event(move |app, event| match event.id().as_ref() {
-                    "quit" => {
-                        app.app_handle().exit(0);
-                    }
-                    "show" => {
-                        if let Some(window) = app.app_handle().get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    }
-                    "hide" => {
-                        if let Some(window) = app.app_handle().get_webview_window("main") {
-                            let _ = window.hide();
-                        }
-                    }
-                    _ => {}
-                })
-                .on_tray_icon_event(move |_tray, event| {
-                    if let TrayIconEvent::Click { .. } = event {
-                        if let Some(window) = app_handle.get_webview_window("main") {
-                            if window.is_visible().unwrap_or(false) {
-                                let _ = window.hide();
-                            } else {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
-                        }
-                    }
-                })
-                .build(app)?;
-
             Ok(())
+        })
+        .system_tray(SystemTray::new().with_menu(
+            SystemTrayMenu::new()
+                .add_item(CustomMenuItem::new("show".to_string(), "Show"))
+                .add_item(CustomMenuItem::new("hide".to_string(), "Hide"))
+                .add_native_item(SystemTrayMenuItem::Separator)
+                .add_item(CustomMenuItem::new("quit".to_string(), "Quit"))
+        ))
+        .on_system_tray_event(|app, event| match event {
+            SystemTrayEvent::LeftClick { .. } => {
+                if let Some(window) = app.get_window("main") {
+                    if window.is_visible().unwrap_or(false) {
+                        let _ = window.hide();
+                    } else {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                }
+            }
+            SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
+                "quit" => {
+                    std::process::exit(0);
+                }
+                "show" => {
+                    if let Some(window) = app.get_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                }
+                "hide" => {
+                    if let Some(window) = app.get_window("main") {
+                        let _ = window.hide();
+                    }
+                }
+                _ => {}
+            }
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             // App commands
@@ -178,7 +170,23 @@ async fn main() {
             save_file,
             load_file,
             export_data,
-            import_data
+            import_data,
+
+            // Error reporting commands (暂时禁用)
+            // error_reporting::configure_error_reporting,
+            // error_reporting::toggle_error_reporting,
+            // error_reporting::get_error_reporting_status,
+
+            // Error testing commands (暂时禁用)
+            // error_testing::run_error_tests,
+            // error_testing::run_single_error_test,
+
+            // Update commands (暂时禁用)
+            // updater::check_for_updates,
+            // updater::download_update,
+            // updater::install_update,
+            // updater::get_update_config,
+            // updater::update_update_config
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

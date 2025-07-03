@@ -1,0 +1,372 @@
+name: Incremental Build System
+
+on:
+  workflow_call:
+    inputs:
+      force_full_build:
+        description: 'Force full build regardless of changes'
+        required: false
+        type: boolean
+        default: false
+      target_platforms:
+        description: 'Target platforms to build (comma-separated)'
+        required: false
+        type: string
+        default: 'all'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # 分析变更范围
+  analyze-changes:
+    name: Analyze Changes
+    runs-on: ubuntu-latest
+    outputs:
+      frontend_changed: ${{ steps.changes.outputs.frontend }}
+      backend_changed: ${{ steps.changes.outputs.backend }}
+      docs_changed: ${{ steps.changes.outputs.docs }}
+      config_changed: ${{ steps.changes.outputs.config }}
+      tests_changed: ${{ steps.changes.outputs.tests }}
+      dependencies_changed: ${{ steps.changes.outputs.dependencies }}
+      build_matrix: ${{ steps.matrix.outputs.matrix }}
+      should_build: ${{ steps.decision.outputs.should_build }}
+      build_reason: ${{ steps.decision.outputs.reason }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            frontend:
+              - 'apps/tauri-desktop/src/**'
+              - 'apps/tauri-desktop/public/**'
+              - 'apps/tauri-desktop/package.json'
+              - 'apps/tauri-desktop/package-lock.json'
+              - 'apps/tauri-desktop/vite.config.ts'
+              - 'apps/tauri-desktop/tsconfig.json'
+            backend:
+              - 'apps/tauri-desktop/src-tauri/src/**'
+              - 'apps/tauri-desktop/src-tauri/Cargo.toml'
+              - 'apps/tauri-desktop/src-tauri/Cargo.lock'
+              - 'apps/tauri-desktop/src-tauri/tauri.conf.json'
+            docs:
+              - 'apps/tauri-desktop/docs/**'
+              - '*.md'
+            config:
+              - '.github/workflows/**'
+              - 'apps/tauri-desktop/src-tauri/tauri.conf.json'
+              - 'apps/tauri-desktop/scripts/**'
+            tests:
+              - 'apps/tauri-desktop/src/**/*.test.ts'
+              - 'apps/tauri-desktop/src/**/*.test.tsx'
+              - 'apps/tauri-desktop/src-tauri/src/**/*test.rs'
+              - 'apps/tauri-desktop/tests/**'
+              - 'apps/tauri-desktop/playwright.config.ts'
+            dependencies:
+              - 'apps/tauri-desktop/package.json'
+              - 'apps/tauri-desktop/package-lock.json'
+              - 'apps/tauri-desktop/src-tauri/Cargo.toml'
+              - 'apps/tauri-desktop/src-tauri/Cargo.lock'
+
+      - name: Generate build matrix
+        id: matrix
+        run: |
+          # 基于变更和输入参数生成构建矩阵
+          platforms="${{ inputs.target_platforms }}"
+          
+          if [ "$platforms" = "all" ]; then
+            if [ "${{ steps.changes.outputs.backend }}" = "true" ] || [ "${{ inputs.force_full_build }}" = "true" ]; then
+              # 后端变更或强制构建，构建所有平台
+              matrix='["windows-latest", "macos-latest", "ubuntu-latest"]'
+            elif [ "${{ steps.changes.outputs.frontend }}" = "true" ]; then
+              # 仅前端变更，只构建一个平台进行验证
+              matrix='["ubuntu-latest"]'
+            else
+              # 无关键变更，跳过构建
+              matrix='[]'
+            fi
+          else
+            # 使用指定平台
+            IFS=',' read -ra PLATFORMS <<< "$platforms"
+            matrix_items=""
+            for platform in "${PLATFORMS[@]}"; do
+              case "$platform" in
+                "windows") matrix_items="$matrix_items\"windows-latest\"," ;;
+                "macos") matrix_items="$matrix_items\"macos-latest\"," ;;
+                "linux") matrix_items="$matrix_items\"ubuntu-latest\"," ;;
+              esac
+            done
+            matrix="[${matrix_items%,}]"
+          fi
+          
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "Generated build matrix: $matrix"
+
+      - name: Build decision
+        id: decision
+        run: |
+          should_build="false"
+          reason="No significant changes detected"
+          
+          if [ "${{ inputs.force_full_build }}" = "true" ]; then
+            should_build="true"
+            reason="Force full build requested"
+          elif [ "${{ steps.changes.outputs.frontend }}" = "true" ] || [ "${{ steps.changes.outputs.backend }}" = "true" ]; then
+            should_build="true"
+            reason="Code changes detected"
+          elif [ "${{ steps.changes.outputs.dependencies }}" = "true" ]; then
+            should_build="true"
+            reason="Dependency changes detected"
+          elif [ "${{ steps.changes.outputs.config }}" = "true" ]; then
+            should_build="true"
+            reason="Configuration changes detected"
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            should_build="true"
+            reason="Scheduled build"
+          elif [ "${{ contains(github.event.head_commit.message, '[build]') }}" = "true" ]; then
+            should_build="true"
+            reason="Build forced by commit message"
+          fi
+          
+          echo "should_build=$should_build" >> $GITHUB_OUTPUT
+          echo "reason=$reason" >> $GITHUB_OUTPUT
+          echo "Build decision: $should_build ($reason)"
+
+  # 智能缓存管理
+  cache-management:
+    name: Cache Management
+    runs-on: ubuntu-latest
+    needs: analyze-changes
+    if: needs.analyze-changes.outputs.should_build == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Calculate cache keys
+        id: cache-keys
+        run: |
+          # 计算各种缓存键
+          
+          # Rust 缓存键
+          rust_key="rust-$(sha256sum apps/tauri-desktop/src-tauri/Cargo.lock | cut -d' ' -f1)"
+          echo "rust_key=$rust_key" >> $GITHUB_OUTPUT
+          
+          # Node.js 缓存键
+          node_key="node-$(sha256sum apps/tauri-desktop/package-lock.json | cut -d' ' -f1)"
+          echo "node_key=$node_key" >> $GITHUB_OUTPUT
+          
+          # 构建缓存键（基于源代码变更）
+          if [ "${{ needs.analyze-changes.outputs.backend_changed }}" = "true" ]; then
+            build_key="build-backend-$(git rev-parse HEAD)"
+          elif [ "${{ needs.analyze-changes.outputs.frontend_changed }}" = "true" ]; then
+            build_key="build-frontend-$(git rev-parse HEAD)"
+          else
+            build_key="build-config-$(git rev-parse HEAD)"
+          fi
+          echo "build_key=$build_key" >> $GITHUB_OUTPUT
+          
+          echo "Cache keys calculated:"
+          echo "  Rust: $rust_key"
+          echo "  Node: $node_key"
+          echo "  Build: $build_key"
+
+      - name: Setup cache strategy
+        run: |
+          echo "### Cache Strategy" >> $GITHUB_STEP_SUMMARY
+          echo "- **Rust dependencies**: ${{ steps.cache-keys.outputs.rust_key }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node dependencies**: ${{ steps.cache-keys.outputs.node_key }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build artifacts**: ${{ steps.cache-keys.outputs.build_key }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dependencies changed**: ${{ needs.analyze-changes.outputs.dependencies_changed }}" >> $GITHUB_STEP_SUMMARY
+
+  # 增量构建
+  incremental-build:
+    name: Incremental Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: [analyze-changes, cache-management]
+    if: needs.analyze-changes.outputs.should_build == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJson(needs.analyze-changes.outputs.build_matrix) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust with caching
+        uses: dtolnay/rust-toolchain@stable
+        if: needs.analyze-changes.outputs.backend_changed == 'true' || inputs.force_full_build
+
+      - name: Setup Node.js with caching
+        uses: actions/setup-node@v4
+        if: needs.analyze-changes.outputs.frontend_changed == 'true' || inputs.force_full_build
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: apps/tauri-desktop/package-lock.json
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        if: needs.analyze-changes.outputs.backend_changed == 'true' || inputs.force_full_build
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            apps/tauri-desktop/src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ needs.cache-management.outputs.rust_key }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Cache build artifacts
+        uses: actions/cache@v3
+        with:
+          path: |
+            apps/tauri-desktop/dist
+            apps/tauri-desktop/src-tauri/target/release
+          key: ${{ runner.os }}-build-${{ needs.cache-management.outputs.build_key }}
+          restore-keys: |
+            ${{ runner.os }}-build-
+
+      - name: Install system dependencies
+        if: matrix.os == 'ubuntu-latest' && (needs.analyze-changes.outputs.backend_changed == 'true' || inputs.force_full_build)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        if: needs.analyze-changes.outputs.frontend_changed == 'true' || needs.analyze-changes.outputs.dependencies_changed == 'true' || inputs.force_full_build
+        working-directory: apps/tauri-desktop
+        run: |
+          echo "Installing frontend dependencies..."
+          npm ci
+
+      - name: Build frontend (incremental)
+        if: needs.analyze-changes.outputs.frontend_changed == 'true' || inputs.force_full_build
+        working-directory: apps/tauri-desktop
+        run: |
+          echo "Building frontend..."
+          npm run build
+
+      - name: Build backend (incremental)
+        if: needs.analyze-changes.outputs.backend_changed == 'true' || inputs.force_full_build
+        working-directory: apps/tauri-desktop/src-tauri
+        run: |
+          echo "Building backend..."
+          if [ "${{ inputs.force_full_build }}" = "true" ]; then
+            cargo build --release
+          else
+            # 增量构建：只构建变更的部分
+            cargo build --release
+          fi
+
+      - name: Run incremental tests
+        if: needs.analyze-changes.outputs.tests_changed == 'true' || needs.analyze-changes.outputs.frontend_changed == 'true' || needs.analyze-changes.outputs.backend_changed == 'true'
+        working-directory: apps/tauri-desktop
+        run: |
+          echo "Running incremental tests..."
+          
+          # 只运行相关的测试
+          if [ "${{ needs.analyze-changes.outputs.frontend_changed }}" = "true" ]; then
+            echo "Running frontend tests..."
+            npm test -- --passWithNoTests
+          fi
+          
+          if [ "${{ needs.analyze-changes.outputs.backend_changed }}" = "true" ]; then
+            echo "Running backend tests..."
+            cd src-tauri && cargo test
+          fi
+
+      - name: Package application
+        if: needs.analyze-changes.outputs.backend_changed == 'true' || inputs.force_full_build
+        working-directory: apps/tauri-desktop
+        run: |
+          echo "Packaging application..."
+          npm run tauri build
+
+      - name: Upload build artifacts
+        if: needs.analyze-changes.outputs.backend_changed == 'true' || inputs.force_full_build
+        uses: actions/upload-artifact@v3
+        with:
+          name: incremental-build-${{ matrix.os }}
+          path: |
+            apps/tauri-desktop/src-tauri/target/release/bundle/
+          retention-days: 7
+
+  # 构建报告
+  build-report:
+    name: Build Report
+    runs-on: ubuntu-latest
+    needs: [analyze-changes, incremental-build]
+    if: always()
+    steps:
+      - name: Generate build report
+        run: |
+          echo "# 🚀 增量构建报告" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 变更分析" >> $GITHUB_STEP_SUMMARY
+          echo "- **前端变更**: ${{ needs.analyze-changes.outputs.frontend_changed }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **后端变更**: ${{ needs.analyze-changes.outputs.backend_changed }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **文档变更**: ${{ needs.analyze-changes.outputs.docs_changed }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **配置变更**: ${{ needs.analyze-changes.outputs.config_changed }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **测试变更**: ${{ needs.analyze-changes.outputs.tests_changed }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **依赖变更**: ${{ needs.analyze-changes.outputs.dependencies_changed }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎯 构建决策" >> $GITHUB_STEP_SUMMARY
+          echo "- **是否构建**: ${{ needs.analyze-changes.outputs.should_build }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **构建原因**: ${{ needs.analyze-changes.outputs.build_reason }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **构建矩阵**: ${{ needs.analyze-changes.outputs.build_matrix }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.analyze-changes.outputs.should_build }}" = "true" ]; then
+            echo "## ✅ 构建结果" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ needs.incremental-build.result }}" = "success" ]; then
+              echo "- **状态**: 构建成功 ✅" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- **状态**: 构建失败 ❌" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "## ⏭️ 跳过构建" >> $GITHUB_STEP_SUMMARY
+            echo "由于没有检测到相关变更，跳过了构建过程。" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📈 性能优化" >> $GITHUB_STEP_SUMMARY
+          echo "- **缓存策略**: 智能缓存管理" >> $GITHUB_STEP_SUMMARY
+          echo "- **增量构建**: 只构建变更的模块" >> $GITHUB_STEP_SUMMARY
+          echo "- **并行执行**: 多平台并行构建" >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const report = `
+            ## 🚀 增量构建报告
+            
+            ### 📊 变更分析
+            - **前端变更**: ${{ needs.analyze-changes.outputs.frontend_changed }}
+            - **后端变更**: ${{ needs.analyze-changes.outputs.backend_changed }}
+            - **依赖变更**: ${{ needs.analyze-changes.outputs.dependencies_changed }}
+            
+            ### 🎯 构建决策
+            - **是否构建**: ${{ needs.analyze-changes.outputs.should_build }}
+            - **构建原因**: ${{ needs.analyze-changes.outputs.build_reason }}
+            
+            ${${{ needs.analyze-changes.outputs.should_build }} === 'true' ? 
+              `### ✅ 构建状态: ${{ needs.incremental-build.result === 'success' ? '成功' : '失败' }}` :
+              '### ⏭️ 跳过构建: 没有检测到相关变更'
+            }
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });

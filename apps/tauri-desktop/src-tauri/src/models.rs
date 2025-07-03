@@ -431,6 +431,7 @@ impl Page {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_tags(&self) -> Vec<String> {
         if self.tags.is_empty() {
             Vec::new()
@@ -439,6 +440,7 @@ impl Page {
         }
     }
 
+    #[allow(dead_code)]
     pub fn set_tags(&mut self, tags: Vec<String>) {
         self.tags = tags.join(",");
     }
@@ -462,6 +464,7 @@ impl Block {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_refs(&self) -> Vec<String> {
         if self.refs.is_empty() {
             Vec::new()
@@ -470,6 +473,7 @@ impl Block {
         }
     }
 
+    #[allow(dead_code)]
     pub fn set_refs(&mut self, refs: Vec<String>) {
         self.refs = refs.join(",");
     }
@@ -490,6 +494,7 @@ impl Note {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_tags(&self) -> Vec<String> {
         self.tags
             .as_ref()

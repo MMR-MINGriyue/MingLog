@@ -1,0 +1,445 @@
+name: Blue-Green Deployment
+
+on:
+  workflow_call:
+    inputs:
+      deployment_strategy:
+        description: 'Deployment strategy (blue-green, canary, rolling)'
+        required: false
+        type: string
+        default: 'blue-green'
+      environment:
+        description: 'Target environment (staging, production)'
+        required: true
+        type: string
+      canary_percentage:
+        description: 'Canary deployment percentage (1-100)'
+        required: false
+        type: number
+        default: 10
+      health_check_timeout:
+        description: 'Health check timeout in seconds'
+        required: false
+        type: number
+        default: 300
+
+env:
+  DEPLOYMENT_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+
+jobs:
+  # 预部署验证
+  pre-deployment:
+    name: Pre-deployment Validation
+    runs-on: ubuntu-latest
+    outputs:
+      deployment_config: ${{ steps.config.outputs.config }}
+      current_version: ${{ steps.version.outputs.current }}
+      new_version: ${{ steps.version.outputs.new }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate deployment strategy
+        run: |
+          case "${{ inputs.deployment_strategy }}" in
+            "blue-green"|"canary"|"rolling")
+              echo "✅ Valid deployment strategy: ${{ inputs.deployment_strategy }}"
+              ;;
+            *)
+              echo "❌ Invalid deployment strategy: ${{ inputs.deployment_strategy }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Generate deployment configuration
+        id: config
+        run: |
+          config=$(cat << EOF
+          {
+            "strategy": "${{ inputs.deployment_strategy }}",
+            "environment": "${{ inputs.environment }}",
+            "canary_percentage": ${{ inputs.canary_percentage }},
+            "health_check_timeout": ${{ inputs.health_check_timeout }},
+            "deployment_id": "${{ env.DEPLOYMENT_ID }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+          )
+          echo "config=$config" >> $GITHUB_OUTPUT
+          echo "Generated deployment config: $config"
+
+      - name: Get version information
+        id: version
+        run: |
+          # 获取当前版本
+          current_version=$(curl -s "https://api.minglog.com/version/${{ inputs.environment }}" | jq -r '.version' || echo "unknown")
+          new_version="${{ github.ref_name }}"
+          
+          echo "current=$current_version" >> $GITHUB_OUTPUT
+          echo "new=$new_version" >> $GITHUB_OUTPUT
+          echo "Current version: $current_version"
+          echo "New version: $new_version"
+
+      - name: Validate environment readiness
+        run: |
+          echo "Validating ${{ inputs.environment }} environment readiness..."
+          
+          # 检查环境健康状态
+          health_status=$(curl -s -o /dev/null -w "%{http_code}" "https://api.minglog.com/health/${{ inputs.environment }}" || echo "000")
+          
+          if [ "$health_status" = "200" ]; then
+            echo "✅ Environment is healthy"
+          else
+            echo "❌ Environment health check failed (HTTP $health_status)"
+            exit 1
+          fi
+
+  # 蓝绿部署
+  blue-green-deploy:
+    name: Blue-Green Deployment
+    runs-on: ubuntu-latest
+    needs: pre-deployment
+    if: inputs.deployment_strategy == 'blue-green'
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: release-artifacts
+          path: ./artifacts
+
+      - name: Determine current environment
+        id: current-env
+        run: |
+          # 查询当前活跃环境
+          current_env=$(curl -s "https://api.minglog.com/deployment/current/${{ inputs.environment }}" | jq -r '.active_environment' || echo "blue")
+          
+          if [ "$current_env" = "blue" ]; then
+            target_env="green"
+          else
+            target_env="blue"
+          fi
+          
+          echo "current=$current_env" >> $GITHUB_OUTPUT
+          echo "target=$target_env" >> $GITHUB_OUTPUT
+          echo "Current environment: $current_env"
+          echo "Target environment: $target_env"
+
+      - name: Deploy to target environment
+        run: |
+          echo "Deploying to ${{ steps.current-env.outputs.target }} environment..."
+          
+          # 部署到目标环境
+          curl -X POST "https://api.minglog.com/deployment/deploy" \
+            -H "Authorization: Bearer ${{ secrets.DEPLOYMENT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "environment": "${{ inputs.environment }}",
+              "target_slot": "${{ steps.current-env.outputs.target }}",
+              "version": "${{ needs.pre-deployment.outputs.new_version }}",
+              "deployment_id": "${{ env.DEPLOYMENT_ID }}",
+              "artifacts": ["./artifacts"]
+            }'
+
+      - name: Health check target environment
+        run: |
+          echo "Performing health check on ${{ steps.current-env.outputs.target }} environment..."
+          
+          timeout=${{ inputs.health_check_timeout }}
+          interval=10
+          elapsed=0
+          
+          while [ $elapsed -lt $timeout ]; do
+            health_status=$(curl -s -o /dev/null -w "%{http_code}" "https://${{ steps.current-env.outputs.target }}-${{ inputs.environment }}.minglog.com/health" || echo "000")
+            
+            if [ "$health_status" = "200" ]; then
+              echo "✅ Health check passed"
+              break
+            fi
+            
+            echo "Health check failed (HTTP $health_status), retrying in ${interval}s..."
+            sleep $interval
+            elapsed=$((elapsed + interval))
+          done
+          
+          if [ $elapsed -ge $timeout ]; then
+            echo "❌ Health check timeout"
+            exit 1
+          fi
+
+      - name: Switch traffic
+        run: |
+          echo "Switching traffic to ${{ steps.current-env.outputs.target }} environment..."
+          
+          curl -X POST "https://api.minglog.com/deployment/switch" \
+            -H "Authorization: Bearer ${{ secrets.DEPLOYMENT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "environment": "${{ inputs.environment }}",
+              "target_slot": "${{ steps.current-env.outputs.target }}",
+              "deployment_id": "${{ env.DEPLOYMENT_ID }}"
+            }'
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying deployment..."
+          
+          # 等待流量切换完成
+          sleep 30
+          
+          # 验证新版本
+          deployed_version=$(curl -s "https://api.minglog.com/version/${{ inputs.environment }}" | jq -r '.version')
+          
+          if [ "$deployed_version" = "${{ needs.pre-deployment.outputs.new_version }}" ]; then
+            echo "✅ Deployment verified successfully"
+          else
+            echo "❌ Deployment verification failed"
+            echo "Expected: ${{ needs.pre-deployment.outputs.new_version }}"
+            echo "Actual: $deployed_version"
+            exit 1
+          fi
+
+  # 金丝雀部署
+  canary-deploy:
+    name: Canary Deployment
+    runs-on: ubuntu-latest
+    needs: pre-deployment
+    if: inputs.deployment_strategy == 'canary'
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: release-artifacts
+          path: ./artifacts
+
+      - name: Deploy canary version
+        run: |
+          echo "Deploying canary version with ${{ inputs.canary_percentage }}% traffic..."
+          
+          curl -X POST "https://api.minglog.com/deployment/canary" \
+            -H "Authorization: Bearer ${{ secrets.DEPLOYMENT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "environment": "${{ inputs.environment }}",
+              "version": "${{ needs.pre-deployment.outputs.new_version }}",
+              "traffic_percentage": ${{ inputs.canary_percentage }},
+              "deployment_id": "${{ env.DEPLOYMENT_ID }}",
+              "artifacts": ["./artifacts"]
+            }'
+
+      - name: Monitor canary metrics
+        run: |
+          echo "Monitoring canary metrics for 5 minutes..."
+          
+          # 监控关键指标
+          for i in {1..10}; do
+            echo "Checking metrics (attempt $i/10)..."
+            
+            metrics=$(curl -s "https://api.minglog.com/metrics/canary/${{ env.DEPLOYMENT_ID }}")
+            error_rate=$(echo "$metrics" | jq -r '.error_rate')
+            response_time=$(echo "$metrics" | jq -r '.avg_response_time')
+            
+            echo "Error rate: $error_rate%"
+            echo "Avg response time: ${response_time}ms"
+            
+            # 检查错误率阈值
+            if (( $(echo "$error_rate > 5.0" | bc -l) )); then
+              echo "❌ Error rate too high: $error_rate%"
+              exit 1
+            fi
+            
+            # 检查响应时间阈值
+            if (( $(echo "$response_time > 2000" | bc -l) )); then
+              echo "❌ Response time too high: ${response_time}ms"
+              exit 1
+            fi
+            
+            sleep 30
+          done
+          
+          echo "✅ Canary metrics look good"
+
+      - name: Promote canary to full deployment
+        run: |
+          echo "Promoting canary to full deployment..."
+          
+          curl -X POST "https://api.minglog.com/deployment/promote" \
+            -H "Authorization: Bearer ${{ secrets.DEPLOYMENT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "environment": "${{ inputs.environment }}",
+              "deployment_id": "${{ env.DEPLOYMENT_ID }}"
+            }'
+
+  # 滚动部署
+  rolling-deploy:
+    name: Rolling Deployment
+    runs-on: ubuntu-latest
+    needs: pre-deployment
+    if: inputs.deployment_strategy == 'rolling'
+    environment: ${{ inputs.environment }}
+    strategy:
+      matrix:
+        instance: [1, 2, 3, 4]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: release-artifacts
+          path: ./artifacts
+
+      - name: Deploy to instance ${{ matrix.instance }}
+        run: |
+          echo "Deploying to instance ${{ matrix.instance }}..."
+          
+          curl -X POST "https://api.minglog.com/deployment/rolling" \
+            -H "Authorization: Bearer ${{ secrets.DEPLOYMENT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "environment": "${{ inputs.environment }}",
+              "instance": ${{ matrix.instance }},
+              "version": "${{ needs.pre-deployment.outputs.new_version }}",
+              "deployment_id": "${{ env.DEPLOYMENT_ID }}",
+              "artifacts": ["./artifacts"]
+            }'
+
+      - name: Health check instance ${{ matrix.instance }}
+        run: |
+          echo "Health checking instance ${{ matrix.instance }}..."
+          
+          timeout=120
+          interval=10
+          elapsed=0
+          
+          while [ $elapsed -lt $timeout ]; do
+            health_status=$(curl -s -o /dev/null -w "%{http_code}" "https://instance-${{ matrix.instance }}-${{ inputs.environment }}.minglog.com/health" || echo "000")
+            
+            if [ "$health_status" = "200" ]; then
+              echo "✅ Instance ${{ matrix.instance }} is healthy"
+              break
+            fi
+            
+            echo "Instance ${{ matrix.instance }} health check failed, retrying..."
+            sleep $interval
+            elapsed=$((elapsed + interval))
+          done
+          
+          if [ $elapsed -ge $timeout ]; then
+            echo "❌ Instance ${{ matrix.instance }} health check timeout"
+            exit 1
+          fi
+
+  # 部署后验证
+  post-deployment:
+    name: Post-deployment Validation
+    runs-on: ubuntu-latest
+    needs: [pre-deployment, blue-green-deploy, canary-deploy, rolling-deploy]
+    if: always() && (needs.blue-green-deploy.result == 'success' || needs.canary-deploy.result == 'success' || needs.rolling-deploy.result == 'success')
+    steps:
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests..."
+          
+          # 基本功能测试
+          tests=(
+            "https://api.minglog.com/health/${{ inputs.environment }}"
+            "https://api.minglog.com/version/${{ inputs.environment }}"
+            "https://api.minglog.com/status/${{ inputs.environment }}"
+          )
+          
+          for test_url in "${tests[@]}"; do
+            echo "Testing: $test_url"
+            status=$(curl -s -o /dev/null -w "%{http_code}" "$test_url")
+            
+            if [ "$status" = "200" ]; then
+              echo "✅ Test passed"
+            else
+              echo "❌ Test failed (HTTP $status)"
+              exit 1
+            fi
+          done
+
+      - name: Update deployment status
+        run: |
+          echo "Updating deployment status..."
+          
+          curl -X POST "https://api.minglog.com/deployment/status" \
+            -H "Authorization: Bearer ${{ secrets.DEPLOYMENT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "deployment_id": "${{ env.DEPLOYMENT_ID }}",
+              "status": "completed",
+              "environment": "${{ inputs.environment }}",
+              "version": "${{ needs.pre-deployment.outputs.new_version }}",
+              "strategy": "${{ inputs.deployment_strategy }}"
+            }'
+
+      - name: Send deployment notification
+        run: |
+          echo "Sending deployment notification..."
+          
+          curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": "🚀 Deployment Completed",
+              "attachments": [
+                {
+                  "color": "good",
+                  "fields": [
+                    {"title": "Environment", "value": "${{ inputs.environment }}", "short": true},
+                    {"title": "Strategy", "value": "${{ inputs.deployment_strategy }}", "short": true},
+                    {"title": "Version", "value": "${{ needs.pre-deployment.outputs.new_version }}", "short": true},
+                    {"title": "Previous Version", "value": "${{ needs.pre-deployment.outputs.current_version }}", "short": true}
+                  ]
+                }
+              ]
+            }'
+
+  # 部署失败处理
+  deployment-failure:
+    name: Handle Deployment Failure
+    runs-on: ubuntu-latest
+    needs: [pre-deployment, blue-green-deploy, canary-deploy, rolling-deploy]
+    if: always() && (needs.blue-green-deploy.result == 'failure' || needs.canary-deploy.result == 'failure' || needs.rolling-deploy.result == 'failure')
+    steps:
+      - name: Trigger rollback
+        run: |
+          echo "Deployment failed, triggering rollback..."
+          
+          curl -X POST "https://api.minglog.com/deployment/rollback" \
+            -H "Authorization: Bearer ${{ secrets.DEPLOYMENT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "deployment_id": "${{ env.DEPLOYMENT_ID }}",
+              "environment": "${{ inputs.environment }}",
+              "target_version": "${{ needs.pre-deployment.outputs.current_version }}"
+            }'
+
+      - name: Send failure notification
+        run: |
+          curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": "❌ Deployment Failed",
+              "attachments": [
+                {
+                  "color": "danger",
+                  "fields": [
+                    {"title": "Environment", "value": "${{ inputs.environment }}", "short": true},
+                    {"title": "Strategy", "value": "${{ inputs.deployment_strategy }}", "short": true},
+                    {"title": "Failed Version", "value": "${{ needs.pre-deployment.outputs.new_version }}", "short": true},
+                    {"title": "Rollback Version", "value": "${{ needs.pre-deployment.outputs.current_version }}", "short": true}
+                  ]
+                }
+              ]
+            }'

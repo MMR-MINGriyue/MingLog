@@ -105,9 +105,9 @@ const VirtualizedSearchResults: React.FC<VirtualizedSearchResultsProps> = ({
           <div className="flex items-start space-x-3 h-full">
             <div className="flex-shrink-0 mt-1">
               {isPage ? (
-                <FileText className="w-4 h-4 text-blue-500" />
+                <FileText className="w-4 h-4 text-blue-500" data-testid="file-text-icon" />
               ) : (
-                <Hash className="w-4 h-4 text-gray-500" />
+                <Hash className="w-4 h-4 text-gray-500" data-testid="hash-icon" />
               )}
             </div>
             
@@ -118,9 +118,9 @@ const VirtualizedSearchResults: React.FC<VirtualizedSearchResultsProps> = ({
                 </h4>
                 <div className="flex items-center space-x-2 text-xs text-gray-500">
                   {result.is_journal && (
-                    <Calendar className="w-3 h-3" />
+                    <Calendar className="w-3 h-3" data-testid="calendar-icon" />
                   )}
-                  <Clock className="w-3 h-3" />
+                  <Clock className="w-3 h-3" data-testid="clock-icon" />
                   <span>{formatDate(result.updated_at)}</span>
                 </div>
               </div>

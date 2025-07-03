@@ -1,0 +1,274 @@
+name: Multi-Platform Build Matrix
+
+on:
+  workflow_call:
+    inputs:
+      build_type:
+        description: 'Build type (debug or release)'
+        required: false
+        type: string
+        default: 'debug'
+      upload_artifacts:
+        description: 'Upload build artifacts'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  build-matrix:
+    name: Build ${{ matrix.platform }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows builds
+          - platform: windows
+            runner: windows-latest
+            arch: x64
+            target: x86_64-pc-windows-msvc
+            bundle_format: msi,nsis
+            
+          - platform: windows
+            runner: windows-latest
+            arch: arm64
+            target: aarch64-pc-windows-msvc
+            bundle_format: msi,nsis
+            
+          # macOS builds
+          - platform: macos
+            runner: macos-latest
+            arch: x64
+            target: x86_64-apple-darwin
+            bundle_format: dmg,app
+            
+          - platform: macos
+            runner: macos-latest
+            arch: arm64
+            target: aarch64-apple-darwin
+            bundle_format: dmg,app
+            
+          # Linux builds
+          - platform: linux
+            runner: ubuntu-latest
+            arch: x64
+            target: x86_64-unknown-linux-gnu
+            bundle_format: appimage,deb,rpm
+            
+          - platform: linux
+            runner: ubuntu-latest
+            arch: arm64
+            target: aarch64-unknown-linux-gnu
+            bundle_format: appimage,deb,rpm
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: apps/tauri-desktop/package-lock.json
+
+      # Platform-specific dependencies
+      - name: Install Windows dependencies
+        if: matrix.platform == 'windows'
+        run: |
+          # Install Windows SDK if needed
+          choco install windows-sdk-10-version-2004-all
+
+      - name: Install macOS dependencies
+        if: matrix.platform == 'macos'
+        run: |
+          # Install Xcode command line tools
+          xcode-select --install || true
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libasound2-dev \
+            libssl-dev \
+            libxdo-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev
+
+      # Cross-compilation setup for ARM64
+      - name: Setup cross-compilation (Linux ARM64)
+        if: matrix.platform == 'linux' && matrix.arch == 'arm64'
+        run: |
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+          echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+          echo "CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++" >> $GITHUB_ENV
+
+      - name: Setup cross-compilation (Windows ARM64)
+        if: matrix.platform == 'windows' && matrix.arch == 'arm64'
+        run: |
+          # Windows ARM64 cross-compilation setup
+          rustup target add aarch64-pc-windows-msvc
+
+      # Install frontend dependencies
+      - name: Install frontend dependencies
+        working-directory: apps/tauri-desktop
+        run: npm ci
+
+      # Build frontend
+      - name: Build frontend
+        working-directory: apps/tauri-desktop
+        run: npm run build
+
+      # Configure Tauri for target platform
+      - name: Configure Tauri target
+        working-directory: apps/tauri-desktop/src-tauri
+        run: |
+          # Update Cargo.toml for cross-compilation if needed
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            echo "Configuring for ARM64 build"
+          fi
+        shell: bash
+
+      # Build Tauri application
+      - name: Build Tauri app (Debug)
+        if: inputs.build_type == 'debug'
+        working-directory: apps/tauri-desktop
+        env:
+          TAURI_BUNDLE_TARGETS: ${{ matrix.bundle_format }}
+        run: |
+          if [ "${{ matrix.target }}" != "$(rustc -vV | grep host | cut -d' ' -f2)" ]; then
+            npm run tauri build -- --target ${{ matrix.target }} --debug
+          else
+            npm run tauri build -- --debug
+          fi
+        shell: bash
+
+      - name: Build Tauri app (Release)
+        if: inputs.build_type == 'release'
+        working-directory: apps/tauri-desktop
+        env:
+          TAURI_BUNDLE_TARGETS: ${{ matrix.bundle_format }}
+        run: |
+          if [ "${{ matrix.target }}" != "$(rustc -vV | grep host | cut -d' ' -f2)" ]; then
+            npm run tauri build -- --target ${{ matrix.target }}
+          else
+            npm run tauri build
+          fi
+        shell: bash
+
+      # Platform-specific post-build steps
+      - name: Post-build Windows
+        if: matrix.platform == 'windows'
+        working-directory: apps/tauri-desktop
+        run: |
+          # List generated files
+          Get-ChildItem -Recurse src-tauri/target/${{ matrix.target }}/${{ inputs.build_type }}/bundle/
+          
+          # Verify executables
+          $exe_path = "src-tauri/target/${{ matrix.target }}/${{ inputs.build_type }}/明志桌面版.exe"
+          if (Test-Path $exe_path) {
+            Write-Host "✅ Executable built successfully: $exe_path"
+            Get-Item $exe_path | Select-Object Name, Length, LastWriteTime
+          } else {
+            Write-Error "❌ Executable not found: $exe_path"
+            exit 1
+          }
+
+      - name: Post-build macOS
+        if: matrix.platform == 'macos'
+        working-directory: apps/tauri-desktop
+        run: |
+          # List generated files
+          find src-tauri/target/${{ matrix.target }}/${{ inputs.build_type }}/bundle/ -type f
+          
+          # Verify app bundle
+          app_path="src-tauri/target/${{ matrix.target }}/${{ inputs.build_type }}/bundle/macos/明志桌面版.app"
+          if [ -d "$app_path" ]; then
+            echo "✅ App bundle built successfully: $app_path"
+            ls -la "$app_path/Contents/MacOS/"
+          else
+            echo "❌ App bundle not found: $app_path"
+            exit 1
+          fi
+
+      - name: Post-build Linux
+        if: matrix.platform == 'linux'
+        working-directory: apps/tauri-desktop
+        run: |
+          # List generated files
+          find src-tauri/target/${{ matrix.target }}/${{ inputs.build_type }}/bundle/ -type f
+          
+          # Verify executable
+          exe_path="src-tauri/target/${{ matrix.target }}/${{ inputs.build_type }}/minglog-desktop"
+          if [ -f "$exe_path" ]; then
+            echo "✅ Executable built successfully: $exe_path"
+            ls -la "$exe_path"
+            file "$exe_path"
+          else
+            echo "❌ Executable not found: $exe_path"
+            exit 1
+          fi
+
+      # Upload artifacts
+      - name: Upload build artifacts
+        if: inputs.upload_artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-${{ matrix.platform }}-${{ matrix.arch }}-${{ inputs.build_type }}
+          path: |
+            apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/${{ inputs.build_type }}/bundle/
+            apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/${{ inputs.build_type }}/minglog-desktop*
+            apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/${{ inputs.build_type }}/明志桌面版*
+          retention-days: 7
+
+      # Generate build report
+      - name: Generate build report
+        run: |
+          echo "# Build Report for ${{ matrix.platform }}-${{ matrix.arch }}" > build-report.md
+          echo "" >> build-report.md
+          echo "- **Platform**: ${{ matrix.platform }}" >> build-report.md
+          echo "- **Architecture**: ${{ matrix.arch }}" >> build-report.md
+          echo "- **Target**: ${{ matrix.target }}" >> build-report.md
+          echo "- **Build Type**: ${{ inputs.build_type }}" >> build-report.md
+          echo "- **Bundle Formats**: ${{ matrix.bundle_format }}" >> build-report.md
+          echo "- **Build Time**: $(date)" >> build-report.md
+          echo "" >> build-report.md
+          
+          # Add file sizes
+          echo "## Generated Files" >> build-report.md
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            find apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/${{ inputs.build_type }}/bundle/ -name "*.msi" -o -name "*.exe" | while read file; do
+              size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "unknown")
+              echo "- $(basename "$file"): ${size} bytes" >> build-report.md
+            done
+          elif [ "${{ matrix.platform }}" = "macos" ]; then
+            find apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/${{ inputs.build_type }}/bundle/ -name "*.dmg" -o -name "*.app" | while read file; do
+              size=$(du -sh "$file" | cut -f1)
+              echo "- $(basename "$file"): ${size}" >> build-report.md
+            done
+          else
+            find apps/tauri-desktop/src-tauri/target/${{ matrix.target }}/${{ inputs.build_type }}/bundle/ -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" | while read file; do
+              size=$(stat -c%s "$file" 2>/dev/null || echo "unknown")
+              echo "- $(basename "$file"): ${size} bytes" >> build-report.md
+            done
+          fi
+
+      - name: Upload build report
+        if: inputs.upload_artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-report-${{ matrix.platform }}-${{ matrix.arch }}
+          path: build-report.md
+          retention-days: 30

@@ -1,7 +1,7 @@
 use crate::error::Result;
-use sysinfo::{System, SystemExt, ProcessExt, CpuExt};
+use sysinfo::{System, Pid, SystemExt, ProcessExt, CpuExt};
 use std::time::Instant;
-use crate::database::Database;
+
 
 #[cfg(test)]
 mod tests;
@@ -1007,12 +1007,13 @@ pub async fn resolve_sync_conflict(
 }
 
 #[tauri::command]
-pub async fn get_system_info() -> Result<serde_json::Value, String> {
+#[allow(dead_code)]
+pub async fn get_system_info() -> Result<serde_json::Value> {
     let mut sys = System::new_all();
     sys.refresh_all();
 
     let current_pid = std::process::id();
-    let process = sys.process(current_pid.into())
+    let process = sys.process(Pid::from(current_pid as usize))
         .ok_or_else(|| "Failed to get process information".to_string())?;
 
     // 获取CPU信息
@@ -1033,7 +1034,7 @@ pub async fn get_system_info() -> Result<serde_json::Value, String> {
         "cpu": {
             "cores": cpu_cores,
             "usage": cpu_usage,
-            "frequency": sys.global_cpu_info().frequency(),
+            "frequency": sys.cpus().first().map(|cpu| cpu.frequency()).unwrap_or(0),
         },
         "memory": {
             "total": total_memory,
@@ -1047,42 +1048,38 @@ pub async fn get_system_info() -> Result<serde_json::Value, String> {
         },
         "process": {
             "run_time": process.run_time(),
-            "threads": process.thread_count(),
+            "threads": 1, // sysinfo 0.29 doesn't provide thread count directly
             "status": format!("{:?}", process.status())
         }
     }))
 }
 
 #[tauri::command]
-pub async fn measure_db_performance(state: tauri::State<'_, Database>) -> Result<serde_json::Value, String> {
-    let mut metrics = Vec::new();
-    
+#[allow(dead_code)]
+pub async fn measure_db_performance(state: tauri::State<'_, AppState>) -> Result<serde_json::Value> {
+    let _metrics: Vec<serde_json::Value> = Vec::new();
+
     // 测试写入性能
     let write_start = Instant::now();
-    state.connection
-        .execute(
-            "INSERT INTO performance_test (timestamp) VALUES (?1)",
-            [chrono::Utc::now().timestamp()]
-        )
-        .map_err(|e| e.to_string())?;
+    let db = state.db.lock().await;
+    sqlx::query("INSERT INTO performance_test (timestamp) VALUES (?1)")
+        .bind(chrono::Utc::now().timestamp())
+        .execute(db.get_pool())
+        .await?;
     let write_time = write_start.elapsed().as_secs_f64() * 1000.0;
     
     // 测试读取性能
     let read_start = Instant::now();
-    state.connection
-        .prepare("SELECT COUNT(*) FROM blocks")
-        .map_err(|e| e.to_string())?
-        .query([])
-        .map_err(|e| e.to_string())?;
+    sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM blocks")
+        .fetch_one(db.get_pool())
+        .await?;
     let read_time = read_start.elapsed().as_secs_f64() * 1000.0;
-    
+
     // 测试索引性能
     let index_start = Instant::now();
-    state.connection
-        .prepare("SELECT * FROM blocks WHERE id IN (SELECT id FROM blocks ORDER BY created_at DESC LIMIT 10)")
-        .map_err(|e| e.to_string())?
-        .query([])
-        .map_err(|e| e.to_string())?;
+    sqlx::query("SELECT * FROM blocks WHERE id IN (SELECT id FROM blocks ORDER BY created_at DESC LIMIT 10)")
+        .fetch_all(db.get_pool())
+        .await?;
     let index_time = index_start.elapsed().as_secs_f64() * 1000.0;
 
     Ok(serde_json::json!({
@@ -1094,12 +1091,13 @@ pub async fn measure_db_performance(state: tauri::State<'_, Database>) -> Result
 }
 
 #[tauri::command]
-pub async fn analyze_performance_bottlenecks() -> Result<serde_json::Value, String> {
+#[allow(dead_code)]
+pub async fn analyze_performance_bottlenecks() -> Result<serde_json::Value> {
     let mut sys = System::new_all();
     sys.refresh_all();
     
     let current_pid = std::process::id();
-    let process = sys.process(current_pid.into())
+    let process = sys.process(Pid::from(current_pid as usize))
         .ok_or_else(|| "Failed to get process information".to_string())?;
     
     // 分析CPU使用情况
@@ -1142,6 +1140,8 @@ pub async fn analyze_performance_bottlenecks() -> Result<serde_json::Value, Stri
         ]
     }))
 }
+
+#[allow(dead_code)]
 
 fn get_optimization_message(is_cpu: bool, is_memory: bool, is_io: bool) -> String {
     if is_cpu {

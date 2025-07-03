@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use std::fmt;
+
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::PathBuf;
@@ -70,28 +70,9 @@ pub struct ErrorData {
     pub recovery_attempts: i32,
 }
 
-impl fmt::Display for AppError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            AppError::Database(e) => write!(f, "Database error: {}", e),
-            AppError::Io(e) => write!(f, "IO error: {}", e),
-            AppError::Serialization(e) => write!(f, "Serialization error: {}", e),
-            AppError::NotFound(e) => write!(f, "Not found: {}", e),
-            AppError::InvalidInput(e) => write!(f, "Invalid input: {}", e),
-            AppError::PermissionDenied(e) => write!(f, "Permission denied: {}", e),
-            AppError::Internal(e) => write!(f, "Internal error: {}", e),
-            AppError::Sync(e) => write!(f, "Sync error: {}", e),
-        }
-    }
-}
 
-impl std::error::Error for AppError {}
 
-impl From<rusqlite::Error> for AppError {
-    fn from(err: rusqlite::Error) -> Self {
-        AppError::Database(err.to_string())
-    }
-}
+
 
 impl From<reqwest::Error> for AppError {
     fn from(err: reqwest::Error) -> Self {
@@ -99,8 +80,15 @@ impl From<reqwest::Error> for AppError {
     }
 }
 
+impl From<String> for AppError {
+    fn from(err: String) -> Self {
+        AppError::Internal(err)
+    }
+}
+
 #[tauri::command]
-pub async fn log_error(error: ErrorData) -> Result<(), String> {
+#[allow(dead_code)]
+pub async fn log_error(error: ErrorData) -> std::result::Result<(), String> {
     let log_dir = PathBuf::from("logs");
     if !log_dir.exists() {
         fs::create_dir_all(&log_dir).map_err(|e| e.to_string())?;
@@ -123,7 +111,8 @@ pub async fn log_error(error: ErrorData) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn report_critical_error(error: ErrorData) -> Result<(), String> {
+#[allow(dead_code)]
+pub async fn report_critical_error(error: ErrorData) -> std::result::Result<(), String> {
     // 这里可以实现发送错误到远程服务器的逻辑
     // 例如: Sentry, LogRocket等
     println!("Critical error reported: {:?}", error);
@@ -131,13 +120,15 @@ pub async fn report_critical_error(error: ErrorData) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn retry_network_requests() -> Result<(), String> {
+#[allow(dead_code)]
+pub async fn retry_network_requests() -> std::result::Result<(), String> {
     // 实现重试失败的网络请求的逻辑
     Ok(())
 }
 
 #[tauri::command]
-pub async fn reset_app_state() -> Result<(), String> {
+#[allow(dead_code)]
+pub async fn reset_app_state() -> std::result::Result<(), String> {
     // 实现重置应用状态的逻辑
     Ok(())
 }

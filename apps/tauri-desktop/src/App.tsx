@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
@@ -151,14 +151,14 @@ function App() {
             <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors">
               <Layout>
                 <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/editor" element={<EditorPage />} />
-                  <Route path="/editor/:pageId" element={<EditorPage />} />
-                  <Route path="/blocks" element={<BlockEditorPage />} />
+                  <Route path="/" element={<Suspense fallback={<LoadingScreen />}><HomePage /></Suspense>} />
+                  <Route path="/editor" element={<Suspense fallback={<LoadingScreen />}><EditorPage /></Suspense>} />
+                  <Route path="/editor/:pageId" element={<Suspense fallback={<LoadingScreen />}><EditorPage /></Suspense>} />
+                  <Route path="/blocks" element={<Suspense fallback={<LoadingScreen />}><BlockEditorPage /></Suspense>} />
                   <Route path="/blocks/:pageId" element={<BlockEditorPage />} />
-                  <Route path="/graph" element={<GraphPage />} />
-                  <Route path="/search" element={<SearchPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="graph" element={<Suspense fallback={<LoadingScreen />}><GraphPage /></Suspense>} />
+                  <Route path="search" element={<Suspense fallback={<LoadingScreen />}><SearchPage /></Suspense>} />
+                  <Route path="settings" element={<Suspense fallback={<LoadingScreen />}><SettingsPage /></Suspense>} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Layout>

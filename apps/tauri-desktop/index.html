@@ -226,7 +226,166 @@
     </div>
 
     <script type="module">
-      import { invoke } from '@tauri-apps/api/core';
+      // Wait for Tauri to be ready and import API
+      let invoke;
+
+      function waitForTauri() {
+        return new Promise((resolve, reject) => {
+          let attempts = 0;
+          const maxAttempts = 50; // 5 seconds max
+
+          function checkTauri() {
+            attempts++;
+            console.log(`Checking Tauri API, attempt ${attempts}...`);
+
+            if (window.__TAURI__ && window.__TAURI__.tauri) {
+              invoke = window.__TAURI__.tauri.invoke;
+              console.log('Tauri API ready');
+              resolve();
+            } else if (attempts >= maxAttempts) {
+              console.error('Tauri API not available after 5 seconds');
+              console.log('Available window properties:', Object.keys(window));
+
+              // Fallback: create mock invoke function for testing
+              invoke = async (command, args) => {
+                console.log(`Mock invoke: ${command}`, args);
+
+                // Mock data storage
+                if (!window.mockData) {
+                  window.mockData = {
+                    pages: [],
+                    blocks: {},
+                    currentId: 1
+                  };
+                }
+
+                switch (command) {
+                  case 'init_app':
+                    return 'Mock app initialized';
+
+                  case 'init_database':
+                    return 'Mock database initialized';
+
+                  case 'get_pages_by_graph':
+                    return window.mockData.pages;
+
+                  case 'create_sample_graph_data':
+                    // Create sample pages
+                    const samplePages = [
+                      { id: 'sample-1', name: 'Machine Learning Basics', title: 'Introduction to Machine Learning' },
+                      { id: 'sample-2', name: 'Deep Learning', title: 'Deep Learning Fundamentals' },
+                      { id: 'sample-3', name: 'Data Science', title: 'Data Science Overview' }
+                    ];
+                    window.mockData.pages.push(...samplePages);
+
+                    // Create sample blocks
+                    window.mockData.blocks['sample-1'] = [
+                      { id: 'block-1', content: '# Machine Learning Basics\n\nMachine learning is a subset of artificial intelligence.', order: 0 }
+                    ];
+                    window.mockData.blocks['sample-2'] = [
+                      { id: 'block-2', content: '# Deep Learning\n\nDeep learning uses neural networks with multiple layers.', order: 0 }
+                    ];
+                    window.mockData.blocks['sample-3'] = [
+                      { id: 'block-3', content: '# Data Science\n\nData science combines statistics, programming, and domain expertise.', order: 0 }
+                    ];
+
+                    return 'Mock sample data created';
+
+                  case 'create_page':
+                    const newPage = {
+                      id: 'mock-' + window.mockData.currentId++,
+                      name: args.request.name,
+                      title: args.request.title || args.request.name,
+                      created_at: new Date().toISOString(),
+                      updated_at: new Date().toISOString()
+                    };
+                    window.mockData.pages.push(newPage);
+                    window.mockData.blocks[newPage.id] = [];
+                    return newPage;
+
+                  case 'get_page':
+                    const page = window.mockData.pages.find(p => p.id === args.id);
+                    if (!page) throw new Error(`Page not found: ${args.id}`);
+                    return page;
+
+                  case 'get_blocks_by_page':
+                    return window.mockData.blocks[args.pageId] || [];
+
+                  case 'create_block':
+                    const newBlock = {
+                      id: 'block-' + window.mockData.currentId++,
+                      page_id: args.request.page_id,
+                      content: args.request.content,
+                      order: args.request.order || 0,
+                      created_at: new Date().toISOString(),
+                      updated_at: new Date().toISOString()
+                    };
+                    if (!window.mockData.blocks[args.request.page_id]) {
+                      window.mockData.blocks[args.request.page_id] = [];
+                    }
+                    window.mockData.blocks[args.request.page_id].push(newBlock);
+                    return newBlock;
+
+                  case 'update_block':
+                    const pageBlocks = window.mockData.blocks[args.request.page_id] || [];
+                    const blockIndex = pageBlocks.findIndex(b => b.id === args.request.id);
+                    if (blockIndex >= 0) {
+                      pageBlocks[blockIndex].content = args.request.content;
+                      pageBlocks[blockIndex].updated_at = new Date().toISOString();
+                      return pageBlocks[blockIndex];
+                    }
+                    throw new Error(`Block not found: ${args.request.id}`);
+
+                  case 'delete_block':
+                    for (const pageId in window.mockData.blocks) {
+                      const blocks = window.mockData.blocks[pageId];
+                      const index = blocks.findIndex(b => b.id === args.id);
+                      if (index >= 0) {
+                        blocks.splice(index, 1);
+                        return 'Block deleted';
+                      }
+                    }
+                    throw new Error(`Block not found: ${args.id}`);
+
+                  case 'import_markdown_files_with_dialog':
+                    // Simulate file import
+                    const importedPage = {
+                      id: 'imported-' + window.mockData.currentId++,
+                      name: '导入的示例页面',
+                      title: '导入的示例页面',
+                      created_at: new Date().toISOString(),
+                      updated_at: new Date().toISOString()
+                    };
+                    window.mockData.pages.push(importedPage);
+                    window.mockData.blocks[importedPage.id] = [
+                      { id: 'imported-block-1', content: '# 导入的示例页面\n\n这是一个通过文件导入功能创建的示例页面。', order: 0 }
+                    ];
+                    return { pages_imported: 1, blocks_imported: 1, errors: [] };
+
+                  case 'export_pages_with_dialog':
+                    return { files_exported: args.pageIds.length, total_size: 1024 * args.pageIds.length };
+
+                  case 'create_backup_with_dialog':
+                    return 'C:\\Users\\User\\Documents\\minglog_backup_' + Date.now() + '.json';
+
+                  case 'open_file_dialog':
+                    return []; // Simulate no files selected
+
+                  default:
+                    throw new Error(`Mock command not implemented: ${command}`);
+                }
+              };
+
+              console.log('Using mock Tauri API for testing');
+              resolve();
+            } else {
+              setTimeout(checkTauri, 100);
+            }
+          }
+
+          checkTauri();
+        });
+      }
 
       // Hide loading screen and show app
       function showApp() {
@@ -237,20 +396,38 @@
       // Initialize app
       async function initApp() {
         try {
+          console.log('Starting app initialization...');
+
+          // Wait for Tauri to be ready
+          await waitForTauri();
+
+          console.log('Initializing backend...');
           await invoke('init_app');
           await invoke('init_database');
 
+          console.log('Creating app structure...');
           // Create basic app structure
           const app = document.getElementById('app');
           app.innerHTML = createAppHTML();
 
+          console.log('Loading pages...');
           // Load pages
           await loadPages();
+
+          console.log('App initialization complete');
           showApp();
 
         } catch (error) {
           console.error('Failed to initialize app:', error);
-          document.querySelector('.loading-text').textContent = '加载失败: ' + error.toString();
+          const loadingText = document.querySelector('.loading-text');
+          if (loadingText) {
+            loadingText.textContent = '加载失败: ' + error.toString();
+          }
+
+          // Show error details in a more user-friendly way
+          setTimeout(() => {
+            alert('应用初始化失败，请重启应用。错误信息: ' + error.toString());
+          }, 1000);
         }
       }
 

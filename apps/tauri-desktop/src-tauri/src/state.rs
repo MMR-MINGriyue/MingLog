@@ -10,6 +10,7 @@ pub struct AppState {
 }
 
 impl AppState {
+    #[allow(dead_code)]
     pub async fn new() -> crate::error::Result<Self> {
         let db = Database::new().await?;
         let sync_manager = WebDAVSyncManager::new();

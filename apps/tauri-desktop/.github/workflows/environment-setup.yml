@@ -1,0 +1,242 @@
+name: Environment Setup
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Target environment (development, staging, production)'
+        required: true
+        type: string
+      setup_secrets:
+        description: 'Setup environment secrets'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  setup-environment:
+    name: Setup ${{ inputs.environment }} Environment
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate environment
+        run: |
+          case "${{ inputs.environment }}" in
+            development|staging|production)
+              echo "✅ Valid environment: ${{ inputs.environment }}"
+              ;;
+            *)
+              echo "❌ Invalid environment: ${{ inputs.environment }}"
+              echo "Valid environments: development, staging, production"
+              exit 1
+              ;;
+          esac
+
+      - name: Setup environment variables
+        run: |
+          echo "Setting up environment variables for ${{ inputs.environment }}"
+          
+          # Base environment variables
+          echo "NODE_ENV=${{ inputs.environment }}" >> $GITHUB_ENV
+          echo "TAURI_ENV=${{ inputs.environment }}" >> $GITHUB_ENV
+          
+          # Environment-specific configurations
+          case "${{ inputs.environment }}" in
+            development)
+              echo "LOG_LEVEL=debug" >> $GITHUB_ENV
+              echo "API_BASE_URL=https://dev-api.minglog.com" >> $GITHUB_ENV
+              echo "UPDATE_SERVER_URL=https://dev-updates.minglog.com" >> $GITHUB_ENV
+              echo "SENTRY_ENVIRONMENT=development" >> $GITHUB_ENV
+              echo "ENABLE_DEVTOOLS=true" >> $GITHUB_ENV
+              ;;
+            staging)
+              echo "LOG_LEVEL=info" >> $GITHUB_ENV
+              echo "API_BASE_URL=https://staging-api.minglog.com" >> $GITHUB_ENV
+              echo "UPDATE_SERVER_URL=https://staging-updates.minglog.com" >> $GITHUB_ENV
+              echo "SENTRY_ENVIRONMENT=staging" >> $GITHUB_ENV
+              echo "ENABLE_DEVTOOLS=false" >> $GITHUB_ENV
+              ;;
+            production)
+              echo "LOG_LEVEL=warn" >> $GITHUB_ENV
+              echo "API_BASE_URL=https://api.minglog.com" >> $GITHUB_ENV
+              echo "UPDATE_SERVER_URL=https://updates.minglog.com" >> $GITHUB_ENV
+              echo "SENTRY_ENVIRONMENT=production" >> $GITHUB_ENV
+              echo "ENABLE_DEVTOOLS=false" >> $GITHUB_ENV
+              ;;
+          esac
+
+      - name: Validate required secrets
+        if: inputs.setup_secrets
+        run: |
+          echo "Validating required secrets for ${{ inputs.environment }}"
+          
+          # Common secrets
+          required_secrets=(
+            "TAURI_PRIVATE_KEY"
+            "TAURI_KEY_PASSWORD"
+            "SENTRY_DSN"
+            "SENTRY_AUTH_TOKEN"
+          )
+          
+          # Environment-specific secrets
+          case "${{ inputs.environment }}" in
+            production)
+              required_secrets+=(
+                "WINDOWS_CERTIFICATE"
+                "WINDOWS_CERTIFICATE_PASSWORD"
+                "MACOS_CERTIFICATE"
+                "MACOS_CERTIFICATE_PASSWORD"
+                "APPLE_ID"
+                "APPLE_PASSWORD"
+                "APPLE_TEAM_ID"
+                "UPDATE_SERVER_HOST"
+                "UPDATE_SERVER_USER"
+                "UPDATE_SERVER_KEY"
+              )
+              ;;
+            staging)
+              required_secrets+=(
+                "STAGING_WINDOWS_CERTIFICATE"
+                "STAGING_MACOS_CERTIFICATE"
+              )
+              ;;
+          esac
+          
+          missing_secrets=()
+          for secret in "${required_secrets[@]}"; do
+            if [ -z "${!secret:-}" ]; then
+              missing_secrets+=("$secret")
+            fi
+          done
+          
+          if [ ${#missing_secrets[@]} -gt 0 ]; then
+            echo "❌ Missing required secrets:"
+            printf '%s\n' "${missing_secrets[@]}"
+            echo ""
+            echo "Please configure these secrets in GitHub repository settings:"
+            echo "Settings > Secrets and variables > Actions > Environment secrets"
+            exit 1
+          else
+            echo "✅ All required secrets are configured"
+          fi
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          UPDATE_SERVER_HOST: ${{ secrets.UPDATE_SERVER_HOST }}
+          UPDATE_SERVER_USER: ${{ secrets.UPDATE_SERVER_USER }}
+          UPDATE_SERVER_KEY: ${{ secrets.UPDATE_SERVER_KEY }}
+          STAGING_WINDOWS_CERTIFICATE: ${{ secrets.STAGING_WINDOWS_CERTIFICATE }}
+          STAGING_MACOS_CERTIFICATE: ${{ secrets.STAGING_MACOS_CERTIFICATE }}
+
+      - name: Setup Sentry configuration
+        if: inputs.setup_secrets
+        run: |
+          echo "Configuring Sentry for ${{ inputs.environment }}"
+          
+          # Create Sentry configuration file
+          cat > sentry.properties << EOF
+          defaults.url=https://sentry.io/
+          defaults.org=minglog
+          defaults.project=minglog-desktop
+          auth.token=${{ secrets.SENTRY_AUTH_TOKEN }}
+          EOF
+          
+          # Validate Sentry configuration
+          if command -v sentry-cli &> /dev/null; then
+            sentry-cli info
+          else
+            echo "Sentry CLI not available, skipping validation"
+          fi
+
+      - name: Setup update server configuration
+        if: inputs.environment == 'production' && inputs.setup_secrets
+        run: |
+          echo "Configuring update server for production"
+          
+          # Create SSH key for update server
+          echo "${{ secrets.UPDATE_SERVER_KEY }}" > update_server_key
+          chmod 600 update_server_key
+          
+          # Test connection to update server
+          ssh -i update_server_key -o StrictHostKeyChecking=no \
+            ${{ secrets.UPDATE_SERVER_USER }}@${{ secrets.UPDATE_SERVER_HOST }} \
+            "echo 'Update server connection successful'"
+
+      - name: Generate environment summary
+        run: |
+          echo "# 🌍 Environment Setup Summary" > environment-summary.md
+          echo "" >> environment-summary.md
+          echo "**Environment**: ${{ inputs.environment }}" >> environment-summary.md
+          echo "**Setup Date**: $(date)" >> environment-summary.md
+          echo "**Setup Secrets**: ${{ inputs.setup_secrets }}" >> environment-summary.md
+          echo "" >> environment-summary.md
+          
+          echo "## 📋 Environment Variables" >> environment-summary.md
+          echo "" >> environment-summary.md
+          echo "- **NODE_ENV**: $NODE_ENV" >> environment-summary.md
+          echo "- **TAURI_ENV**: $TAURI_ENV" >> environment-summary.md
+          echo "- **LOG_LEVEL**: $LOG_LEVEL" >> environment-summary.md
+          echo "- **API_BASE_URL**: $API_BASE_URL" >> environment-summary.md
+          echo "- **UPDATE_SERVER_URL**: $UPDATE_SERVER_URL" >> environment-summary.md
+          echo "- **SENTRY_ENVIRONMENT**: $SENTRY_ENVIRONMENT" >> environment-summary.md
+          echo "- **ENABLE_DEVTOOLS**: $ENABLE_DEVTOOLS" >> environment-summary.md
+          echo "" >> environment-summary.md
+          
+          echo "## 🔐 Security Configuration" >> environment-summary.md
+          echo "" >> environment-summary.md
+          if [ "${{ inputs.setup_secrets }}" = "true" ]; then
+            echo "✅ Secrets validation completed" >> environment-summary.md
+            echo "✅ Sentry configuration setup" >> environment-summary.md
+            if [ "${{ inputs.environment }}" = "production" ]; then
+              echo "✅ Update server configuration setup" >> environment-summary.md
+              echo "✅ Code signing certificates configured" >> environment-summary.md
+            fi
+          else
+            echo "⏭️ Secrets setup skipped" >> environment-summary.md
+          fi
+          
+          echo "" >> environment-summary.md
+          echo "## 🎯 Next Steps" >> environment-summary.md
+          echo "" >> environment-summary.md
+          case "${{ inputs.environment }}" in
+            development)
+              echo "- Run development builds and tests" >> environment-summary.md
+              echo "- Enable debug logging and devtools" >> environment-summary.md
+              echo "- Use development API endpoints" >> environment-summary.md
+              ;;
+            staging)
+              echo "- Deploy to staging environment" >> environment-summary.md
+              echo "- Run integration tests" >> environment-summary.md
+              echo "- Validate with staging data" >> environment-summary.md
+              ;;
+            production)
+              echo "- Deploy to production environment" >> environment-summary.md
+              echo "- Monitor application performance" >> environment-summary.md
+              echo "- Enable production monitoring" >> environment-summary.md
+              ;;
+          esac
+
+      - name: Upload environment summary
+        uses: actions/upload-artifact@v3
+        with:
+          name: environment-summary-${{ inputs.environment }}
+          path: environment-summary.md
+          retention-days: 30
+
+      - name: Output environment status
+        run: |
+          echo "✅ Environment setup completed successfully"
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Secrets configured: ${{ inputs.setup_secrets }}"

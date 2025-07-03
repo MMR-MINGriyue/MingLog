@@ -205,6 +205,7 @@ impl WebDAVSyncManager {
     }
 
     /// 获取最后同步时间
+    #[allow(dead_code)]
     pub fn get_last_sync(&self) -> Option<DateTime<Utc>> {
         self.last_sync
     }
@@ -223,6 +224,7 @@ impl WebDAVSyncManager {
     }
 
     /// 获取文件同步信息
+    #[allow(dead_code)]
     pub fn get_file_sync_info(&self, file_path: &str) -> Option<&FileSyncInfo> {
         self.file_sync_info.get(file_path)
     }
@@ -237,6 +239,7 @@ impl WebDAVSyncManager {
     }
 
     /// 清理同步缓存
+    #[allow(dead_code)]
     pub fn clear_sync_cache(&mut self) {
         self.file_sync_info.clear();
         log::info!("Sync cache cleared");
@@ -266,15 +269,18 @@ pub enum SyncEvent {
 }
 
 /// 同步事件监听器
+#[allow(dead_code)]
 pub trait SyncEventListener {
     fn on_sync_event(&self, event: SyncEvent);
 }
 
 /// 同步配置验证器
+#[allow(dead_code)]
 pub struct SyncConfigValidator;
 
 impl SyncConfigValidator {
     /// 验证服务器URL格式
+    #[allow(dead_code)]
     pub fn validate_server_url(url: &str) -> Result<()> {
         if !url.starts_with("http://") && !url.starts_with("https://") {
             return Err(AppError::Sync("Server URL must start with http:// or https://".to_string()));
@@ -283,6 +289,7 @@ impl SyncConfigValidator {
     }
 
     /// 验证远程路径格式
+    #[allow(dead_code)]
     pub fn validate_remote_path(path: &str) -> Result<()> {
         if path.is_empty() {
             return Err(AppError::Sync("Remote path cannot be empty".to_string()));

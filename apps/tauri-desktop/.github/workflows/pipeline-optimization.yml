@@ -1,0 +1,426 @@
+name: Pipeline Optimization
+
+on:
+  workflow_call:
+    inputs:
+      optimization_level:
+        description: 'Optimization level (basic, advanced, aggressive)'
+        required: false
+        type: string
+        default: 'advanced'
+      enable_parallel_jobs:
+        description: 'Enable parallel job execution'
+        required: false
+        type: boolean
+        default: true
+      cache_strategy:
+        description: 'Cache strategy (conservative, balanced, aggressive)'
+        required: false
+        type: string
+        default: 'balanced'
+
+env:
+  OPTIMIZATION_LEVEL: ${{ inputs.optimization_level }}
+  PARALLEL_JOBS: ${{ inputs.enable_parallel_jobs }}
+  CACHE_STRATEGY: ${{ inputs.cache_strategy }}
+
+jobs:
+  # 管道分析和优化
+  pipeline-analysis:
+    name: Pipeline Analysis
+    runs-on: ubuntu-latest
+    outputs:
+      optimization_config: ${{ steps.config.outputs.config }}
+      parallel_matrix: ${{ steps.matrix.outputs.matrix }}
+      cache_config: ${{ steps.cache.outputs.config }}
+      resource_allocation: ${{ steps.resources.outputs.allocation }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Analyze pipeline requirements
+        id: analysis
+        run: |
+          echo "Analyzing pipeline requirements..."
+          
+          # 分析代码库大小和复杂度
+          total_files=$(find . -type f -name "*.rs" -o -name "*.ts" -o -name "*.tsx" | wc -l)
+          total_lines=$(find . -type f -name "*.rs" -o -name "*.ts" -o -name "*.tsx" -exec wc -l {} + | tail -1 | awk '{print $1}')
+          
+          echo "total_files=$total_files" >> $GITHUB_OUTPUT
+          echo "total_lines=$total_lines" >> $GITHUB_OUTPUT
+          
+          # 分析依赖复杂度
+          rust_deps=$(grep -c "^[a-zA-Z]" apps/tauri-desktop/src-tauri/Cargo.toml || echo "0")
+          node_deps=$(jq '.dependencies | length' apps/tauri-desktop/package.json || echo "0")
+          
+          echo "rust_deps=$rust_deps" >> $GITHUB_OUTPUT
+          echo "node_deps=$node_deps" >> $GITHUB_OUTPUT
+          
+          echo "Pipeline analysis completed:"
+          echo "  Files: $total_files"
+          echo "  Lines: $total_lines"
+          echo "  Rust deps: $rust_deps"
+          echo "  Node deps: $node_deps"
+
+      - name: Generate optimization configuration
+        id: config
+        run: |
+          case "${{ inputs.optimization_level }}" in
+            "basic")
+              parallel_factor=2
+              cache_ttl=7
+              resource_class="standard"
+              ;;
+            "advanced")
+              parallel_factor=4
+              cache_ttl=14
+              resource_class="large"
+              ;;
+            "aggressive")
+              parallel_factor=8
+              cache_ttl=30
+              resource_class="xlarge"
+              ;;
+          esac
+          
+          config=$(cat << EOF
+          {
+            "parallel_factor": $parallel_factor,
+            "cache_ttl_days": $cache_ttl,
+            "resource_class": "$resource_class",
+            "enable_distributed_cache": ${{ inputs.optimization_level == 'aggressive' }},
+            "enable_build_splitting": ${{ steps.analysis.outputs.total_files > 100 }},
+            "enable_test_sharding": ${{ steps.analysis.outputs.total_files > 50 }}
+          }
+          EOF
+          )
+          
+          echo "config=$config" >> $GITHUB_OUTPUT
+          echo "Generated optimization config: $config"
+
+      - name: Generate parallel execution matrix
+        id: matrix
+        run: |
+          if [ "${{ inputs.enable_parallel_jobs }}" = "true" ]; then
+            case "${{ inputs.optimization_level }}" in
+              "basic")
+                matrix='{"include":[{"job":"lint","runner":"ubuntu-latest"},{"job":"test","runner":"ubuntu-latest"},{"job":"build","runner":"ubuntu-latest"}]}'
+                ;;
+              "advanced")
+                matrix='{"include":[{"job":"lint","runner":"ubuntu-latest"},{"job":"test-unit","runner":"ubuntu-latest"},{"job":"test-integration","runner":"ubuntu-latest"},{"job":"build-frontend","runner":"ubuntu-latest"},{"job":"build-backend","runner":"ubuntu-latest"}]}'
+                ;;
+              "aggressive")
+                matrix='{"include":[{"job":"lint-rust","runner":"ubuntu-latest"},{"job":"lint-ts","runner":"ubuntu-latest"},{"job":"test-unit-rust","runner":"ubuntu-latest"},{"job":"test-unit-ts","runner":"ubuntu-latest"},{"job":"test-integration","runner":"ubuntu-latest"},{"job":"test-e2e","runner":"ubuntu-latest"},{"job":"build-frontend","runner":"ubuntu-latest"},{"job":"build-backend","runner":"ubuntu-latest"}]}'
+                ;;
+            esac
+          else
+            matrix='{"include":[{"job":"sequential","runner":"ubuntu-latest"}]}'
+          fi
+          
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "Generated parallel matrix: $matrix"
+
+      - name: Configure cache strategy
+        id: cache
+        run: |
+          case "${{ inputs.cache_strategy }}" in
+            "conservative")
+              cache_scope="branch"
+              cache_size_limit="1GB"
+              cache_compression="true"
+              ;;
+            "balanced")
+              cache_scope="repository"
+              cache_size_limit="2GB"
+              cache_compression="true"
+              ;;
+            "aggressive")
+              cache_scope="global"
+              cache_size_limit="5GB"
+              cache_compression="false"
+              ;;
+          esac
+          
+          cache_config=$(cat << EOF
+          {
+            "scope": "$cache_scope",
+            "size_limit": "$cache_size_limit",
+            "compression": $cache_compression,
+            "distributed": ${{ inputs.optimization_level == 'aggressive' }},
+            "warm_cache": ${{ inputs.optimization_level != 'basic' }}
+          }
+          EOF
+          )
+          
+          echo "config=$cache_config" >> $GITHUB_OUTPUT
+          echo "Generated cache config: $cache_config"
+
+      - name: Calculate resource allocation
+        id: resources
+        run: |
+          # 基于代码库大小和复杂度计算资源分配
+          total_files=${{ steps.analysis.outputs.total_files }}
+          total_lines=${{ steps.analysis.outputs.total_lines }}
+          
+          if [ $total_files -gt 200 ] || [ $total_lines -gt 50000 ]; then
+            cpu_cores=8
+            memory_gb=16
+            disk_gb=50
+          elif [ $total_files -gt 100 ] || [ $total_lines -gt 20000 ]; then
+            cpu_cores=4
+            memory_gb=8
+            disk_gb=25
+          else
+            cpu_cores=2
+            memory_gb=4
+            disk_gb=10
+          fi
+          
+          allocation=$(cat << EOF
+          {
+            "cpu_cores": $cpu_cores,
+            "memory_gb": $memory_gb,
+            "disk_gb": $disk_gb,
+            "timeout_minutes": $((cpu_cores * 15))
+          }
+          EOF
+          )
+          
+          echo "allocation=$allocation" >> $GITHUB_OUTPUT
+          echo "Resource allocation: $allocation"
+
+  # 智能缓存预热
+  cache-warmup:
+    name: Cache Warmup
+    runs-on: ubuntu-latest
+    needs: pipeline-analysis
+    if: fromJson(needs.pipeline-analysis.outputs.cache_config).warm_cache
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup cache keys
+        id: cache-keys
+        run: |
+          # 生成智能缓存键
+          rust_key="rust-$(sha256sum apps/tauri-desktop/src-tauri/Cargo.lock | cut -d' ' -f1)-${{ runner.os }}"
+          node_key="node-$(sha256sum apps/tauri-desktop/package-lock.json | cut -d' ' -f1)-${{ runner.os }}"
+          build_key="build-$(git rev-parse HEAD)-${{ runner.os }}"
+          
+          echo "rust_key=$rust_key" >> $GITHUB_OUTPUT
+          echo "node_key=$node_key" >> $GITHUB_OUTPUT
+          echo "build_key=$build_key" >> $GITHUB_OUTPUT
+
+      - name: Warm Rust cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            apps/tauri-desktop/src-tauri/target
+          key: ${{ steps.cache-keys.outputs.rust_key }}
+          restore-keys: |
+            rust-${{ runner.os }}-
+
+      - name: Warm Node.js cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.npm
+            apps/tauri-desktop/node_modules
+          key: ${{ steps.cache-keys.outputs.node_key }}
+          restore-keys: |
+            node-${{ runner.os }}-
+
+      - name: Pre-install dependencies
+        run: |
+          echo "Pre-installing dependencies for cache warmup..."
+          
+          # 安装 Rust 依赖
+          cd apps/tauri-desktop/src-tauri
+          cargo fetch
+          
+          # 安装 Node.js 依赖
+          cd ..
+          npm ci --prefer-offline
+
+  # 并行作业执行
+  parallel-execution:
+    name: ${{ matrix.job }}
+    runs-on: ${{ matrix.runner }}
+    needs: [pipeline-analysis, cache-warmup]
+    if: always() && needs.pipeline-analysis.result == 'success'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.pipeline-analysis.outputs.parallel_matrix) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup optimized environment
+        run: |
+          echo "Setting up optimized environment for job: ${{ matrix.job }}"
+          
+          # 配置资源限制
+          resource_config='${{ needs.pipeline-analysis.outputs.resource_allocation }}'
+          cpu_cores=$(echo "$resource_config" | jq -r '.cpu_cores')
+          memory_gb=$(echo "$resource_config" | jq -r '.memory_gb')
+          
+          echo "CPU cores: $cpu_cores"
+          echo "Memory: ${memory_gb}GB"
+          
+          # 设置并行度
+          echo "MAKEFLAGS=-j$cpu_cores" >> $GITHUB_ENV
+          echo "CARGO_BUILD_JOBS=$cpu_cores" >> $GITHUB_ENV
+
+      - name: Restore optimized caches
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.npm
+            apps/tauri-desktop/src-tauri/target
+            apps/tauri-desktop/node_modules
+          key: optimized-${{ matrix.job }}-${{ runner.os }}-${{ hashFiles('**/Cargo.lock', '**/package-lock.json') }}
+          restore-keys: |
+            optimized-${{ matrix.job }}-${{ runner.os }}-
+            optimized-${{ runner.os }}-
+
+      - name: Execute job with optimization
+        run: |
+          case "${{ matrix.job }}" in
+            "lint"|"lint-rust")
+              echo "Running Rust linting..."
+              cd apps/tauri-desktop/src-tauri
+              cargo clippy --all-targets --all-features -- -D warnings
+              ;;
+            "lint-ts")
+              echo "Running TypeScript linting..."
+              cd apps/tauri-desktop
+              npm run lint
+              ;;
+            "test"|"test-unit"|"test-unit-rust")
+              echo "Running Rust unit tests..."
+              cd apps/tauri-desktop/src-tauri
+              cargo test --release
+              ;;
+            "test-unit-ts")
+              echo "Running TypeScript unit tests..."
+              cd apps/tauri-desktop
+              npm test
+              ;;
+            "test-integration")
+              echo "Running integration tests..."
+              cd apps/tauri-desktop
+              npm run test:integration
+              ;;
+            "test-e2e")
+              echo "Running E2E tests..."
+              cd apps/tauri-desktop
+              npm run test:e2e
+              ;;
+            "build"|"build-frontend")
+              echo "Building frontend..."
+              cd apps/tauri-desktop
+              npm run build
+              ;;
+            "build-backend")
+              echo "Building backend..."
+              cd apps/tauri-desktop/src-tauri
+              cargo build --release
+              ;;
+            "sequential")
+              echo "Running sequential pipeline..."
+              cd apps/tauri-desktop
+              npm run lint
+              npm test
+              npm run build
+              cd src-tauri
+              cargo clippy --all-targets --all-features -- -D warnings
+              cargo test --release
+              cargo build --release
+              ;;
+          esac
+
+      - name: Upload job artifacts
+        if: contains(matrix.job, 'build')
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.job }}-artifacts
+          path: |
+            apps/tauri-desktop/dist/
+            apps/tauri-desktop/src-tauri/target/release/
+          retention-days: 1
+
+  # 性能分析和报告
+  performance-analysis:
+    name: Performance Analysis
+    runs-on: ubuntu-latest
+    needs: [pipeline-analysis, parallel-execution]
+    if: always()
+    steps:
+      - name: Collect pipeline metrics
+        run: |
+          echo "Collecting pipeline performance metrics..."
+          
+          # 计算总执行时间
+          start_time="${{ github.event.head_commit.timestamp }}"
+          end_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          
+          echo "Pipeline started: $start_time"
+          echo "Pipeline ended: $end_time"
+
+      - name: Generate optimization report
+        run: |
+          echo "# 🚀 管道优化报告" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 配置信息" >> $GITHUB_STEP_SUMMARY
+          echo "- **优化级别**: ${{ inputs.optimization_level }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **并行执行**: ${{ inputs.enable_parallel_jobs }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **缓存策略**: ${{ inputs.cache_strategy }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## ⚡ 性能优化" >> $GITHUB_STEP_SUMMARY
+          optimization_config='${{ needs.pipeline-analysis.outputs.optimization_config }}'
+          parallel_factor=$(echo "$optimization_config" | jq -r '.parallel_factor')
+          cache_ttl=$(echo "$optimization_config" | jq -r '.cache_ttl_days')
+          
+          echo "- **并行因子**: ${parallel_factor}x" >> $GITHUB_STEP_SUMMARY
+          echo "- **缓存TTL**: ${cache_ttl} 天" >> $GITHUB_STEP_SUMMARY
+          echo "- **资源分配**: 动态优化" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 📈 执行结果" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.parallel-execution.result }}" = "success" ]; then
+            echo "- **状态**: 执行成功 ✅" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **状态**: 执行失败 ❌" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "- **作业数量**: $(echo '${{ needs.pipeline-analysis.outputs.parallel_matrix }}' | jq '.include | length')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 💡 优化建议" >> $GITHUB_STEP_SUMMARY
+          echo "- 使用智能缓存减少构建时间" >> $GITHUB_STEP_SUMMARY
+          echo "- 并行执行提升整体效率" >> $GITHUB_STEP_SUMMARY
+          echo "- 动态资源分配优化成本" >> $GITHUB_STEP_SUMMARY
+
+      - name: Save optimization metrics
+        run: |
+          metrics=$(cat << EOF
+          {
+            "optimization_level": "${{ inputs.optimization_level }}",
+            "parallel_jobs": ${{ inputs.enable_parallel_jobs }},
+            "cache_strategy": "${{ inputs.cache_strategy }}",
+            "execution_result": "${{ needs.parallel-execution.result }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+          )
+          
+          echo "Pipeline optimization metrics: $metrics"
+          
+          # 这里可以发送到监控系统
+          # curl -X POST "https://api.minglog.com/metrics/pipeline" -d "$metrics"
