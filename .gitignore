@@ -140,6 +140,16 @@ test-results/
 playwright-report/
 playwright/.cache/
 test-report-*.json
+coverage/
+*.lcov
+
+# Temporary test files and HTML demos
+**/test-*.html
+**/demo-*.html
+**/comprehensive-test-suite.html
+**/performance-optimization.html
+**/webdav-sync-demo.html
+**/verify-*.html
 
 # Temporary and cache files
 .DS_Store

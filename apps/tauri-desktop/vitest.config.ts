@@ -36,6 +36,7 @@ export default defineConfig({
       'node_modules/',
       'dist/',
       'src-tauri/',
+      'src/test/e2e/**', // E2E tests should use Playwright
       '.{idea,git,cache,output,temp}/',
     ],
   },
