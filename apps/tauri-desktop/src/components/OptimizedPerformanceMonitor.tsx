@@ -160,12 +160,18 @@ const OptimizedPerformanceMonitor: React.FC<OptimizedPerformanceMonitorProps> = 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-5/6 flex flex-col">
+      <div
+        role="dialog"
+        aria-labelledby="performance-monitor-title"
+        aria-describedby="performance-monitor-description"
+        tabIndex={-1}
+        className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-5/6 flex flex-col"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <Activity className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">性能监控</h2>
+            <h2 id="performance-monitor-title" className="text-xl font-semibold text-gray-900">性能监控</h2>
             {currentStatus && currentStatus.severity !== 'good' && (
               <AlertTriangle className={`w-5 h-5 ${
                 currentStatus.severity === 'warning' ? 'text-yellow-500' : 'text-red-500'
@@ -176,9 +182,11 @@ const OptimizedPerformanceMonitor: React.FC<OptimizedPerformanceMonitorProps> = 
             <button
               type="button"
               onClick={onToggleMonitoring}
+              aria-label="performance monitoring toggle"
+              aria-pressed={isMonitoring.toString()}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
-                isMonitoring 
-                  ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                isMonitoring
+                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
                   : 'bg-green-100 text-green-700 hover:bg-green-200'
               }`}
             >
@@ -194,6 +202,7 @@ const OptimizedPerformanceMonitor: React.FC<OptimizedPerformanceMonitorProps> = 
             <button
               type="button"
               onClick={onClose}
+              aria-label="关闭性能监控"
               className="text-gray-400 hover:text-gray-600"
             >
               <X className="w-6 h-6" />
@@ -234,6 +243,9 @@ const OptimizedPerformanceMonitor: React.FC<OptimizedPerformanceMonitorProps> = 
           {/* Overview Mode */}
           {viewMode === 'overview' && (
             <div className="p-6 space-y-6">
+              <div id="performance-monitor-description" className="sr-only">
+                性能监控界面，显示应用程序的实时性能指标包括渲染时间、内存使用和数据库查询时间
+              </div>
               {/* Performance Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-blue-50 rounded-lg p-4">

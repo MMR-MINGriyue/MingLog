@@ -250,22 +250,22 @@ describe('Memory Leak Detection', () => {
   })
 
   describe('Memory Leak Detectors', () => {
-    it('should detect excessive intervals', () => {
+    it('should detect excessive intervals', async () => {
       // 创建6个以上的interval来触发检测
       for (let i = 0; i < 7; i++) {
         const id = setInterval(() => {}, 1000)
         tracker.registerInterval(id)
       }
-      
+
       render(<TestComponentWithDetection />)
-      
+
       const forceButton = screen.getByTestId('force-detection')
       act(() => {
         forceButton.click()
       })
-      
+
       // 应该检测到泄漏
-      waitFor(() => {
+      await waitFor(() => {
         const leakReports = screen.getByTestId('leak-reports')
         expect(parseInt(leakReports.textContent || '0')).toBeGreaterThan(0)
       })
