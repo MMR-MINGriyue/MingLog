@@ -483,8 +483,13 @@
 
       window.createNewPage = async function() {
         try {
+          console.log('createNewPage called');
+          console.log('invoke function available:', typeof invoke);
+
           const name = prompt('请输入页面名称:');
           if (!name) return;
+
+          console.log('Creating page with name:', name);
 
           const request = {
             graph_id: 'default',
@@ -494,20 +499,31 @@
             is_journal: false
           };
 
+          console.log('Calling invoke with request:', request);
           const page = await invoke('create_page', { request });
+          console.log('Page created:', page);
+
           await loadPages();
           await loadPage(page.id);
         } catch (error) {
+          console.error('Error in createNewPage:', error);
           alert('创建页面失败: ' + error.toString());
         }
       };
 
       window.createSampleData = async function() {
         try {
+          console.log('createSampleData called');
+          console.log('invoke function available:', typeof invoke);
+
+          console.log('Calling create_sample_graph_data');
           await invoke('create_sample_graph_data');
+          console.log('Sample data created successfully');
+
           await loadPages();
           alert('示例数据创建成功!');
         } catch (error) {
+          console.error('Error in createSampleData:', error);
           alert('创建示例数据失败: ' + error.toString());
         }
       };

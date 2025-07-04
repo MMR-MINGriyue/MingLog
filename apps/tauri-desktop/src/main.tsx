@@ -8,15 +8,14 @@ import './index.css'
 import './i18n'
 
 // Import Tauri API for desktop functionality
-import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
 // Initialize Tauri app
 async function initializeApp() {
   try {
     // Set up window properties
-    const window = getCurrentWindow()
-    await window.setTitle('MingLog Desktop')
+    const appWindow = getCurrentWindow()
+    await appWindow.setTitle('MingLog Desktop')
     
     // Prevent default context menu
     document.addEventListener('contextmenu', (e) => {

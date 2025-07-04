@@ -40,7 +40,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
 
     document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+
+    // 确保清理函数正确执行
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [])
 
   const navigation = [

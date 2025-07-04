@@ -2,6 +2,8 @@ use crate::error::{AppError, Result};
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod integration_tests;
 use crate::models::{
     Graph, Page, Block, Note, Tag, Settings,
     CreateGraphRequest, UpdateGraphRequest,
@@ -831,6 +833,43 @@ impl Database {
             FROM pages ORDER BY created_at DESC
             "#
         )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(pages)
+    }
+
+    pub async fn get_pages(&self, limit: Option<usize>) -> Result<Vec<Page>> {
+        let query = if let Some(limit) = limit {
+            format!(
+                r#"
+                SELECT id, name, title, properties, tags, is_journal, journal_date, created_at, updated_at, graph_id
+                FROM pages ORDER BY created_at DESC LIMIT {}
+                "#,
+                limit
+            )
+        } else {
+            r#"
+            SELECT id, name, title, properties, tags, is_journal, journal_date, created_at, updated_at, graph_id
+            FROM pages ORDER BY created_at DESC
+            "#.to_string()
+        };
+
+        let pages = sqlx::query_as::<_, Page>(&query)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(pages)
+    }
+
+    pub async fn get_recent_pages(&self, limit: usize) -> Result<Vec<Page>> {
+        let pages = sqlx::query_as::<_, Page>(
+            r#"
+            SELECT id, name, title, properties, tags, is_journal, journal_date, created_at, updated_at, graph_id
+            FROM pages ORDER BY updated_at DESC LIMIT ?
+            "#
+        )
+        .bind(limit as i64)
         .fetch_all(&self.pool)
         .await?;
 

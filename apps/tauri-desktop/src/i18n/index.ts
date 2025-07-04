@@ -1,6 +1,5 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
-import LanguageDetector from 'i18next-browser-languagedetector'
 
 // Import translation resources
 import enTranslations from './locales/en.json'
@@ -15,22 +14,34 @@ const resources = {
   }
 }
 
+// 简单的语言检测逻辑
+const detectLanguage = (): string => {
+  // 检查localStorage中保存的语言设置
+  const savedLanguage = localStorage.getItem('minglog-language')
+  if (savedLanguage && resources[savedLanguage as keyof typeof resources]) {
+    return savedLanguage
+  }
+
+  // 检查浏览器语言
+  const browserLanguage = navigator.language
+  if (browserLanguage.startsWith('zh')) {
+    return 'zh-CN'
+  }
+
+  // 默认使用中文
+  return 'zh-CN'
+}
+
 i18n
-  .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources,
-    fallbackLng: 'en',
+    lng: detectLanguage(), // 使用我们的检测函数
+    fallbackLng: 'zh-CN', // 默认使用中文
     debug: process.env.NODE_ENV === 'development',
-    
+
     interpolation: {
       escapeValue: false, // React already does escaping
-    },
-    
-    detection: {
-      order: ['localStorage', 'navigator', 'htmlTag'],
-      caches: ['localStorage'],
-      lookupLocalStorage: 'minglog-language',
     },
     
     // Namespace configuration

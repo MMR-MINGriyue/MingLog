@@ -1,21 +1,9 @@
 import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react'
 import { FileText, Hash, Calendar, Clock } from 'lucide-react'
 
-interface SearchResult {
-  id: string
-  result_type: string
-  title: string
-  content: string
-  excerpt: string
-  score: number
-  page_id?: string
-  page_name?: string
-  block_id?: string
-  tags: string[]
-  is_journal: boolean
-  created_at: number
-  updated_at: number
-}
+import { BlockSearchResult } from '../utils/tauri'
+
+type SearchResult = BlockSearchResult
 
 interface VirtualizedSearchResultsProps {
   results: SearchResult[]
@@ -86,6 +74,8 @@ const VirtualizedSearchResults: React.FC<VirtualizedSearchResultsProps> = ({
       items.push(
         <div
           key={result.id}
+          role="option"
+          aria-selected={isSelected ? "true" : "false"}
           data-testid={`search-result-${i}`}
           data-result-id={result.id}
           className={`

@@ -5,6 +5,8 @@ use std::time::Instant;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod integration_tests;
 use crate::models::{
     AppInfo, Graph, Page, Block, Note, Tag, Settings,
     CreateGraphRequest, UpdateGraphRequest,
@@ -99,6 +101,7 @@ pub async fn search_blocks(
     request: BlockSearchRequest,
     state: State<'_, AppState>,
 ) -> Result<BlockSearchResponse> {
+    let search_start = std::time::Instant::now();
     let db = state.db.lock().await;
 
     // Use optimized FTS search instead of full scan
@@ -246,6 +249,9 @@ pub async fn search_blocks(
     let limit = request.limit.unwrap_or(50) as usize;
     let total = results.len() as i64;
     results.truncate(limit);
+
+    let search_duration = search_start.elapsed();
+    log::debug!("Search completed in {:?} for query: '{}'", search_duration, request.query);
 
     Ok(BlockSearchResponse {
         results,
@@ -1090,12 +1096,14 @@ pub async fn measure_db_performance(state: tauri::State<'_, AppState>) -> Result
     }))
 }
 
+
+
 #[tauri::command]
 #[allow(dead_code)]
 pub async fn analyze_performance_bottlenecks() -> Result<serde_json::Value> {
     let mut sys = System::new_all();
     sys.refresh_all();
-    
+
     let current_pid = std::process::id();
     let process = sys.process(Pid::from(current_pid as usize))
         .ok_or_else(|| "Failed to get process information".to_string())?;

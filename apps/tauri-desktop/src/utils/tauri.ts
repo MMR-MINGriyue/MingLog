@@ -49,6 +49,58 @@ export interface SearchRequest {
   offset?: number
 }
 
+// WebDAV and Sync related types
+export interface WebDAVConfig {
+  enabled: boolean
+  server_url: string
+  username: string
+  password: string
+  remote_path: string
+  sync_direction: SyncDirection
+  conflict_resolution: ConflictResolution
+  auto_sync: boolean
+  sync_interval: number
+  auto_sync_interval: number
+  sync_attachments: boolean
+  max_file_size: number
+}
+
+export enum SyncDirection {
+  Upload = 'upload',
+  Download = 'download',
+  Bidirectional = 'bidirectional'
+}
+
+export enum ConflictResolution {
+  Local = 'local',
+  Remote = 'remote',
+  Manual = 'manual',
+  LocalWins = 'local_wins',
+  RemoteWins = 'remote_wins',
+  ManualMerge = 'manual_merge',
+  CreateBoth = 'create_both'
+}
+
+export enum SyncStatus {
+  Idle = 'idle',
+  Syncing = 'syncing',
+  Uploading = 'uploading',
+  Downloading = 'downloading',
+  Testing = 'testing',
+  Success = 'success',
+  Failed = 'failed',
+  Error = 'error',
+  Conflict = 'conflict'
+}
+
+export interface SyncStats {
+  last_sync: string | null
+  files_uploaded: number
+  files_downloaded: number
+  conflicts: number
+  errors: number
+}
+
 export interface SearchResult {
   notes: Note[]
   total: number
@@ -134,7 +186,7 @@ export interface BlockSearchResult {
   score: number
   page_id?: string
   page_name?: string
-  block_id?: string
+  block_id?: string | null
   tags: string[]
   is_journal: boolean
   created_at: number
@@ -247,6 +299,31 @@ export const importMarkdownFile = (filePath: string, graphId: string): Promise<I
 
 export const exportPageToMarkdown = (pageId: string, outputDir: string): Promise<string> =>
   invoke('export_page_to_markdown', { pageId, outputDir })
+
+// WebDAV and Sync functions
+export const configureWebDAVSync = (config: WebDAVConfig): Promise<void> =>
+  invoke('configure_webdav_sync', { config })
+
+export const getWebDAVConfig = (): Promise<WebDAVConfig> =>
+  invoke('get_webdav_config')
+
+export const testWebDAVConnection = (config: WebDAVConfig): Promise<boolean> =>
+  invoke('test_webdav_connection', { config })
+
+export const startWebDAVSync = (): Promise<void> =>
+  invoke('start_webdav_sync')
+
+export const stopWebDAVSync = (): Promise<void> =>
+  invoke('stop_webdav_sync')
+
+export const getSyncStatus = (): Promise<SyncStatus> =>
+  invoke('get_sync_status')
+
+export const getSyncStats = (): Promise<SyncStats> =>
+  invoke('get_sync_stats')
+
+export const clearSyncCache = (): Promise<void> =>
+  invoke('clear_sync_cache')
 
 export const bulkExportPages = (pageIds: string[], outputDir: string): Promise<ExportResult> =>
   invoke('bulk_export_pages', { pageIds, outputDir })

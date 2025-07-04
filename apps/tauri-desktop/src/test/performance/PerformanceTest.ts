@@ -9,23 +9,23 @@ test.describe('Performance Tests', () => {
   test('Memory usage should be within acceptable limits', async () => {
     const systemInfo = await invoke<any>('get_system_info')
     const memoryUsage = systemInfo.memory.percentage
-    
-    expect(memoryUsage).toBeLessThan(80, '内存使用率不应超过80%')
+
+    expect(memoryUsage).toBeLessThan(80) // 内存使用率不应超过80%
   })
 
   test('CPU usage should be within acceptable limits', async () => {
     const systemInfo = await invoke<any>('get_system_info')
     const cpuUsage = systemInfo.cpu.usage
-    
-    expect(cpuUsage).toBeLessThan(80, 'CPU使用率不应超过80%')
+
+    expect(cpuUsage).toBeLessThan(80) // CPU使用率不应超过80%
   })
 
   test('Database operations should complete within time limits', async () => {
     const dbPerformance = await invoke<any>('measure_db_performance')
-    
-    expect(dbPerformance.write_time).toBeLessThan(100, '写入操作应在100ms内完成')
-    expect(dbPerformance.read_time).toBeLessThan(50, '读取操作应在50ms内完成')
-    expect(dbPerformance.index_time).toBeLessThan(75, '索引操作应在75ms内完成')
+
+    expect(dbPerformance.write_time).toBeLessThan(100) // 写入操作应在100ms内完成
+    expect(dbPerformance.read_time).toBeLessThan(50) // 读取操作应在50ms内完成
+    expect(dbPerformance.index_time).toBeLessThan(75) // 索引操作应在75ms内完成
   })
 
   test('Page load time should be acceptable', async ({ page }: { page: Page }) => {
@@ -33,7 +33,7 @@ test.describe('Performance Tests', () => {
     await page.goto('/')
     const loadTime = Date.now() - startTime
     
-    expect(loadTime).toBeLessThan(2000, '页面加载时间不应超过2秒')
+    expect(loadTime).toBeLessThan(2000) // 页面加载时间不应超过2秒
   })
 
   test('Search performance should be acceptable', async ({ page }: { page: Page }) => {
@@ -43,7 +43,7 @@ test.describe('Performance Tests', () => {
     await page.getByRole('listitem').first().waitFor()
     const searchTime = Date.now() - startTime
     
-    expect(searchTime).toBeLessThan(500, '搜索结果应在500ms内显示')
+    expect(searchTime).toBeLessThan(500) // 搜索结果应在500ms内显示
   })
 
   test('Editor performance should be acceptable', async ({ page }: { page: Page }) => {
@@ -53,7 +53,7 @@ test.describe('Performance Tests', () => {
     await page.getByRole('textbox').type('This is a test content')
     const typeTime = Date.now() - startTime
     
-    expect(typeTime).toBeLessThan(100, '编辑器输入延迟不应超过100ms')
+    expect(typeTime).toBeLessThan(100) // 编辑器输入延迟不应超过100ms
   })
 
   test('Graph visualization should render efficiently', async ({ page }: { page: Page }) => {
@@ -63,7 +63,7 @@ test.describe('Performance Tests', () => {
     await page.getByTestId('graph-container').waitFor()
     const renderTime = Date.now() - startTime
     
-    expect(renderTime).toBeLessThan(3000, '图形可视化应在3秒内完成渲染')
+    expect(renderTime).toBeLessThan(3000) // 图形可视化应在3秒内完成渲染
   })
 
   test('File operations should be performant', async () => {
@@ -82,7 +82,7 @@ test.describe('Performance Tests', () => {
     await invoke<void>('delete_test_file')
     
     const operationTime = Date.now() - startTime
-    expect(operationTime).toBeLessThan(1000, '文件操作应在1秒内完成')
+    expect(operationTime).toBeLessThan(1000) // 文件操作应在1秒内完成
   })
 
   test('Memory should not leak during extended usage', async ({ page }: { page: Page }) => {
@@ -99,7 +99,7 @@ test.describe('Performance Tests', () => {
     const finalMemory = (await invoke<any>('get_system_info')).memory.used
     const memoryIncrease = finalMemory - initialMemory
     
-    expect(memoryIncrease).toBeLessThan(50 * 1024 * 1024, '内存增长不应超过50MB')
+    expect(memoryIncrease).toBeLessThan(50 * 1024 * 1024) // 内存增长不应超过50MB
   })
 
   test('Application should handle concurrent operations', async ({ page }: { page: Page }) => {
@@ -114,21 +114,7 @@ test.describe('Performance Tests', () => {
     ])
     
     const concurrentTime = Date.now() - startTime
-    expect(concurrentTime).toBeLessThan(3000, '并发操作应在3秒内完成')
+    expect(concurrentTime).toBeLessThan(3000) // 并发操作应在3秒内完成
   })
 })
 
-// 辅助函数
-async function measureOperation(operation: () => Promise<void>): Promise<number> {
-  const startTime = Date.now()
-  await operation()
-  return Date.now() - startTime
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
-} 

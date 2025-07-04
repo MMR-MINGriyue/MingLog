@@ -8,6 +8,9 @@ use serde::{Deserialize, Serialize};
 use crate::models::{Page, Block, Tag as TagModel, CreatePageRequest, CreateBlockRequest};
 use crate::database::Database;
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MarkdownFrontmatter {
     pub title: Option<String>,

@@ -1,0 +1,19 @@
+/* 基础样式重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 编辑器内容样式 */
+.ProseMirror {
+  min-height: 200px;
+  outline: none;
+}
+
+/* 页面列表项选中状态 */
+.page-item.active {
+  background-color: #e6f7ff;
+  font-weight: 500;
+  border-left: 3px solid #1890ff;
+}

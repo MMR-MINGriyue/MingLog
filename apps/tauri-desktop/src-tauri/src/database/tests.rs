@@ -2,6 +2,7 @@
 mod tests {
     use super::*;
     use crate::models::*;
+    use crate::database::Database;
     use tempfile::tempdir;
     use tokio;
 
@@ -25,9 +26,10 @@ mod tests {
             name: "Test Page".to_string(),
             title: Some("Test Page Title".to_string()),
             graph_id: "default".to_string(),
-            is_journal: false,
+            is_journal: Some(false),
             journal_date: None,
-            tags: Some(vec!["test".to_string(), "page".to_string()]),
+            tags: Some("test,page".to_string()),
+            properties: None,
         };
 
         let created_page = db.create_page(request).await.unwrap();
@@ -49,9 +51,10 @@ mod tests {
             name: "Test Page".to_string(),
             title: None,
             graph_id: "default".to_string(),
-            is_journal: false,
+            is_journal: Some(false),
             journal_date: None,
             tags: None,
+            properties: None,
         };
         let page = db.create_page(page_request).await.unwrap();
 
@@ -61,8 +64,9 @@ mod tests {
             page_id: page.id.clone(),
             graph_id: "default".to_string(),
             parent_id: None,
-            order: 0,
+            order: Some(0),
             refs: Some(vec!["reference".to_string()]),
+            properties: None,
         };
 
         let created_block = db.create_block(block_request).await.unwrap();

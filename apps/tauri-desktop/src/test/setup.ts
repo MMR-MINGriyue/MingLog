@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom'
-import { vi } from 'vitest'
+import { vi, beforeEach } from 'vitest'
+import i18n from '../i18n'
 
 // Mock Tauri APIs
 const mockTauri = {
@@ -87,7 +88,7 @@ Object.defineProperty(window, 'sessionStorage', {
 })
 
 // Reset all mocks before each test
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks()
   localStorageMock.getItem.mockClear()
   localStorageMock.setItem.mockClear()
@@ -97,4 +98,11 @@ beforeEach(() => {
   sessionStorageMock.setItem.mockClear()
   sessionStorageMock.removeItem.mockClear()
   sessionStorageMock.clear.mockClear()
+
+  // Initialize i18n for tests
+  if (!i18n.isInitialized) {
+    await i18n.init()
+  }
+  // Set to English for consistent testing
+  await i18n.changeLanguage('en')
 })
