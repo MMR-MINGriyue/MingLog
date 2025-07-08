@@ -1,11 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest'
-import * as tauriUtils from '../tauri'
 
-// Mock Tauri API
-const mockInvoke = vi.fn()
+// Mock Tauri API - use vi.hoisted to avoid hoisting issues
+const mockInvoke = vi.hoisted(() => vi.fn())
+
+// Mock both the old and new Tauri API imports
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
 }))
+
+vi.mock('@tauri-apps/api/tauri', () => ({
+  invoke: mockInvoke,
+}))
+
+import * as tauriUtils from '../tauri'
 
 // Mock console methods
 const consoleSpy = {
@@ -60,7 +67,7 @@ describe('tauri utils', () => {
 
   describe('searchBlocks', () => {
     const mockSearchResults = {
-      results: [
+      blocks: [
         {
           id: '1',
           title: 'Test Page',
@@ -69,8 +76,8 @@ describe('tauri utils', () => {
           score: 0.95,
         },
       ],
-      total_results: 1,
-      query_time_ms: 10,
+      total: 1,
+      query: 'test',
     }
 
     it('searches with default parameters', async () => {
@@ -79,10 +86,12 @@ describe('tauri utils', () => {
       const result = await tauriUtils.searchBlocks({ query: 'test' })
       
       expect(mockInvoke).toHaveBeenCalledWith('search_blocks', {
-        query: 'test',
-        include_pages: true,
-        include_blocks: true,
-        limit: 20,
+        request: {
+          query: 'test',
+          include_pages: true,
+          include_blocks: true,
+          limit: 20,
+        }
       })
       expect(result).toEqual(mockSearchResults)
     })
@@ -99,7 +108,7 @@ describe('tauri utils', () => {
       
       const result = await tauriUtils.searchBlocks(params)
       
-      expect(mockInvoke).toHaveBeenCalledWith('search_blocks', params)
+      expect(mockInvoke).toHaveBeenCalledWith('search_blocks', { request: params })
       expect(result).toEqual(mockSearchResults)
     })
 

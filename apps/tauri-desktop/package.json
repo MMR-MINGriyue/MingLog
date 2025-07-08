@@ -1,7 +1,7 @@
 {
-  "name": "minglog-desktop-simple",
+  "name": "@minglog/desktop",
   "version": "1.0.0",
-  "description": "MingLog Desktop - Simple Version",
+  "description": "MingLog Desktop - 模块化知识管理桌面应用",
   "type": "module",
   "private": true,
   "scripts": {
@@ -22,9 +22,13 @@
     "test:ci": "npm run test:all"
   },
   "dependencies": {
+    "@minglog/core": "workspace:*",
+    "@minglog/notes": "workspace:*",
+    "@minglog/ui": "workspace:*",
     "@tauri-apps/api": "^1.6.0",
     "@types/react-window": "^1.8.8",
     "chart.js": "^4.5.0",
+    "clsx": "^2.0.0",
     "i18next": "^25.2.1",
     "lucide-react": "^0.294.0",
     "react": "^18.3.1",

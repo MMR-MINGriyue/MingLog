@@ -1,241 +1,349 @@
-import React, { Suspense, lazy } from 'react'
-import { Activity, Settings, HelpCircle } from 'lucide-react'
+import React, { Suspense, lazy } from 'react';
+import { Activity, Settings, HelpCircle } from 'lucide-react';
 
-// Lazy load heavy components
-const PerformanceMonitor = lazy(() => import('./PerformanceMonitor'))
-const UserGuide = lazy(() => import('./UserGuide'))
-const UserPreferences = lazy(() => import('./UserPreferences'))
+// Loading component with skeleton support
+const LoadingSpinner: React.FC<{
+  message?: string;
+  componentType?: 'performance-monitor' | 'user-guide' | 'user-preferences' | 'default';
+}> = ({ message = 'Loading...', componentType = 'default' }) => {
 
-// Loading fallback components
-const PerformanceMonitorSkeleton = () => (
-  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
-      {/* Header Skeleton */}
-      <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-3">
-          <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400 animate-pulse" />
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-48 animate-pulse"></div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-        </div>
-      </div>
-      
-      {/* Content Skeleton */}
-      <div className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-24 mb-2 animate-pulse"></div>
-              <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-16 mb-2 animate-pulse"></div>
-              <div className="h-2 bg-gray-200 dark:bg-gray-600 rounded w-full animate-pulse"></div>
-            </div>
-          ))}
-        </div>
-        
-        {/* Chart Skeleton */}
-        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 h-64">
-          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-32 mb-4 animate-pulse"></div>
-          <div className="h-48 bg-gray-200 dark:bg-gray-600 rounded animate-pulse"></div>
-        </div>
-      </div>
-      
-      {/* Footer Skeleton */}
-      <div className="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-        <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-48 animate-pulse"></div>
-        <div className="flex items-center space-x-3">
-          <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-24 animate-pulse"></div>
-          <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-16 animate-pulse"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-)
+  // Get appropriate icon based on component type
+  const getIcon = () => {
+    switch (componentType) {
+      case 'performance-monitor':
+        return <Activity data-testid="activity-icon" className="w-6 h-6" />;
+      case 'user-guide':
+        return <HelpCircle data-testid="help-circle-icon" className="w-6 h-6" />;
+      case 'user-preferences':
+        return <Settings data-testid="settings-icon" className="w-6 h-6" />;
+      default:
+        return <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>;
+    }
+  };
 
-const UserGuideSkeleton = () => (
-  <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center">
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-2">
-          <HelpCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-pulse" />
-          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
-        </div>
-        <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-      </div>
-      
-      <div className="mb-6">
-        <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2 animate-pulse"></div>
-        <div className="h-2 bg-blue-600 rounded animate-pulse" style={{ width: '60%' }}></div>
-      </div>
-      
-      <div className="mb-6">
-        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-2 animate-pulse"></div>
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-1 animate-pulse"></div>
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 animate-pulse"></div>
-      </div>
-      
-      <div className="flex items-center justify-between">
-        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-20 animate-pulse"></div>
-        <div className="flex items-center space-x-2">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-12 animate-pulse"></div>
-          <div className="h-8 bg-blue-600 rounded w-16 animate-pulse"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-)
-
-const UserPreferencesSkeleton = () => (
-  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
-      <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-3">
-          <Settings className="w-6 h-6 text-blue-600 dark:text-blue-400 animate-pulse" />
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
-        </div>
-        <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-      </div>
-      
-      <div className="flex border-b border-gray-200 dark:border-gray-700">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="flex items-center space-x-2 px-4 py-3">
-            <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 animate-pulse"></div>
+  // For performance monitor, render full skeleton overlay
+  if (componentType === 'performance-monitor') {
+    return (
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+        data-testid="performance-monitor-skeleton"
+        role="dialog"
+        aria-label="Loading Performance Monitor"
+      >
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-md mx-4">
+          <div className="flex items-center space-x-3">
+            {getIcon()}
+            <span className="text-gray-600 dark:text-gray-400">{message}</span>
           </div>
-        ))}
-      </div>
-      
-      <div className="p-6">
-        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-6 animate-pulse"></div>
-        <div className="space-y-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="flex items-center justify-between">
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
-              <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            </div>
-          ))}
         </div>
       </div>
-    </div>
-  </div>
-)
-
-// Lazy wrapper components with error boundaries
-interface LazyPerformanceMonitorProps {
-  isOpen: boolean
-  onClose: () => void
-}
-
-export const LazyPerformanceMonitor: React.FC<LazyPerformanceMonitorProps> = (props) => (
-  <Suspense fallback={<PerformanceMonitorSkeleton />}>
-    <PerformanceMonitor {...props} />
-  </Suspense>
-)
-
-interface LazyUserGuideProps {
-  isOpen: boolean
-  onClose: () => void
-  steps: any[]
-  componentName: string
-}
-
-export const LazyUserGuide: React.FC<LazyUserGuideProps> = (props) => (
-  <Suspense fallback={<UserGuideSkeleton />}>
-    <UserGuide {...props} />
-  </Suspense>
-)
-
-interface LazyUserPreferencesProps {
-  isOpen: boolean
-  onClose: () => void
-  onPreferencesChange?: (preferences: any) => void
-}
-
-export const LazyUserPreferences: React.FC<LazyUserPreferencesProps> = (props) => (
-  <Suspense fallback={<UserPreferencesSkeleton />}>
-    <UserPreferences {...props} />
-  </Suspense>
-)
-
-// Error boundary for lazy components
-interface ErrorBoundaryState {
-  hasError: boolean
-  error?: Error
-}
-
-class LazyComponentErrorBoundary extends React.Component<
-  React.PropsWithChildren<{}>,
-  ErrorBoundaryState
-> {
-  constructor(props: React.PropsWithChildren<{}>) {
-    super(props)
-    this.state = { hasError: false }
+    );
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error }
+  // For user guide, render modal-style skeleton
+  if (componentType === 'user-guide') {
+    return (
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+        data-testid="user-guide-skeleton"
+        role="dialog"
+        aria-label="Loading User Guide"
+      >
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-2xl mx-4">
+          <div className="flex items-center space-x-3">
+            {getIcon()}
+            <span className="text-gray-600 dark:text-gray-400">{message}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // For user preferences, render modal-style skeleton
+  if (componentType === 'user-preferences') {
+    return (
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+        data-testid="user-preferences-skeleton"
+        role="dialog"
+        aria-label="Loading User Preferences"
+      >
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-lg mx-4">
+          <div className="flex items-center space-x-3">
+            {getIcon()}
+            <span className="text-gray-600 dark:text-gray-400">{message}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Default loading spinner
+  return (
+    <div className="flex items-center justify-center p-8">
+      <div className="flex items-center space-x-3">
+        {getIcon()}
+        <span className="text-gray-600 dark:text-gray-400">{message}</span>
+      </div>
+    </div>
+  );
+};
+
+// Error boundary for lazy components
+class LazyComponentErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback?: React.ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: React.ReactNode; fallback?: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Lazy component failed to load:', error, errorInfo)
+    console.error('Lazy component error:', error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="text-center">
-              <div className="text-red-600 dark:text-red-400 mb-4">
-                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                Component Failed to Load
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                There was an error loading this component. Please try refreshing the page.
-              </p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Refresh Page
-              </button>
-            </div>
+      return this.props.fallback || (
+        <div className="flex items-center justify-center p-8 text-red-500">
+          <div className="text-center">
+            <p className="font-medium">Failed to load component</p>
+            <p className="text-sm mt-1">{this.state.error?.message}</p>
+            <button
+              type="button"
+              onClick={() => this.setState({ hasError: false, error: undefined })}
+              className="mt-3 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+            >
+              Retry
+            </button>
           </div>
         </div>
-      )
+      );
     }
 
-    return this.props.children
+    return this.props.children;
   }
 }
 
-// Wrapped lazy components with error boundaries
-export const SafeLazyPerformanceMonitor: React.FC<LazyPerformanceMonitorProps> = (props) => (
-  <LazyComponentErrorBoundary>
-    <LazyPerformanceMonitor {...props} />
-  </LazyComponentErrorBoundary>
-)
+// Lazy component wrapper with error boundary and loading state
+const withLazyLoading = <P extends object>(
+  Component: React.LazyExoticComponent<React.ComponentType<P>>,
+  loadingMessage?: string,
+  componentType?: 'performance-monitor' | 'user-guide' | 'user-preferences' | 'default',
+  fallback?: React.ReactNode
+) => {
+  return React.forwardRef<any, P>((props, ref) => (
+    <LazyComponentErrorBoundary fallback={fallback}>
+      <Suspense fallback={<LoadingSpinner message={loadingMessage} componentType={componentType} />}>
+        <Component {...props} ref={ref} />
+      </Suspense>
+    </LazyComponentErrorBoundary>
+  ));
+};
 
-export const SafeLazyUserGuide: React.FC<LazyUserGuideProps> = (props) => (
-  <LazyComponentErrorBoundary>
-    <LazyUserGuide {...props} />
-  </LazyComponentErrorBoundary>
-)
+// Lazy loaded components
+export const LazyPerformanceMonitor = withLazyLoading(
+  lazy(() => import('./PerformanceMonitor')),
+  'Loading Performance Monitor...',
+  'performance-monitor'
+);
 
-export const SafeLazyUserPreferences: React.FC<LazyUserPreferencesProps> = (props) => (
-  <LazyComponentErrorBoundary>
-    <LazyUserPreferences {...props} />
-  </LazyComponentErrorBoundary>
-)
+export const LazyOptimizedPerformanceMonitor = withLazyLoading(
+  lazy(() => import('./OptimizedPerformanceMonitor')),
+  'Loading Optimized Performance Monitor...',
+  'performance-monitor'
+);
+
+export const LazyVirtualizedSearchResults = withLazyLoading(
+  lazy(() => import('./VirtualizedSearchResults')),
+  'Loading Search Results...',
+  'default'
+);
+
+export const LazyVirtualizedPerformanceList = withLazyLoading(
+  lazy(() => import('./VirtualizedPerformanceList')),
+  'Loading Performance List...',
+  'default'
+);
+
+export const LazySearchComponent = withLazyLoading(
+  lazy(() => import('./SearchComponent')),
+  'Loading Search Component...',
+  'default'
+);
+
+// Chart components (heavy dependencies)
+export const LazyChartLoader = withLazyLoading(
+  lazy(() => import('./ChartLoader')),
+  'Loading Charts...',
+  'default'
+);
+
+// User interface components
+export const LazyUserGuide = withLazyLoading(
+  lazy(() => import('./UserGuide')),
+  'Loading User Guide...',
+  'user-guide'
+);
+
+export const LazyUserPreferences = withLazyLoading(
+  lazy(() => import('./UserPreferences')),
+  'Loading User Preferences...',
+  'user-preferences'
+);
+
+// Settings and configuration components
+export const LazySettingsPanel = withLazyLoading(
+  lazy(() => import('./SettingsPanel')),
+  'Loading Settings...',
+  'default'
+);
+
+// Module-specific lazy components
+export const LazyNotesModule = withLazyLoading(
+  lazy(() => import('./modules/NotesModule')),
+  'Loading Notes Module...'
+);
+
+export const LazyMindMapModule = withLazyLoading(
+  lazy(() => import('./modules/MindMapModule')),
+  'Loading Mind Map Module...'
+);
+
+export const LazyTasksModule = withLazyLoading(
+  lazy(() => import('./modules/TasksModule')),
+  'Loading Tasks Module...'
+);
+
+// Utility function to preload components
+export const preloadComponent = (componentLoader: () => Promise<any>) => {
+  // Preload on idle or after a delay
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => componentLoader());
+  } else {
+    setTimeout(() => componentLoader(), 100);
+  }
+};
+
+// Preload critical components
+export const preloadCriticalComponents = () => {
+  preloadComponent(() => import('./PerformanceMonitor'));
+  preloadComponent(() => import('./SearchComponent'));
+};
+
+// Component registry for dynamic loading
+export const componentRegistry = {
+  PerformanceMonitor: LazyPerformanceMonitor,
+  OptimizedPerformanceMonitor: LazyOptimizedPerformanceMonitor,
+  VirtualizedSearchResults: LazyVirtualizedSearchResults,
+  VirtualizedPerformanceList: LazyVirtualizedPerformanceList,
+  SearchComponent: LazySearchComponent,
+  ChartLoader: LazyChartLoader,
+  SettingsPanel: LazySettingsPanel,
+  NotesModule: LazyNotesModule,
+  MindMapModule: LazyMindMapModule,
+  TasksModule: LazyTasksModule,
+};
+
+// Dynamic component loader
+export const loadComponent = (componentName: keyof typeof componentRegistry) => {
+  return componentRegistry[componentName];
+};
+
+// Hook for lazy loading with loading state
+export const useLazyComponent = (componentName: keyof typeof componentRegistry) => {
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [Component, setComponent] = React.useState<React.ComponentType<any> | null>(null);
+  const [error, setError] = React.useState<Error | null>(null);
+
+  React.useEffect(() => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const LazyComponent = loadComponent(componentName);
+      setComponent(() => LazyComponent);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [componentName]);
+
+  return { Component, isLoading, error };
+};
+
+// Safe lazy components with enhanced error boundaries
+export const SafeLazyPerformanceMonitor = withLazyLoading(
+  lazy(() => import('./PerformanceMonitor')),
+  'Loading Performance Monitor...',
+  'performance-monitor',
+  <div className="p-8 text-center text-red-500">
+    <p>Failed to load Performance Monitor</p>
+    <button
+      type="button"
+      onClick={() => window.location.reload()}
+      className="mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+    >
+      Reload
+    </button>
+  </div>
+);
+
+export const SafeLazyUserGuide = withLazyLoading(
+  lazy(() => import('./UserGuide')),
+  'Loading User Guide...',
+  'user-guide',
+  <div className="p-8 text-center text-red-500">
+    <p>Failed to load User Guide</p>
+    <button
+      type="button"
+      onClick={() => window.location.reload()}
+      className="mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+    >
+      Reload
+    </button>
+  </div>
+);
+
+export const SafeLazyUserPreferences = withLazyLoading(
+  lazy(() => import('./UserPreferences')),
+  'Loading User Preferences...',
+  'user-preferences',
+  <div className="p-8 text-center text-red-500">
+    <p>Failed to load User Preferences</p>
+    <button
+      type="button"
+      onClick={() => window.location.reload()}
+      className="mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+    >
+      Reload
+    </button>
+  </div>
+);
+
+// Export LazyComponentErrorBoundary for external use
+export { LazyComponentErrorBoundary };
 
 export default {
-  PerformanceMonitor: SafeLazyPerformanceMonitor,
-  UserGuide: SafeLazyUserGuide,
-  UserPreferences: SafeLazyUserPreferences,
-}
+  LazyPerformanceMonitor,
+  LazyOptimizedPerformanceMonitor,
+  LazyVirtualizedSearchResults,
+  LazyVirtualizedPerformanceList,
+  LazySearchComponent,
+  LazyChartLoader,
+  LazySettingsPanel,
+  LazyNotesModule,
+  LazyMindMapModule,
+  LazyTasksModule,
+  withLazyLoading,
+  preloadComponent,
+  preloadCriticalComponents,
+  loadComponent,
+  useLazyComponent,
+};

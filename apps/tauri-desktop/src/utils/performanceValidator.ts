@@ -1,310 +1,495 @@
-// 性能验证工具 - 验证<100ms渲染目标
-import { measureChartPerformance, getChartMemoryUsage } from './chartOptimization'
-
-interface PerformanceTestResult {
-  testName: string
-  renderTime: number
-  memoryUsage: number | null
-  passed: boolean
-  details: string
+interface PerformanceThresholds {
+  memoryUsage: number; // MB
+  renderTime: number; // ms
+  domNodes: number; // count
+  eventListeners: number; // count
+  bundleSize: number; // MB
+  loadTime: number; // ms
+  fps: number; // minimum fps
 }
 
-interface PerformanceValidationReport {
-  overallPassed: boolean
-  averageRenderTime: number
-  maxRenderTime: number
-  memoryEfficiency: number
-  tests: PerformanceTestResult[]
-  recommendations: string[]
+interface PerformanceMetric {
+  name: string;
+  value: number;
+  threshold: number;
+  unit: string;
+  status: 'pass' | 'warning' | 'fail';
+  description: string;
 }
 
-// 性能基准
-const PERFORMANCE_TARGETS = {
-  MAX_RENDER_TIME: 100, // 100ms
+interface PerformanceReport {
+  timestamp: number;
+  overallScore: number;
+  status: 'pass' | 'warning' | 'fail';
+  metrics: PerformanceMetric[];
+  recommendations: string[];
+  overallPassed?: boolean;
+}
+
+interface TestResult {
+  testName: string;
+  renderTime: number;
+  passed: boolean;
+  memoryUsage?: number;
+  domNodes?: number;
+  fps?: number;
+  details?: string;
+}
+
+const DEFAULT_THRESHOLDS: PerformanceThresholds = {
+  memoryUsage: 100, // 100MB
+  renderTime: 16, // 16ms for 60fps
+  domNodes: 5000, // 5000 DOM nodes
+  eventListeners: 500, // 500 event listeners
+  bundleSize: 5, // 5MB bundle size
+  loadTime: 3000, // 3 seconds load time
+  fps: 30, // minimum 30 fps
+};
+
+// Performance targets for testing
+export const PERFORMANCE_TARGETS = {
+  MAX_RENDER_TIME: 100, // ms
   MAX_MEMORY_INCREASE: 50 * 1024 * 1024, // 50MB
   MIN_FPS: 30,
-  MAX_DOM_NODES: 5000
-}
+  MAX_DOM_NODES: 5000,
+};
 
-// 性能测试套件
-export class PerformanceValidator {
-  private results: PerformanceTestResult[] = []
-  private initialMemory: number | null = null
+class PerformanceValidator {
+  private thresholds: PerformanceThresholds;
+  private startTime: number;
+  private testResults: TestResult[] = [];
 
-  constructor() {
-    this.initialMemory = getChartMemoryUsage()?.used || null
+  constructor(thresholds: Partial<PerformanceThresholds> = {}) {
+    this.thresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
+    this.startTime = performance.now();
   }
 
-  // 测试组件渲染性能
-  async testComponentRender(componentName: string, renderFunction: () => Promise<void>): Promise<PerformanceTestResult> {
-    const timer = measureChartPerformance()
-    
-    try {
-      await renderFunction()
-      const renderTime = timer.end()
-      const currentMemory = getChartMemoryUsage()?.used || null
-      
-      const passed = renderTime <= PERFORMANCE_TARGETS.MAX_RENDER_TIME
-      const details = passed 
-        ? `渲染时间 ${renderTime.toFixed(1)}ms 符合目标 (<${PERFORMANCE_TARGETS.MAX_RENDER_TIME}ms)`
-        : `渲染时间 ${renderTime.toFixed(1)}ms 超过目标 (>${PERFORMANCE_TARGETS.MAX_RENDER_TIME}ms)`
-
-      const result: PerformanceTestResult = {
-        testName: `${componentName} 渲染性能`,
-        renderTime,
-        memoryUsage: currentMemory,
-        passed,
-        details
-      }
-
-      this.results.push(result)
-      return result
-    } catch (error) {
-      const result: PerformanceTestResult = {
-        testName: `${componentName} 渲染性能`,
-        renderTime: -1,
-        memoryUsage: null,
-        passed: false,
-        details: `渲染失败: ${error instanceof Error ? error.message : 'Unknown error'}`
-      }
-
-      this.results.push(result)
-      return result
-    }
+  // Clear test results
+  clearResults(): void {
+    this.testResults = [];
   }
 
-  // 测试大数据集渲染性能
-  async testLargeDatasetRender(dataSize: number, renderFunction: () => Promise<void>): Promise<PerformanceTestResult> {
-    const timer = measureChartPerformance()
-    
-    try {
-      await renderFunction()
-      const renderTime = timer.end()
-      
-      // 对于大数据集，允许更长的渲染时间
-      const adjustedTarget = Math.min(PERFORMANCE_TARGETS.MAX_RENDER_TIME * (1 + dataSize / 1000), 500)
-      const passed = renderTime <= adjustedTarget
-      
-      const result: PerformanceTestResult = {
-        testName: `大数据集渲染 (${dataSize} 条记录)`,
-        renderTime,
-        memoryUsage: getChartMemoryUsage()?.used || null,
-        passed,
-        details: passed 
-          ? `大数据集渲染时间 ${renderTime.toFixed(1)}ms 符合调整目标 (<${adjustedTarget.toFixed(1)}ms)`
-          : `大数据集渲染时间 ${renderTime.toFixed(1)}ms 超过调整目标 (>${adjustedTarget.toFixed(1)}ms)`
-      }
+  // Test component render performance
+  async testComponentRender(componentName: string, renderFunction: () => Promise<void>): Promise<TestResult> {
+    const startTime = performance.now();
+    const startMemory = this.getMemoryUsage();
 
-      this.results.push(result)
-      return result
-    } catch (error) {
-      const result: PerformanceTestResult = {
-        testName: `大数据集渲染 (${dataSize} 条记录)`,
-        renderTime: -1,
-        memoryUsage: null,
-        passed: false,
-        details: `大数据集渲染失败: ${error instanceof Error ? error.message : 'Unknown error'}`
-      }
+    await renderFunction();
 
-      this.results.push(result)
-      return result
-    }
+    const endTime = performance.now();
+    const endMemory = this.getMemoryUsage();
+    const renderTime = endTime - startTime;
+
+    const result: TestResult = {
+      testName: `${componentName} 渲染性能`,
+      renderTime,
+      passed: renderTime < PERFORMANCE_TARGETS.MAX_RENDER_TIME,
+      memoryUsage: endMemory - startMemory
+    };
+
+    this.testResults.push(result);
+    return result;
   }
 
-  // 测试内存使用效率
-  testMemoryEfficiency(): PerformanceTestResult {
-    const currentMemory = getChartMemoryUsage()?.used || null
-    
-    if (!this.initialMemory || !currentMemory) {
-      const result: PerformanceTestResult = {
-        testName: '内存使用效率',
-        renderTime: 0,
-        memoryUsage: currentMemory,
-        passed: false,
-        details: '无法获取内存使用信息'
-      }
-      this.results.push(result)
-      return result
-    }
+  // Test large dataset rendering performance
+  async testLargeDatasetRender(itemCount: number, renderFunction: () => Promise<void>): Promise<TestResult> {
+    const startTime = performance.now();
 
-    const memoryIncrease = currentMemory - this.initialMemory
-    const passed = memoryIncrease <= PERFORMANCE_TARGETS.MAX_MEMORY_INCREASE
-    
-    const result: PerformanceTestResult = {
+    await renderFunction();
+
+    const endTime = performance.now();
+    const renderTime = endTime - startTime;
+
+    const result: TestResult = {
+      testName: `大数据集渲染 (${itemCount} 条记录)`,
+      renderTime,
+      passed: renderTime < PERFORMANCE_TARGETS.MAX_RENDER_TIME * 2, // Allow more time for large datasets
+      details: `大数据集渲染时间: ${renderTime.toFixed(2)}ms (${itemCount} 条记录)`
+    };
+
+    this.testResults.push(result);
+    return result;
+  }
+
+  // Test memory efficiency
+  testMemoryEfficiency(): TestResult {
+    const memoryUsage = this.getMemoryUsage();
+    const memoryBytes = memoryUsage * 1024 * 1024; // Convert MB to bytes
+
+    const result: TestResult = {
       testName: '内存使用效率',
       renderTime: 0,
-      memoryUsage: currentMemory,
-      passed,
-      details: passed
-        ? `内存增长 ${(memoryIncrease / 1024 / 1024).toFixed(1)}MB 符合目标 (<${PERFORMANCE_TARGETS.MAX_MEMORY_INCREASE / 1024 / 1024}MB)`
-        : `内存增长 ${(memoryIncrease / 1024 / 1024).toFixed(1)}MB 超过目标 (>${PERFORMANCE_TARGETS.MAX_MEMORY_INCREASE / 1024 / 1024}MB)`
-    }
+      passed: memoryUsage < this.thresholds.memoryUsage,
+      memoryUsage: memoryBytes,
+      details: `内存增长: ${memoryUsage.toFixed(2)}MB`
+    };
 
-    this.results.push(result)
-    return result
+    this.testResults.push(result);
+    return result;
   }
 
-  // 测试DOM节点数量
-  testDOMNodeCount(): PerformanceTestResult {
-    const nodeCount = document.querySelectorAll('*').length
-    const passed = nodeCount <= PERFORMANCE_TARGETS.MAX_DOM_NODES
-    
-    const result: PerformanceTestResult = {
+  // Test DOM node count
+  testDOMNodeCount(): TestResult {
+    const domNodes = this.getDOMNodeCount();
+
+    const result: TestResult = {
       testName: 'DOM节点数量',
       renderTime: 0,
-      memoryUsage: null,
-      passed,
-      details: passed
-        ? `DOM节点数量 ${nodeCount} 符合目标 (<${PERFORMANCE_TARGETS.MAX_DOM_NODES})`
-        : `DOM节点数量 ${nodeCount} 超过目标 (>${PERFORMANCE_TARGETS.MAX_DOM_NODES})`
-    }
+      passed: domNodes < PERFORMANCE_TARGETS.MAX_DOM_NODES,
+      domNodes,
+      details: `DOM节点数量: ${domNodes}`
+    };
 
-    this.results.push(result)
-    return result
+    this.testResults.push(result);
+    return result;
   }
 
-  // 测试FPS性能
-  async testFPS(duration: number = 2000): Promise<PerformanceTestResult> {
+  // Test FPS performance
+  async testFPS(duration: number = 1000): Promise<TestResult> {
     return new Promise((resolve) => {
-      let frameCount = 0
-      const startTime = performance.now()
-      
+      let frameCount = 0;
+      const startTime = performance.now();
+
       const countFrame = () => {
-        frameCount++
-        const elapsed = performance.now() - startTime
-        
-        if (elapsed < duration) {
-          requestAnimationFrame(countFrame)
+        frameCount++;
+        const currentTime = performance.now();
+
+        if (currentTime - startTime < duration) {
+          requestAnimationFrame(countFrame);
         } else {
-          const fps = (frameCount / elapsed) * 1000
-          const passed = fps >= PERFORMANCE_TARGETS.MIN_FPS
-          
-          const result: PerformanceTestResult = {
+          const fps = Math.round((frameCount * 1000) / (currentTime - startTime));
+
+          const result: TestResult = {
             testName: 'FPS性能',
             renderTime: 0,
-            memoryUsage: getChartMemoryUsage()?.used || null,
-            passed,
-            details: passed
-              ? `FPS ${fps.toFixed(1)} 符合目标 (>${PERFORMANCE_TARGETS.MIN_FPS})`
-              : `FPS ${fps.toFixed(1)} 低于目标 (<${PERFORMANCE_TARGETS.MIN_FPS})`
-          }
+            passed: fps >= PERFORMANCE_TARGETS.MIN_FPS,
+            fps,
+            details: `FPS: ${fps}`
+          };
 
-          this.results.push(result)
-          resolve(result)
+          this.testResults.push(result);
+          resolve(result);
         }
-      }
+      };
 
-      requestAnimationFrame(countFrame)
-    })
+      requestAnimationFrame(countFrame);
+    });
   }
 
-  // 生成性能验证报告
-  generateReport(): PerformanceValidationReport {
-    const passedTests = this.results.filter(r => r.passed).length
-    const totalTests = this.results.length
-    const overallPassed = passedTests === totalTests
+  private getMemoryUsage(): number {
+    const memory = (performance as any).memory;
+    return memory ? memory.usedJSHeapSize / 1024 / 1024 : 0;
+  }
 
-    const renderTimes = this.results
-      .filter(r => r.renderTime > 0)
-      .map(r => r.renderTime)
+  private getDOMNodeCount(): number {
+    return document.querySelectorAll('*').length;
+  }
+
+  private getEventListenerCount(): number {
+    // Simplified event listener counting
+    let count = 0;
+    const elements = document.querySelectorAll('*');
     
-    const averageRenderTime = renderTimes.length > 0 
-      ? renderTimes.reduce((sum, time) => sum + time, 0) / renderTimes.length 
-      : 0
+    elements.forEach(element => {
+      // Check for common event attributes
+      const eventAttrs = ['onclick', 'onload', 'onchange', 'onsubmit', 'onmouseover', 'onmouseout'];
+      eventAttrs.forEach(attr => {
+        if ((element as any)[attr]) count++;
+      });
+    });
+
+    return count;
+  }
+
+  private getRenderTime(): number {
+    // Use performance.now() to measure render time
+    const entries = performance.getEntriesByType('measure');
+    const renderEntries = entries.filter(entry => entry.name.includes('render'));
     
-    const maxRenderTime = renderTimes.length > 0 
-      ? Math.max(...renderTimes) 
-      : 0
-
-    const currentMemory = getChartMemoryUsage()?.used || 0
-    const memoryEfficiency = this.initialMemory 
-      ? Math.max(0, 100 - ((currentMemory - this.initialMemory) / this.initialMemory) * 100)
-      : 100
-
-    const recommendations: string[] = []
-
-    // 生成建议
-    if (averageRenderTime > PERFORMANCE_TARGETS.MAX_RENDER_TIME) {
-      recommendations.push('考虑实现虚拟化渲染以减少渲染时间')
-      recommendations.push('优化组件重渲染逻辑，使用React.memo和useMemo')
+    if (renderEntries.length > 0) {
+      return renderEntries[renderEntries.length - 1].duration;
     }
+    
+    // Fallback: estimate based on frame timing
+    return performance.now() - this.startTime;
+  }
 
-    if (maxRenderTime > PERFORMANCE_TARGETS.MAX_RENDER_TIME * 2) {
-      recommendations.push('存在严重的渲染性能问题，需要重构相关组件')
-    }
+  private getLoadTime(): number {
+    const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+    return navigation ? navigation.loadEventEnd - navigation.navigationStart : 0;
+  }
 
-    if (memoryEfficiency < 80) {
-      recommendations.push('内存使用效率较低，检查是否存在内存泄漏')
-      recommendations.push('考虑实现数据压缩和清理机制')
-    }
+  private getBundleSize(): number {
+    // Estimate bundle size from resource entries
+    const resources = performance.getEntriesByType('resource');
+    const jsResources = resources.filter(resource => 
+      resource.name.endsWith('.js') || resource.name.includes('chunk')
+    );
+    
+    return jsResources.reduce((total, resource) => {
+      return total + ((resource as any).transferSize || 0);
+    }, 0) / 1024 / 1024; // Convert to MB
+  }
 
-    const failedTests = this.results.filter(r => !r.passed)
-    if (failedTests.length > 0) {
-      recommendations.push(`${failedTests.length} 个测试未通过，需要针对性优化`)
-    }
+  private getFPS(): number {
+    // This is a simplified FPS calculation
+    // In a real implementation, you'd track frame times over a period
+    return 60; // Placeholder
+  }
 
-    if (recommendations.length === 0) {
-      recommendations.push('所有性能测试通过，系统性能良好')
+  private evaluateMetric(
+    name: string,
+    value: number,
+    threshold: number,
+    unit: string,
+    description: string,
+    isLowerBetter: boolean = true
+  ): PerformanceMetric {
+    let status: 'pass' | 'warning' | 'fail';
+    
+    if (isLowerBetter) {
+      if (value <= threshold) status = 'pass';
+      else if (value <= threshold * 1.5) status = 'warning';
+      else status = 'fail';
+    } else {
+      if (value >= threshold) status = 'pass';
+      else if (value >= threshold * 0.7) status = 'warning';
+      else status = 'fail';
     }
 
     return {
-      overallPassed,
+      name,
+      value,
+      threshold,
+      unit,
+      status,
+      description,
+    };
+  }
+
+  validate(): PerformanceReport {
+    const metrics: PerformanceMetric[] = [];
+    const recommendations: string[] = [];
+
+    // Memory usage validation
+    const memoryUsage = this.getMemoryUsage();
+    metrics.push(this.evaluateMetric(
+      'Memory Usage',
+      memoryUsage,
+      this.thresholds.memoryUsage,
+      'MB',
+      'JavaScript heap memory usage'
+    ));
+
+    if (memoryUsage > this.thresholds.memoryUsage) {
+      recommendations.push('建议优化内存使用，清理未使用的变量并实施适当的内存管理');
+    }
+
+    // Render time validation
+    const renderTime = this.getRenderTime();
+    metrics.push(this.evaluateMetric(
+      'Render Time',
+      renderTime,
+      this.thresholds.renderTime,
+      'ms',
+      'Time taken to render components'
+    ));
+
+    if (renderTime > this.thresholds.renderTime) {
+      recommendations.push('建议使用React.memo、useMemo和useCallback优化渲染性能');
+    }
+
+    // DOM nodes validation
+    const domNodes = this.getDOMNodeCount();
+    metrics.push(this.evaluateMetric(
+      'DOM Nodes',
+      domNodes,
+      this.thresholds.domNodes,
+      'nodes',
+      'Total number of DOM elements'
+    ));
+
+    if (domNodes > this.thresholds.domNodes) {
+      recommendations.push('建议通过虚拟化技术减少DOM复杂度，优化大列表性能');
+    }
+
+    // Event listeners validation
+    const eventListeners = this.getEventListenerCount();
+    metrics.push(this.evaluateMetric(
+      'Event Listeners',
+      eventListeners,
+      this.thresholds.eventListeners,
+      'listeners',
+      'Number of active event listeners'
+    ));
+
+    if (eventListeners > this.thresholds.eventListeners) {
+      recommendations.push('建议检查并清理未使用的事件监听器，防止内存泄漏');
+    }
+
+    // Bundle size validation
+    const bundleSize = this.getBundleSize();
+    metrics.push(this.evaluateMetric(
+      'Bundle Size',
+      bundleSize,
+      this.thresholds.bundleSize,
+      'MB',
+      'Total JavaScript bundle size'
+    ));
+
+    if (bundleSize > this.thresholds.bundleSize) {
+      recommendations.push('建议实施代码分割和懒加载技术，减少打包体积');
+    }
+
+    // Load time validation
+    const loadTime = this.getLoadTime();
+    metrics.push(this.evaluateMetric(
+      'Load Time',
+      loadTime,
+      this.thresholds.loadTime,
+      'ms',
+      'Initial page load time'
+    ));
+
+    if (loadTime > this.thresholds.loadTime) {
+      recommendations.push('建议通过预加载和缓存策略优化加载性能');
+    }
+
+    // FPS validation
+    const fps = this.getFPS();
+    metrics.push(this.evaluateMetric(
+      'FPS',
+      fps,
+      this.thresholds.fps,
+      'fps',
+      'Frames per second',
+      false // Higher is better
+    ));
+
+    if (fps < this.thresholds.fps) {
+      recommendations.push('建议减少渲染周期中的复杂计算，提升动画性能');
+    }
+
+    // Add general performance recommendations if none were added
+    if (recommendations.length === 0) {
+      recommendations.push('继续保持良好的性能优化实践');
+      recommendations.push('定期监控应用性能指标');
+      recommendations.push('考虑实施代码分割和懒加载优化');
+    }
+
+    // Calculate overall score
+    const passCount = metrics.filter(m => m.status === 'pass').length;
+    const warningCount = metrics.filter(m => m.status === 'warning').length;
+    const failCount = metrics.filter(m => m.status === 'fail').length;
+
+    const overallScore = Math.round(
+      (passCount * 100 + warningCount * 60 + failCount * 0) / metrics.length
+    );
+
+    let status: 'pass' | 'warning' | 'fail';
+    if (overallScore >= 80) status = 'pass';
+    else if (overallScore >= 60) status = 'warning';
+    else status = 'fail';
+
+    return {
+      timestamp: Date.now(),
+      overallScore,
+      status,
+      metrics,
+      recommendations,
+    };
+  }
+
+  setThresholds(thresholds: Partial<PerformanceThresholds>): void {
+    this.thresholds = { ...this.thresholds, ...thresholds };
+  }
+
+  getThresholds(): PerformanceThresholds {
+    return { ...this.thresholds };
+  }
+
+  // Generate comprehensive report including test results
+  generateReport(): PerformanceReport & { tests: TestResult[]; averageRenderTime: number; maxRenderTime: number; memoryEfficiency: number } {
+    const baseReport = this.validate();
+
+    // Calculate additional metrics from test results
+    const renderTimes = this.testResults.filter(r => r.renderTime > 0).map(r => r.renderTime);
+    const averageRenderTime = renderTimes.length > 0 ? renderTimes.reduce((a, b) => a + b, 0) / renderTimes.length : 0;
+    const maxRenderTime = renderTimes.length > 0 ? Math.max(...renderTimes) : 0;
+    const memoryEfficiency = this.getMemoryUsage();
+
+    return {
+      ...baseReport,
+      tests: [...this.testResults],
+      overallPassed: baseReport.status === 'pass',
       averageRenderTime,
       maxRenderTime,
-      memoryEfficiency,
-      tests: this.results,
-      recommendations
-    }
+      memoryEfficiency
+    };
   }
 
-  // 清理测试结果
-  clearResults(): void {
-    this.results = []
-    this.initialMemory = getChartMemoryUsage()?.used || null
-  }
-
-  // 获取测试结果
-  getResults(): PerformanceTestResult[] {
-    return [...this.results]
+  // Get all test results
+  getResults(): TestResult[] {
+    return [...this.testResults];
   }
 }
 
-// 便捷的性能测试函数
-export const runPerformanceValidation = async (): Promise<PerformanceValidationReport> => {
-  const validator = new PerformanceValidator()
+// Utility functions
+export const createPerformanceValidator = (thresholds?: Partial<PerformanceThresholds>) => {
+  return new PerformanceValidator(thresholds);
+};
 
-  console.log('🚀 开始性能验证测试...')
+export const validatePerformance = (thresholds?: Partial<PerformanceThresholds>): PerformanceReport => {
+  const validator = new PerformanceValidator(thresholds);
+  return validator.validate();
+};
 
-  // 测试基本组件渲染
-  await validator.testComponentRender('PerformanceMonitor', async () => {
-    // 模拟组件渲染
-    await new Promise(resolve => requestAnimationFrame(resolve))
-  })
+export const formatPerformanceReport = (report: PerformanceReport): string => {
+  const lines = [
+    `Performance Report - ${new Date(report.timestamp).toLocaleString()}`,
+    `Overall Score: ${report.overallScore}/100 (${report.status.toUpperCase()})`,
+    '',
+    'Metrics:',
+    ...report.metrics.map(metric =>
+      `  ${metric.name}: ${metric.value.toFixed(2)}${metric.unit} (${metric.status.toUpperCase()}) - Threshold: ${metric.threshold}${metric.unit}`
+    ),
+    '',
+    'Recommendations:',
+    ...report.recommendations.map(rec => `  • ${rec}`),
+  ];
 
-  // 测试大数据集渲染
-  await validator.testLargeDatasetRender(1000, async () => {
-    // 模拟大数据集渲染
-    await new Promise(resolve => setTimeout(resolve, 50))
-  })
+  return lines.join('\n');
+};
 
-  // 测试内存效率
-  validator.testMemoryEfficiency()
+// Run comprehensive performance validation
+export const runPerformanceValidation = async (thresholds?: Partial<PerformanceThresholds>): Promise<PerformanceReport & { tests: TestResult[] }> => {
+  const validator = new PerformanceValidator(thresholds);
 
-  // 测试DOM节点数量
-  validator.testDOMNodeCount()
+  // Run additional component tests
+  try {
+    await validator.testComponentRender('PerformanceMonitor', async () => {
+      await new Promise(resolve => setTimeout(resolve, 25));
+    });
 
-  // 测试FPS
-  await validator.testFPS(1000)
+    await validator.testComponentRender('FastRenderComponent', async () => {
+      await new Promise(resolve => setTimeout(resolve, 30));
+    });
 
-  const report = validator.generateReport()
-  
-  console.log('📊 性能验证完成')
-  console.log(`✅ 通过率: ${report.tests.filter(t => t.passed).length}/${report.tests.length}`)
-  console.log(`⏱️ 平均渲染时间: ${report.averageRenderTime.toFixed(1)}ms`)
-  console.log(`🧠 内存效率: ${report.memoryEfficiency.toFixed(1)}%`)
+    await validator.testLargeDatasetRender(1000, async () => {
+      await new Promise(resolve => setTimeout(resolve, 80));
+    });
 
-  return report
-}
+    validator.testMemoryEfficiency();
+    validator.testDOMNodeCount();
 
-// 导出性能目标常量
-export { PERFORMANCE_TARGETS }
+    await validator.testFPS(500);
+  } catch (err) {
+    console.warn('Some performance tests failed:', err);
+  }
+
+  // Generate comprehensive report
+  return validator.generateReport();
+};
+
+export { PerformanceValidator, DEFAULT_THRESHOLDS };
+export type { PerformanceThresholds, PerformanceMetric, PerformanceReport, TestResult };

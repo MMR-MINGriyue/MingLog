@@ -169,7 +169,7 @@ const PerformanceChart: React.FC<PerformanceChartProps> = memo(({ history, isLoa
   }, [history])
 
   return (
-    <div data-testid="performance-chart">
+    <div data-testid="performance-chart-component">
       <ChartLoader
         data={chartData}
         options={chartOptions}

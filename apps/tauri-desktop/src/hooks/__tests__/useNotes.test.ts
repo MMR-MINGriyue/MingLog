@@ -52,7 +52,7 @@ describe('useNotes', () => {
       expect(result.current.loading).toBe(false)
     })
     
-    expect(mockInvoke).toHaveBeenCalledWith('get_notes', { limit: undefined, offset: undefined })
+    expect(mockInvoke).toHaveBeenCalledWith('get_all_notes')
     expect(result.current.notes).toEqual(mockNotes)
     expect(result.current.error).toBeNull()
   })
@@ -91,7 +91,7 @@ describe('useNotes', () => {
     })
     
     await act(async () => {
-      await result.current.createNewNote({ title: 'New Note', content: 'New content' })
+      await result.current.createNote({ title: 'New Note', content: 'New content' })
     })
 
     expect(mockInvoke).toHaveBeenCalledWith('create_note', {
@@ -117,7 +117,7 @@ describe('useNotes', () => {
     })
     
     await act(async () => {
-      await result.current.updateExistingNote({
+      await result.current.updateNote({
         id: '1',
         title: 'Updated Title',
         content: 'Updated content',
@@ -144,7 +144,7 @@ describe('useNotes', () => {
     })
     
     await act(async () => {
-      await result.current.deleteExistingNote('1')
+      await result.current.deleteNote('1')
     })
 
     expect(mockInvoke).toHaveBeenCalledWith('delete_note', { id: '1' })
@@ -204,11 +204,11 @@ describe('useNotes', () => {
     
     // Simulate concurrent create and update operations
     const createPromise = act(async () => {
-      await result.current.createNewNote({ title: 'Concurrent Note 1', content: 'Content 1' })
+      await result.current.createNote({ title: 'Concurrent Note 1', content: 'Content 1' })
     })
 
     const updatePromise = act(async () => {
-      await result.current.updateExistingNote({ id: '1', title: 'Updated concurrently' })
+      await result.current.updateNote({ id: '1', title: 'Updated concurrently' })
     })
     
     await Promise.all([createPromise, updatePromise])

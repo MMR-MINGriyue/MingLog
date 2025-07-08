@@ -1,7 +1,7 @@
 {
-  "name": "minglog-web",
+  "name": "@minglog/web",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,6 +18,9 @@
     "vite": "^4.4.5"
   },
   "dependencies": {
+    "@minglog/core": "workspace:*",
+    "@minglog/ui": "workspace:*",
+    "@minglog/notes": "workspace:*",
     "@tiptap/core": "^2.23.1",
     "@tiptap/extension-document": "^2.23.1",
     "@tiptap/extension-paragraph": "^2.23.1",

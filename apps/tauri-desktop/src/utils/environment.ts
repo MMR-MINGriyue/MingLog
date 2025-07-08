@@ -27,9 +27,9 @@ export const isMobileDevice = (): boolean => {
 
 // 检测是否支持触摸
 export const isTouchDevice = (): boolean => {
-  if (typeof window === 'undefined') return false
-  
-  return 'ontouchstart' in window || 
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false
+
+  return 'ontouchstart' in window ||
          navigator.maxTouchPoints > 0 ||
          (navigator as any).msMaxTouchPoints > 0
 }
@@ -37,28 +37,28 @@ export const isTouchDevice = (): boolean => {
 // 检测浏览器类型
 export const getBrowserInfo = () => {
   if (typeof window === 'undefined') {
-    return { name: 'unknown', version: 'unknown' }
+    return { name: 'Unknown', version: 'Unknown' }
   }
 
   const userAgent = navigator.userAgent
-  
+
   if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
-    return { name: 'chrome', version: userAgent.match(/Chrome\/(\d+)/)?.[1] || 'unknown' }
+    return { name: 'Chrome', version: userAgent.match(/Chrome\/([\d.]+)/)?.[1] || 'Unknown' }
   }
-  
+
   if (userAgent.includes('Firefox')) {
-    return { name: 'firefox', version: userAgent.match(/Firefox\/(\d+)/)?.[1] || 'unknown' }
+    return { name: 'Firefox', version: userAgent.match(/Firefox\/([\d.]+)/)?.[1] || 'Unknown' }
   }
-  
+
   if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
-    return { name: 'safari', version: userAgent.match(/Version\/(\d+)/)?.[1] || 'unknown' }
+    return { name: 'Safari', version: userAgent.match(/Version\/([\d.]+)/)?.[1] || 'Unknown' }
   }
-  
+
   if (userAgent.includes('Edg')) {
-    return { name: 'edge', version: userAgent.match(/Edg\/(\d+)/)?.[1] || 'unknown' }
+    return { name: 'Edge', version: userAgent.match(/Edg\/([\d.]+)/)?.[1] || 'Unknown' }
   }
   
-  return { name: 'unknown', version: 'unknown' }
+  return { name: 'Unknown', version: 'Unknown' }
 }
 
 // 检测性能API支持
@@ -76,7 +76,8 @@ export const getPerformanceCapabilities = () => {
     performance: 'performance' in window,
     memory: 'memory' in (window.performance || {}),
     observer: 'PerformanceObserver' in window,
-    timing: 'timing' in (window.performance || {})
+    timing: 'timing' in (window.performance || {}),
+    navigation: 'navigation' in (window.performance || {})
   }
 }
 
@@ -84,24 +85,33 @@ export const getPerformanceCapabilities = () => {
 export const getDeviceInfo = () => {
   if (typeof window === 'undefined') {
     return {
-      screen: { width: 0, height: 0 },
-      viewport: { width: 0, height: 0 },
+      screenWidth: 0,
+      screenHeight: 0,
+      windowWidth: 0,
+      windowHeight: 0,
       devicePixelRatio: 1,
-      colorScheme: 'light'
+      colorScheme: 'light',
+      screen: { width: 0, height: 0 },
+      viewport: { width: 0, height: 0 }
     }
   }
 
+  const screenWidth = window.screen?.width || 0;
+  const screenHeight = window.screen?.height || 0;
+  const windowWidth = window.innerWidth || 0;
+  const windowHeight = window.innerHeight || 0;
+
   return {
-    screen: {
-      width: window.screen?.width || 0,
-      height: window.screen?.height || 0
-    },
-    viewport: {
-      width: window.innerWidth || 0,
-      height: window.innerHeight || 0
-    },
+    screenWidth,
+    screenHeight,
+    windowWidth,
+    windowHeight,
     devicePixelRatio: window.devicePixelRatio || 1,
-    colorScheme: window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    pixelRatio: window.devicePixelRatio || 1, // Alias for compatibility
+    colorScheme: window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+    colorDepth: window.screen?.colorDepth || 24,
+    screen: { width: screenWidth, height: screenHeight },
+    viewport: { width: windowWidth, height: windowHeight }
   }
 }
 
@@ -204,7 +214,7 @@ export const createEnvironmentAdapter = () => {
     getSyncStatus: async () => {
       if (features.isTauri) {
         try {
-          const { invoke } = await import('@tauri-apps/api/core')
+          const { invoke } = await import('@tauri-apps/api/tauri')
           return await invoke<string>('get_sync_status')
         } catch (error) {
           console.warn('Sync status not available:', error)

@@ -1,5 +1,7 @@
 // Mock for @tauri-apps/api/core
-const invoke = jest.fn().mockImplementation((command, args) => {
+import { vi } from 'vitest'
+
+const invoke = vi.fn().mockImplementation((command, args) => {
   // Mock different commands with appropriate responses
   switch (command) {
     case 'init_app':
@@ -21,13 +23,30 @@ const invoke = jest.fn().mockImplementation((command, args) => {
       return Promise.resolve({ total_files: 10 })
     case 'get_webdav_config':
       return Promise.resolve({ enabled: true })
+    case 'get_system_info':
+      return Promise.resolve({
+        cpu_usage: Math.random() * 100,
+        memory_usage: Math.random() * 100,
+        disk_usage: Math.random() * 100
+      })
+    case 'search_blocks':
+      return Promise.resolve({
+        blocks: args?.request?.query ? [
+          {
+            id: 'test-block-1',
+            title: 'Test Page',
+            content: 'This is a test page',
+            type: 'block',
+            score: 95.0,
+          }
+        ] : [],
+        total: args?.request?.query ? 1 : 0,
+        query: args?.request?.query || '',
+      })
     default:
       return Promise.resolve(null)
   }
 })
 
-module.exports = {
-  invoke,
-  __esModule: true,
-  default: { invoke }
-}
+export { invoke }
+export default { invoke }

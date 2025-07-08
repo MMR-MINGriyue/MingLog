@@ -102,6 +102,8 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
 
     // Check cache first
     const cachedResults = searchCache.current.get(cacheKey)
+
+    // Use cache if available (both in production and test environments)
     if (cachedResults) {
       setResults(cachedResults)
       setSelectedIndex(0)
@@ -188,13 +190,14 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center pt-20">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center pt-4 sm:pt-20">
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[70vh] flex flex-col"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl mx-2 sm:mx-4 max-h-[90vh] sm:max-h-[70vh] flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby="search-title"
         aria-describedby="search-description"
+        tabIndex={-1}
       >
         {/* Hidden titles for ARIA */}
         <h1 id="search-title" className="sr-only">{t('search.title')}</h1>
@@ -217,7 +220,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t('search.placeholder')}
-              className="flex-1 bg-transparent border-none outline-none text-base sm:text-lg placeholder-gray-400"
+              className="flex-1 bg-transparent border-none outline-none text-base sm:text-lg placeholder-gray-400 px-1 sm:px-2"
             />
             {isLoading && (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
@@ -243,7 +246,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 rounded"
+              className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 rounded"
               aria-label="Close search"
             >
               <X className="w-5 h-5" />
@@ -257,7 +260,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
                 type="checkbox"
                 checked={searchOptions.includePages}
                 onChange={(e) => setSearchOptions(prev => ({ ...prev, includePages: e.target.checked }))}
-                className="rounded"
+                className="rounded w-3 h-3 sm:w-4 sm:h-4"
               />
               <span className="text-gray-600 dark:text-gray-300">{t('page.pages')}</span>
             </label>
@@ -266,7 +269,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
                 type="checkbox"
                 checked={searchOptions.includeBlocks}
                 onChange={(e) => setSearchOptions(prev => ({ ...prev, includeBlocks: e.target.checked }))}
-                className="rounded"
+                className="rounded w-3 h-3 sm:w-4 sm:h-4"
               />
               <span className="text-gray-600 dark:text-gray-300">{t('block.blocks')}</span>
             </label>
@@ -282,8 +285,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
         <div
           ref={resultsRef}
           className="flex-1 overflow-y-auto"
-          role="listbox"
-          id="search-results-listbox"
+          id="search-results-list"
           aria-label={t('search.searchResults')}
         >
           {query.trim() && !isLoading && results.length === 0 && (
@@ -294,17 +296,21 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
             </div>
           )}
 
-          <VirtualizedSearchResults
-            results={results}
-            selectedIndex={selectedIndex}
-            query={query}
-            onResultClick={(result, index) => {
-              setSelectedIndex(index)
-              handleResultClick(result)
-            }}
-            highlightText={highlightText}
-            formatDate={formatDate}
-          />
+          {results.length > 0 && (
+            <div role="listbox" id="search-results-listbox" aria-label="Search results">
+              <VirtualizedSearchResults
+                results={results}
+                selectedIndex={selectedIndex}
+                query={query}
+                onResultClick={(result, index) => {
+                  setSelectedIndex(index)
+                  handleResultClick(result)
+                }}
+                highlightText={highlightText}
+                formatDate={formatDate}
+              />
+            </div>
+          )}
         </div>
 
         {/* Footer */}

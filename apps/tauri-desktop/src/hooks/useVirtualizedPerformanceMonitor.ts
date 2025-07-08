@@ -1,408 +1,341 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react';
 
-// 性能监控常量
-const PERFORMANCE_THRESHOLDS = {
-  RENDER_TIME_WARNING: 16, // 60fps = 16ms per frame
-  RENDER_TIME_CRITICAL: 33, // 30fps = 33ms per frame
-  MEMORY_WARNING: 100 * 1024 * 1024, // 100MB
-  MEMORY_CRITICAL: 200 * 1024 * 1024, // 200MB
-  DB_QUERY_WARNING: 100, // 100ms
-  DB_QUERY_CRITICAL: 300, // 300ms
+export interface PerformanceMetrics {
+  timestamp: number;
+  memoryUsage: number;
+  cpuUsage: number;
+  renderTime: number;
+  fps: number;
+  domNodes: number;
+  eventListeners: number;
 }
 
-interface PerformanceMetrics {
-  memoryUsage: {
-    used: number
-    total: number
-    percentage: number
-  }
-  renderTime: number
-  dbQueryTime: number
-  componentCount: number
-  lastUpdate: Date
-  cpuCores?: number
-  cpuUsage?: number
-  diskRead?: number
-  diskWrite?: number
-  pageLoadTime?: number
-  domNodes?: number
-  jsHeapSize?: number
-  networkRequests?: number
-  fps?: number
-  bundleSize?: number
+export interface PerformanceAlert {
+  id: string;
+  type: 'warning' | 'error' | 'info';
+  message: string;
+  timestamp: number;
+  metric: keyof PerformanceMetrics;
+  value: number;
+  threshold: number;
 }
 
-interface VirtualizedPerformanceMonitorOptions {
-  updateInterval?: number
-  maxHistoryEntries?: number
-  enableSmartSampling?: boolean
-  enablePerformanceOptimization?: boolean
-  samplingThreshold?: number
-  compressionRatio?: number
+export interface UseVirtualizedPerformanceMonitorOptions {
+  maxDataPoints?: number;
+  updateInterval?: number;
+  enableAlerts?: boolean;
+  thresholds?: {
+    memoryUsage?: number;
+    cpuUsage?: number;
+    renderTime?: number;
+    fps?: number;
+  };
 }
 
-interface VirtualizedPerformanceMonitorReturn {
-  metrics: PerformanceMetrics
-  history: PerformanceMetrics[]
-  virtualizedHistory: PerformanceMetrics[]
-  isMonitoring: boolean
-  isLoading: boolean
-  error: string | null
-  performanceStats: {
-    totalEntries: number
-    virtualizedEntries: number
-    compressionRatio: number
-    memoryUsage: number
-    renderTime: number
-  }
-  startMonitoring: () => void
-  stopMonitoring: () => void
-  clearHistory: () => void
-  optimizeData: () => void
+export interface UseVirtualizedPerformanceMonitorReturn {
+  metrics: PerformanceMetrics[];
+  currentMetrics: PerformanceMetrics | null;
+  alerts: PerformanceAlert[];
+  isMonitoring: boolean;
+  startMonitoring: () => void;
+  stopMonitoring: () => void;
+  clearData: () => void;
+  clearAlerts: () => void;
+  exportData: () => string;
+  getAverageMetrics: () => Partial<PerformanceMetrics>;
+  getPerformanceScore: () => number;
 }
 
-// 性能阈值检查
-const checkPerformanceThresholds = (metrics: PerformanceMetrics) => {
-  const warnings: string[] = []
-
-  if (metrics.renderTime > 16) {
-    warnings.push(`渲染时间过长: ${metrics.renderTime.toFixed(1)}ms`)
-  }
-
-  if (metrics.memoryUsage.used > 100 * 1024 * 1024) {
-    warnings.push(`内存使用过高: ${(metrics.memoryUsage.used / 1024 / 1024).toFixed(1)}MB`)
-  }
-
-  if (metrics.dbQueryTime > 100) {
-    warnings.push(`数据库查询缓慢: ${metrics.dbQueryTime.toFixed(1)}ms`)
-  }
-
-  return warnings
-}
-
-// 智能数据压缩算法 - 优化版本
-const compressPerformanceData = (
-  data: PerformanceMetrics[],
-  maxEntries: number,
-  compressionRatio: number = 0.7
-): PerformanceMetrics[] => {
-  if (data.length <= maxEntries) return data
-
-  const targetSize = Math.floor(maxEntries * compressionRatio)
-  const step = Math.ceil(data.length / targetSize)
-  const compressed: PerformanceMetrics[] = []
-
-  // 保留最新的数据点 (30%)
-  const recentData = data.slice(-Math.floor(maxEntries * 0.3))
-
-  // 对历史数据进行智能采样 (70%)
-  const historicalData = data.slice(0, -recentData.length)
-  for (let i = 0; i < historicalData.length; i += step) {
-    compressed.push(historicalData[i])
-  }
-
-  // 合并压缩的历史数据和最新数据
-  return [...compressed, ...recentData]
-}
-
-// 性能数据去重
-const deduplicateData = (data: PerformanceMetrics[]): PerformanceMetrics[] => {
-  const seen = new Set<string>()
-  return data.filter(item => {
-    const key = `${item.memoryUsage.percentage}-${item.renderTime}-${item.dbQueryTime}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
-}
-
-// 计算数据变化率
-const calculateChangeRate = (current: PerformanceMetrics, previous: PerformanceMetrics): number => {
-  const memoryChange = Math.abs(current.memoryUsage.percentage - previous.memoryUsage.percentage)
-  const renderChange = Math.abs(current.renderTime - previous.renderTime)
-  const dbChange = Math.abs(current.dbQueryTime - previous.dbQueryTime)
-  
-  return (memoryChange + renderChange + dbChange) / 3
-}
+const DEFAULT_THRESHOLDS = {
+  memoryUsage: 100, // MB
+  cpuUsage: 80, // %
+  renderTime: 16, // ms (60fps)
+  fps: 30, // minimum fps
+};
 
 export const useVirtualizedPerformanceMonitor = (
-  options: VirtualizedPerformanceMonitorOptions = {}
-): VirtualizedPerformanceMonitorReturn => {
+  options: UseVirtualizedPerformanceMonitorOptions = {}
+): UseVirtualizedPerformanceMonitorReturn => {
   const {
-    updateInterval = 2000,
-    maxHistoryEntries = 1000,
-    enableSmartSampling = true,
-    enablePerformanceOptimization = true,
-    samplingThreshold = 5, // 变化率阈值
-    compressionRatio = 0.7
-  } = options
+    maxDataPoints = 100,
+    updateInterval = 1000,
+    enableAlerts = true,
+    thresholds = DEFAULT_THRESHOLDS,
+  } = options;
 
-  // 状态管理
-  const [metrics, setMetrics] = useState<PerformanceMetrics>({
-    memoryUsage: { used: 0, total: 0, percentage: 0 },
-    renderTime: 0,
-    dbQueryTime: 0,
-    componentCount: 0,
-    lastUpdate: new Date()
-  })
+  const [metrics, setMetrics] = useState<PerformanceMetrics[]>([]);
+  const [alerts, setAlerts] = useState<PerformanceAlert[]>([]);
+  const [isMonitoring, setIsMonitoring] = useState(false);
+  
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const frameRef = useRef<number | null>(null);
+  const lastFrameTime = useRef<number>(performance.now());
+  const frameCount = useRef<number>(0);
+  const fpsHistory = useRef<number[]>([]);
 
-  const [history, setHistory] = useState<PerformanceMetrics[]>([])
-  const [isMonitoring, setIsMonitoring] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  // 引用管理
-  const intervalRef = useRef<NodeJS.Timeout>()
-  const lastMetricsRef = useRef<PerformanceMetrics | null>(null)
-  const performanceObserverRef = useRef<PerformanceObserver>()
-  const compressionWorkerRef = useRef<Worker>()
-
-  // 虚拟化历史数据 - 智能采样和压缩
-  const virtualizedHistory = useMemo(() => {
-    if (!enableSmartSampling) return history
-
-    let processedData = [...history]
-
-    // 1. 去重
-    processedData = deduplicateData(processedData)
-
-    // 2. 智能采样 - 保留重要的数据点
-    if (enableSmartSampling && processedData.length > 2) {
-      const sampledData: PerformanceMetrics[] = [processedData[0]] // 保留第一个点
-
-      for (let i = 1; i < processedData.length - 1; i++) {
-        const current = processedData[i]
-        const previous = processedData[i - 1]
-        const changeRate = calculateChangeRate(current, previous)
-
-        // 如果变化率超过阈值，保留这个数据点
-        if (changeRate > samplingThreshold) {
-          sampledData.push(current)
-        }
+  // FPS calculation
+  const calculateFPS = useCallback(() => {
+    const now = performance.now();
+    const delta = now - lastFrameTime.current;
+    
+    if (delta >= 1000) {
+      const fps = (frameCount.current * 1000) / delta;
+      fpsHistory.current.push(fps);
+      
+      if (fpsHistory.current.length > 10) {
+        fpsHistory.current.shift();
       }
-
-      // 保留最后一个点
-      if (processedData.length > 1) {
-        sampledData.push(processedData[processedData.length - 1])
-      }
-
-      processedData = sampledData
+      
+      frameCount.current = 0;
+      lastFrameTime.current = now;
+      
+      return fpsHistory.current.reduce((sum, f) => sum + f, 0) / fpsHistory.current.length;
     }
+    
+    frameCount.current++;
+    return fpsHistory.current[fpsHistory.current.length - 1] || 60;
+  }, []);
 
-    // 3. 数据压缩
-    if (processedData.length > maxHistoryEntries) {
-      processedData = compressPerformanceData(processedData, maxHistoryEntries, compressionRatio)
-    }
-
-    return processedData
-  }, [history, enableSmartSampling, maxHistoryEntries, samplingThreshold, compressionRatio])
-
-  // 性能统计
-  const performanceStats = useMemo(() => {
-    const memoryUsage = history.length * 0.1 // 估算内存使用 (KB)
-    const avgRenderTime = virtualizedHistory.length > 0 
-      ? virtualizedHistory.reduce((sum, item) => sum + item.renderTime, 0) / virtualizedHistory.length 
-      : 0
+  // Collect performance metrics
+  const collectMetrics = useCallback((): PerformanceMetrics => {
+    const now = performance.now();
+    
+    // Memory usage (if available)
+    const memoryInfo = (performance as any).memory;
+    const memoryUsage = memoryInfo ? memoryInfo.usedJSHeapSize / 1024 / 1024 : 0;
+    
+    // CPU usage estimation (simplified)
+    const cpuUsage = Math.min(100, Math.random() * 20 + 10); // Placeholder
+    
+    // Render time estimation
+    const renderTime = performance.now() - now;
+    
+    // FPS calculation
+    const fps = calculateFPS();
+    
+    // DOM metrics
+    const domNodes = document.querySelectorAll('*').length;
+    const eventListeners = (window as any).getEventListeners ? 
+      Object.keys((window as any).getEventListeners(document)).length : 0;
 
     return {
-      totalEntries: history.length,
-      virtualizedEntries: virtualizedHistory.length,
-      compressionRatio: history.length > 0 ? virtualizedHistory.length / history.length : 1,
+      timestamp: Date.now(),
       memoryUsage,
-      renderTime: avgRenderTime
-    }
-  }, [history.length, virtualizedHistory])
+      cpuUsage,
+      renderTime: Math.max(0, renderTime),
+      fps,
+      domNodes,
+      eventListeners,
+    };
+  }, [calculateFPS]);
 
-  // 优化的内存使用监控
-  const getMemoryUsage = useCallback(async () => {
-    try {
-      if ('memory' in performance) {
-        const memory = (performance as any).memory
-        return {
-          used: memory.usedJSHeapSize || 0,
-          total: memory.totalJSHeapSize || 0,
-          percentage: memory.totalJSHeapSize > 0
-            ? (memory.usedJSHeapSize / memory.totalJSHeapSize) * 100
-            : 0
-        }
-      }
+  // Check thresholds and create alerts
+  const checkThresholds = useCallback((metric: PerformanceMetrics) => {
+    if (!enableAlerts) return;
 
-      // 模拟数据作为后备
-      const used = Math.random() * 50 + 20
-      return {
-        used: used * 1024 * 1024,
-        total: 100 * 1024 * 1024,
-        percentage: used
-      }
-    } catch (error) {
-      console.error('Failed to get memory usage:', error)
-      return { used: 0, total: 0, percentage: 0 }
-    }
-  }, [])
+    const checks = [
+      {
+        key: 'memoryUsage' as const,
+        value: metric.memoryUsage,
+        threshold: thresholds.memoryUsage || DEFAULT_THRESHOLDS.memoryUsage,
+        message: `High memory usage: ${metric.memoryUsage.toFixed(1)}MB`,
+      },
+      {
+        key: 'cpuUsage' as const,
+        value: metric.cpuUsage,
+        threshold: thresholds.cpuUsage || DEFAULT_THRESHOLDS.cpuUsage,
+        message: `High CPU usage: ${metric.cpuUsage.toFixed(1)}%`,
+      },
+      {
+        key: 'renderTime' as const,
+        value: metric.renderTime,
+        threshold: thresholds.renderTime || DEFAULT_THRESHOLDS.renderTime,
+        message: `Slow render time: ${metric.renderTime.toFixed(1)}ms`,
+      },
+      {
+        key: 'fps' as const,
+        value: metric.fps,
+        threshold: thresholds.fps || DEFAULT_THRESHOLDS.fps,
+        message: `Low FPS: ${metric.fps.toFixed(0)}`,
+        isLowThreshold: true,
+      },
+    ];
 
-  // 优化的渲染时间测量
-  const measureRenderTime = useCallback(async () => {
-    return new Promise<number>((resolve) => {
-      const startTime = performance.now()
+    checks.forEach(({ key, value, threshold, message, isLowThreshold }) => {
+      const isAlert = isLowThreshold ? value < threshold : value > threshold;
       
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const endTime = performance.now()
-          resolve(endTime - startTime)
-        })
-      })
-    })
-  }, [])
+      if (isAlert) {
+        const alert: PerformanceAlert = {
+          id: `${key}-${Date.now()}`,
+          type: value > threshold * 1.5 ? 'error' : 'warning',
+          message,
+          timestamp: Date.now(),
+          metric: key,
+          value,
+          threshold,
+        };
 
-  // 数据库查询时间模拟
-  const measureDbQueryTime = useCallback(async () => {
-    const baseTime = Math.random() * 10 + 2
-    const variation = (Math.random() - 0.5) * 4
-    return Math.max(0, baseTime + variation)
-  }, [])
-
-  // 组件计数
-  const countComponents = useCallback(() => {
-    try {
-      const rootElement = document.querySelector('#root')
-      if (!rootElement) return 0
-      
-      const allElements = rootElement.querySelectorAll('*')
-      return allElements.length
-    } catch (error) {
-      console.error('Failed to count components:', error)
-      return 0
-    }
-  }, [])
-
-  // 收集性能指标
-  const collectMetrics = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      setError(null)
-
-      const [memUsage, renderTime, dbTime, compCount] = await Promise.all([
-        getMemoryUsage(),
-        measureRenderTime(),
-        measureDbQueryTime(),
-        Promise.resolve(countComponents())
-      ])
-
-      const newMetrics: PerformanceMetrics = {
-        memoryUsage: memUsage,
-        renderTime,
-        dbQueryTime: dbTime,
-        componentCount: compCount,
-        lastUpdate: new Date()
+        setAlerts(prev => {
+          // Avoid duplicate alerts for the same metric within 5 seconds
+          const recentAlert = prev.find(a => 
+            a.metric === key && 
+            Date.now() - a.timestamp < 5000
+          );
+          
+          if (recentAlert) return prev;
+          
+          return [...prev.slice(-19), alert]; // Keep last 20 alerts
+        });
       }
+    });
+  }, [enableAlerts, thresholds]);
 
-      setMetrics(newMetrics)
-      
-      // 智能历史记录管理
-      setHistory(prev => {
-        const updated = [...prev, newMetrics]
-        
-        // 如果启用性能优化，限制内存中的历史记录数量
-        if (enablePerformanceOptimization && updated.length > maxHistoryEntries * 1.2) {
-          return updated.slice(-maxHistoryEntries)
-        }
-        
-        return updated
-      })
-
-      lastMetricsRef.current = newMetrics
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-      setError(errorMessage)
-      console.error('Failed to collect metrics:', err)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [getMemoryUsage, measureRenderTime, measureDbQueryTime, countComponents, enablePerformanceOptimization, maxHistoryEntries])
-
-  // 开始监控
+  // Start monitoring
   const startMonitoring = useCallback(() => {
-    if (isMonitoring) return
+    if (isMonitoring) return;
 
-    setIsMonitoring(true)
-    setError(null)
+    setIsMonitoring(true);
+    
+    const updateMetrics = () => {
+      const newMetric = collectMetrics();
+      
+      setMetrics(prev => {
+        const updated = [...prev, newMetric];
+        return updated.slice(-maxDataPoints);
+      });
+      
+      checkThresholds(newMetric);
+    };
 
-    // 立即收集一次数据
-    collectMetrics()
-
-    // 设置定时器
-    intervalRef.current = setInterval(collectMetrics, updateInterval)
-
-    // 设置性能观察器
-    if ('PerformanceObserver' in window) {
-      try {
-        performanceObserverRef.current = new PerformanceObserver((list) => {
-          const entries = list.getEntries()
-          // 处理性能条目
-          console.debug('Performance entries:', entries.length)
-        })
-        
-        performanceObserverRef.current.observe({ 
-          entryTypes: ['measure', 'navigation', 'resource'] 
-        })
-      } catch (err) {
-        console.warn('Failed to setup PerformanceObserver:', err)
+    // Initial collection
+    updateMetrics();
+    
+    // Set up interval
+    intervalRef.current = setInterval(updateMetrics, updateInterval);
+    
+    // Set up FPS monitoring
+    const fpsLoop = () => {
+      calculateFPS();
+      if (isMonitoring) {
+        frameRef.current = requestAnimationFrame(fpsLoop);
       }
-    }
-  }, [isMonitoring, collectMetrics, updateInterval])
+    };
+    frameRef.current = requestAnimationFrame(fpsLoop);
+  }, [isMonitoring, collectMetrics, checkThresholds, maxDataPoints, updateInterval, calculateFPS]);
 
-  // 停止监控
+  // Stop monitoring
   const stopMonitoring = useCallback(() => {
-    setIsMonitoring(false)
+    setIsMonitoring(false);
     
     if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = undefined
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    if (frameRef.current) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+  }, []);
+
+  // Clear data
+  const clearData = useCallback(() => {
+    setMetrics([]);
+  }, []);
+
+  // Clear alerts
+  const clearAlerts = useCallback(() => {
+    setAlerts([]);
+  }, []);
+
+  // Export data as JSON
+  const exportData = useCallback(() => {
+    const data = {
+      metrics,
+      alerts,
+      exportTime: new Date().toISOString(),
+      summary: getAverageMetrics(),
+    };
+    return JSON.stringify(data, null, 2);
+  }, [metrics, alerts]);
+
+  // Get average metrics
+  const getAverageMetrics = useCallback((): Partial<PerformanceMetrics> => {
+    if (metrics.length === 0) return {};
+
+    const sums = metrics.reduce(
+      (acc, metric) => ({
+        memoryUsage: acc.memoryUsage + metric.memoryUsage,
+        cpuUsage: acc.cpuUsage + metric.cpuUsage,
+        renderTime: acc.renderTime + metric.renderTime,
+        fps: acc.fps + metric.fps,
+        domNodes: acc.domNodes + metric.domNodes,
+        eventListeners: acc.eventListeners + metric.eventListeners,
+      }),
+      { memoryUsage: 0, cpuUsage: 0, renderTime: 0, fps: 0, domNodes: 0, eventListeners: 0 }
+    );
+
+    const count = metrics.length;
+    return {
+      memoryUsage: sums.memoryUsage / count,
+      cpuUsage: sums.cpuUsage / count,
+      renderTime: sums.renderTime / count,
+      fps: sums.fps / count,
+      domNodes: sums.domNodes / count,
+      eventListeners: sums.eventListeners / count,
+    };
+  }, [metrics]);
+
+  // Calculate performance score (0-100)
+  const getPerformanceScore = useCallback((): number => {
+    if (metrics.length === 0) return 100;
+
+    const avg = getAverageMetrics();
+    let score = 100;
+
+    // Memory score (0-25 points)
+    if (avg.memoryUsage) {
+      score -= Math.min(25, (avg.memoryUsage / 200) * 25);
     }
 
-    if (performanceObserverRef.current) {
-      performanceObserverRef.current.disconnect()
-      performanceObserverRef.current = undefined
+    // CPU score (0-25 points)
+    if (avg.cpuUsage) {
+      score -= Math.min(25, (avg.cpuUsage / 100) * 25);
     }
-  }, [])
 
-  // 清理历史记录
-  const clearHistory = useCallback(() => {
-    setHistory([])
-    lastMetricsRef.current = null
-  }, [])
+    // Render time score (0-25 points)
+    if (avg.renderTime) {
+      score -= Math.min(25, (avg.renderTime / 32) * 25);
+    }
 
-  // 手动优化数据
-  const optimizeData = useCallback(() => {
-    setHistory(prev => {
-      const optimized = compressPerformanceData(prev, maxHistoryEntries, compressionRatio)
-      console.log(`Data optimized: ${prev.length} -> ${optimized.length} entries`)
-      return optimized
-    })
-  }, [maxHistoryEntries, compressionRatio])
+    // FPS score (0-25 points)
+    if (avg.fps) {
+      score -= Math.min(25, Math.max(0, (60 - avg.fps) / 60) * 25);
+    }
 
-  // 清理副作用
+    return Math.max(0, Math.round(score));
+  }, [metrics, getAverageMetrics]);
+
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      stopMonitoring()
-      
-      if (compressionWorkerRef.current) {
-        compressionWorkerRef.current.terminate()
-      }
-    }
-  }, [stopMonitoring])
+      stopMonitoring();
+    };
+  }, [stopMonitoring]);
+
+  const currentMetrics = metrics.length > 0 ? metrics[metrics.length - 1] : null;
 
   return {
     metrics,
-    history,
-    virtualizedHistory,
+    currentMetrics,
+    alerts,
     isMonitoring,
-    isLoading,
-    error,
-    performanceStats,
     startMonitoring,
     stopMonitoring,
-    clearHistory,
-    optimizeData
-  }
-}
+    clearData,
+    clearAlerts,
+    exportData,
+    getAverageMetrics,
+    getPerformanceScore,
+  };
+};

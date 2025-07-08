@@ -1,30 +1,25 @@
 // Mock for @tauri-apps/api/dialog
-const open = jest.fn().mockImplementation((options) => {
+import { vi } from 'vitest'
+
+const open = vi.fn().mockImplementation((options) => {
   return Promise.resolve('/mock/file/path.txt')
 })
 
-const save = jest.fn().mockImplementation((options) => {
+const save = vi.fn().mockImplementation((options) => {
   return Promise.resolve('/mock/save/path.txt')
 })
 
-const message = jest.fn().mockImplementation((message, options) => {
+const message = vi.fn().mockImplementation((message, options) => {
   return Promise.resolve()
 })
 
-const ask = jest.fn().mockImplementation((message, options) => {
+const ask = vi.fn().mockImplementation((message, options) => {
   return Promise.resolve(true)
 })
 
-const confirm = jest.fn().mockImplementation((message, options) => {
+const confirm = vi.fn().mockImplementation((message, options) => {
   return Promise.resolve(true)
 })
 
-module.exports = {
-  open,
-  save,
-  message,
-  ask,
-  confirm,
-  __esModule: true,
-  default: { open, save, message, ask, confirm }
-}
+export { open, save, message, ask, confirm }
+export default { open, save, message, ask, confirm }

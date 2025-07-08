@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   PerformanceMonitorSkeleton,
   LoadingSpinner,
@@ -121,10 +122,10 @@ describe('LoadingStates Components', () => {
   })
 
   describe('ErrorState', () => {
-    const mockRetry = jest.fn()
+    const mockRetry = vi.fn()
 
     beforeEach(() => {
-      jest.clearAllMocks()
+      vi.clearAllMocks()
     })
 
     it('should render error message', () => {

@@ -1,0 +1,46 @@
+{
+  "name": "minglog",
+  "version": "1.0.0",
+  "description": "模块化知识管理系统",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --recursive dev",
+    "build": "pnpm --recursive build",
+    "test": "pnpm --recursive test",
+    "test:coverage": "pnpm --recursive test:coverage",
+    "lint": "eslint packages apps --ext .ts,.tsx",
+    "type-check": "pnpm --recursive type-check",
+    "clean": "pnpm --recursive clean",
+    "desktop:dev": "pnpm --filter @minglog/desktop dev",
+    "desktop:build": "pnpm --filter @minglog/desktop build",
+    "web:dev": "pnpm --filter @minglog/web dev",
+    "web:build": "pnpm --filter @minglog/web build",
+    "core:build": "pnpm --filter @minglog/core build",
+    "modules:build": "pnpm --filter '@minglog/modules/*' build",
+    "ui:build": "pnpm --filter @minglog/ui build",
+    "storybook": "pnpm --filter @minglog/ui storybook"
+  },
+  "keywords": [
+    "knowledge-management",
+    "modular",
+    "notes",
+    "mindmap",
+    "tasks"
+  ],
+  "author": "MingLog Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vitest/coverage-v8": "^1.6.1",
+    "eslint": "^8.0.0",
+    "eslint-plugin-react": "^7.0.0",
+    "eslint-plugin-react-hooks": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}

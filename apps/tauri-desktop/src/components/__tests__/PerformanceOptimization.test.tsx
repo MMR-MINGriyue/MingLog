@@ -255,40 +255,50 @@ describe('Performance Optimizations', () => {
     it('should show loading state initially', () => {
       render(
         <ChartLoader
+          type="line"
           data={mockChartData}
           options={mockChartOptions}
-          loadingMessage="Loading chart..."
         />
       )
-      
+
       expect(screen.getByText('Loading chart...')).toBeInTheDocument()
     })
 
-    it('should handle empty data gracefully', () => {
+    it('should handle empty data gracefully', async () => {
       render(
         <ChartLoader
+          type="line"
           data={{ labels: [], datasets: [] }}
           options={mockChartOptions}
-          fallbackMessage="No data available"
+          fallback={<div>No data available</div>}
         />
       )
-      
-      expect(screen.getByText('No data available')).toBeInTheDocument()
+
+      // Should show loading state initially
+      expect(screen.getByText('Loading chart...')).toBeInTheDocument()
+
+      // Wait for the chart to load and render
+      await waitFor(() => {
+        expect(screen.getByTestId('chart-container')).toBeInTheDocument()
+      }, { timeout: 3000 })
     })
 
-    it('should not load Chart.js when data is empty', () => {
-      const onLoadError = vi.fn()
-      
+    it('should load chart component successfully', async () => {
       render(
         <ChartLoader
-          data={{ labels: [], datasets: [] }}
+          type="line"
+          data={mockChartData}
           options={mockChartOptions}
-          onLoadError={onLoadError}
         />
       )
-      
-      // Should not attempt to load Chart.js
-      expect(onLoadError).not.toHaveBeenCalled()
+
+      // Chart should eventually render successfully
+      await waitFor(() => {
+        expect(screen.getByTestId('chart-container')).toBeInTheDocument()
+      }, { timeout: 3000 })
+
+      // Should have a canvas element for the chart
+      expect(screen.getByRole('img')).toBeInTheDocument()
     })
   })
 

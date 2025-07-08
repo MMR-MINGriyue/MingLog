@@ -1,0 +1,45 @@
+{
+  "name": "@minglog/core",
+  "version": "1.0.0",
+  "description": "MingLog核心模块管理框架",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage"
+  },
+  "keywords": [
+    "minglog",
+    "knowledge-management",
+    "modular",
+    "core"
+  ],
+  "author": "MingLog Team",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^24.0.7",
+    "eventemitter3": "^5.0.1",
+    "react": "^19.1.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/uuid": "^9.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types/index.js",
+      "require": "./dist/types/index.js",
+      "types": "./dist/types/index.d.ts"
+    }
+  }
+}

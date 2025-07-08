@@ -154,18 +154,20 @@ mod integration_tests {
         db.create_block(block_request).await.unwrap();
 
         // Test search
-        let search_request = BlockSearchRequest {
+        let search_request = SearchRequest {
             query: "searchable".to_string(),
-            page_id: None,
-            include_pages: Some(true),
-            include_blocks: Some(true),
-            threshold: Some(0.1),
+            tags: None,
+            date_from: None,
+            date_to: None,
+            include_archived: Some(false),
+            limit: Some(10),
+            offset: Some(0),
         };
 
-        let search_results = db.search_blocks(search_request).await.unwrap();
-        assert!(!search_results.is_empty(), "Search should return results");
-        
-        let first_result = &search_results[0];
+        let search_results = db.search_notes(search_request).await.unwrap();
+        assert!(!search_results.notes.is_empty(), "Search should return results");
+
+        let first_result = &search_results.notes[0];
         assert!(first_result.content.contains("searchable"));
     }
 
@@ -200,28 +202,32 @@ mod integration_tests {
         }
 
         // Test pagination
-        let search_request = BlockSearchRequest {
+        let search_request = SearchRequest {
             query: "Block".to_string(),
-            page_id: None,
-            include_pages: Some(true),
-            include_blocks: Some(true),
-            threshold: Some(0.1),
+            tags: None,
+            date_from: None,
+            date_to: None,
+            include_archived: Some(false),
+            limit: Some(10),
+            offset: Some(0),
         };
 
-        let search_results = db.search_blocks(search_request).await.unwrap();
-        assert!(search_results.len() >= 5, "Should find all blocks");
+        let search_results = db.search_notes(search_request).await.unwrap();
+        assert!(search_results.notes.len() >= 5, "Should find all blocks");
 
         // Test that search returns results
-        let search_request_page2 = BlockSearchRequest {
+        let search_request_page2 = SearchRequest {
             query: "Block".to_string(),
-            page_id: None,
-            include_pages: Some(true),
-            include_blocks: Some(true),
-            threshold: Some(0.1),
+            tags: None,
+            date_from: None,
+            date_to: None,
+            include_archived: Some(false),
+            limit: Some(10),
+            offset: Some(0),
         };
 
-        let second_search = db.search_blocks(search_request_page2).await.unwrap();
-        assert!(second_search.len() >= 5, "Should find all blocks in second search");
+        let second_search = db.search_notes(search_request_page2).await.unwrap();
+        assert!(second_search.notes.len() >= 5, "Should find all blocks in second search");
     }
 
     #[tokio::test]
@@ -247,11 +253,11 @@ mod integration_tests {
 
     #[tokio::test]
     async fn test_concurrent_operations() {
-        let db = create_test_database().await.unwrap();
-        
+        let db = std::sync::Arc::new(create_test_database().await.unwrap());
+
         // Create multiple pages concurrently
         let mut handles = vec![];
-        
+
         for i in 0..3 {
             let db_clone = db.clone();
             let handle = tokio::spawn(async move {

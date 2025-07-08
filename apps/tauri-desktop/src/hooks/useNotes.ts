@@ -1,110 +1,139 @@
 import { useState, useEffect, useCallback } from 'react'
-import { 
-  Note, 
-  CreateNoteRequest, 
-  UpdateNoteRequest,
-  getNotes, 
-  createNote, 
-  updateNote, 
-  deleteNote,
-  withErrorHandling 
-} from '../utils/tauri'
+import { invoke } from '@tauri-apps/api/core'
+
+interface Note {
+  id: string
+  title: string
+  content: string
+  created_at: number
+  updated_at: number
+  tags: string[]
+}
+
+interface CreateNoteRequest {
+  title: string
+  content: string
+  tags?: string[]
+}
+
+interface UpdateNoteRequest {
+  id: string
+  title?: string
+  content?: string
+  tags?: string[]
+}
 
 interface UseNotesReturn {
   notes: Note[]
   loading: boolean
   error: string | null
-  createNewNote: (request: CreateNoteRequest) => Promise<Note | null>
-  updateExistingNote: (request: UpdateNoteRequest) => Promise<Note | null>
-  deleteExistingNote: (id: string) => Promise<boolean>
+  createNote: (note: CreateNoteRequest) => Promise<Note | null>
+  updateNote: (note: UpdateNoteRequest) => Promise<Note | null>
+  deleteNote: (id: string) => Promise<boolean>
+  getNoteById: (id: string) => Note | undefined
+  searchNotes: (query: string) => Note[]
   refreshNotes: () => Promise<void>
-  clearError: () => void
 }
 
-export const useNotes = (limit?: number, offset?: number): UseNotesReturn => {
+export const useNotes = (): UseNotesReturn => {
   const [notes, setNotes] = useState<Note[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Load all notes
   const loadNotes = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    
-    const result = await withErrorHandling(
-      () => getNotes(limit, offset),
-      'Failed to load notes'
-    )
-    
-    if (result) {
-      setNotes(result)
-    } else {
-      setError('Failed to load notes')
+    try {
+      setLoading(true)
+      setError(null)
+      const result = await invoke<Note[]>('get_all_notes')
+      setNotes(result || [])
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load notes'
+      setError(errorMessage)
+      console.error('Failed to load notes:', err)
+    } finally {
+      setLoading(false)
     }
-    
-    setLoading(false)
-  }, [limit, offset])
+  }, [])
 
-  const createNewNote = useCallback(async (request: CreateNoteRequest): Promise<Note | null> => {
-    setError(null)
-    
-    const result = await withErrorHandling(
-      () => createNote(request),
-      'Failed to create note'
-    )
-    
-    if (result) {
-      setNotes(prev => [result, ...prev])
-      return result
-    } else {
-      setError('Failed to create note')
+  // Create a new note
+  const createNote = useCallback(async (noteData: CreateNoteRequest): Promise<Note | null> => {
+    try {
+      setError(null)
+      const newNote = await invoke<Note>('create_note', { request: noteData })
+      if (newNote) {
+        setNotes(prev => [newNote, ...prev])
+        return newNote
+      }
+      return null
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create note'
+      setError(errorMessage)
+      console.error('Failed to create note:', err)
       return null
     }
   }, [])
 
-  const updateExistingNote = useCallback(async (request: UpdateNoteRequest): Promise<Note | null> => {
-    setError(null)
-    
-    const result = await withErrorHandling(
-      () => updateNote(request),
-      'Failed to update note'
-    )
-    
-    if (result) {
-      setNotes(prev => prev.map(note => 
-        note.id === result.id ? result : note
-      ))
-      return result
-    } else {
-      setError('Failed to update note')
+  // Update an existing note
+  const updateNote = useCallback(async (noteData: UpdateNoteRequest): Promise<Note | null> => {
+    try {
+      setError(null)
+      const updatedNote = await invoke<Note>('update_note', { request: noteData })
+      if (updatedNote) {
+        setNotes(prev => prev.map(note => 
+          note.id === updatedNote.id ? updatedNote : note
+        ))
+        return updatedNote
+      }
+      return null
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update note'
+      setError(errorMessage)
+      console.error('Failed to update note:', err)
       return null
     }
   }, [])
 
-  const deleteExistingNote = useCallback(async (id: string): Promise<boolean> => {
-    setError(null)
-    
-    const result = await withErrorHandling(
-      () => deleteNote(id),
-      'Failed to delete note'
-    )
-    
-    if (result !== null) {
+  // Delete a note
+  const deleteNote = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      setError(null)
+      await invoke('delete_note', { id })
       setNotes(prev => prev.filter(note => note.id !== id))
       return true
-    } else {
-      setError('Failed to delete note')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete note'
+      setError(errorMessage)
+      console.error('Failed to delete note:', err)
       return false
     }
   }, [])
 
+  // Get a note by ID
+  const getNoteById = useCallback((id: string): Note | undefined => {
+    return notes.find(note => note.id === id)
+  }, [notes])
+
+  // Search notes by query
+  const searchNotes = useCallback((query: string): Note[] => {
+    if (!query.trim()) {
+      return notes
+    }
+
+    const lowercaseQuery = query.toLowerCase()
+    return notes.filter(note => 
+      note.title.toLowerCase().includes(lowercaseQuery) ||
+      note.content.toLowerCase().includes(lowercaseQuery) ||
+      note.tags.some(tag => tag.toLowerCase().includes(lowercaseQuery))
+    )
+  }, [notes])
+
+  // Refresh notes (reload from backend)
   const refreshNotes = useCallback(async () => {
     await loadNotes()
   }, [loadNotes])
 
-  const clearError = useCallback(() => {
-    setError(null)
-  }, [])
-
+  // Load notes on mount
   useEffect(() => {
     loadNotes()
   }, [loadNotes])
@@ -113,10 +142,13 @@ export const useNotes = (limit?: number, offset?: number): UseNotesReturn => {
     notes,
     loading,
     error,
-    createNewNote,
-    updateExistingNote,
-    deleteExistingNote,
-    refreshNotes,
-    clearError
+    createNote,
+    updateNote,
+    deleteNote,
+    getNoteById,
+    searchNotes,
+    refreshNotes
   }
 }
+
+export type { Note, CreateNoteRequest, UpdateNoteRequest, UseNotesReturn }

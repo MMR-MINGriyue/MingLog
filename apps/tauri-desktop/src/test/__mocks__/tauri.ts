@@ -52,11 +52,53 @@ export const invoke = vi.fn().mockImplementation((command: string, args?: any) =
     
     case 'search_blocks':
       return Promise.resolve({
-        results: [],
-        total_results: 0,
-        query_time_ms: 5
+        blocks: args?.request?.query ? [
+          {
+            id: 'test-block-1',
+            title: 'Integration Test Page',
+            content: 'This is a test page for integration testing',
+            type: 'block',
+            score: 95.0,
+          },
+          {
+            id: 'test-block-2',
+            title: 'Test Block',
+            content: 'This is a test block',
+            type: 'block',
+            score: 85.0,
+          }
+        ] : [],
+        total: args?.request?.query ? 2 : 0,
+        query: args?.request?.query || '',
       })
-    
+
+    case 'create_note':
+      return Promise.resolve({
+        id: 'mock-note-id',
+        title: args?.request?.title || 'Mock Note',
+        content: args?.request?.content || '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+
+    case 'get_notes':
+      return Promise.resolve([])
+
+    case 'update_note':
+      return Promise.resolve({
+        id: args?.request?.id || 'mock-note-id',
+        title: args?.request?.title || 'Updated Note',
+        content: args?.request?.content || '',
+        updated_at: new Date().toISOString(),
+      })
+
+    case 'delete_note':
+      return Promise.resolve()
+
+    case 'export_data':
+    case 'import_data':
+      return Promise.resolve('success')
+
     default:
       console.warn(`Unhandled Tauri command: ${command}`)
       return Promise.resolve({})

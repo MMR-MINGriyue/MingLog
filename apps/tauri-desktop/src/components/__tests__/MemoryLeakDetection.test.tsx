@@ -60,6 +60,8 @@ const TestComponentWithSafeResources: React.FC = () => {
 // Test component that creates memory leaks
 const LeakyComponent: React.FC = () => {
   useEffect(() => {
+    const tracker = ResourceTracker.getInstance()
+
     // 创建未清理的定时器
     const interval1 = setInterval(() => {}, 100)
     const interval2 = setInterval(() => {}, 200)
@@ -68,10 +70,19 @@ const LeakyComponent: React.FC = () => {
     const interval5 = setInterval(() => {}, 500)
     const interval6 = setInterval(() => {}, 600) // 第6个，会触发检测
 
+    // 注册到ResourceTracker
+    tracker.registerInterval(interval1)
+    tracker.registerInterval(interval2)
+    tracker.registerInterval(interval3)
+    tracker.registerInterval(interval4)
+    tracker.registerInterval(interval5)
+    tracker.registerInterval(interval6)
+
     // 创建未清理的事件监听器
     const handler = () => {}
     for (let i = 0; i < 60; i++) { // 创建60个监听器，会触发检测
       window.addEventListener('click', handler)
+      tracker.registerEventListener(window, 'click', handler)
     }
 
     // 故意不清理资源来测试检测功能

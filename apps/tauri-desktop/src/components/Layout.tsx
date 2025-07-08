@@ -1,21 +1,17 @@
 import React, { useState, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useLocation, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  Home,
-  Edit3,
-  Network,
-  Search,
-  Settings,
   Menu,
   X,
   Plus,
-  BookOpen,
-  HelpCircle
+  HelpCircle,
+  BookOpen
 } from 'lucide-react'
 import { useGlobalShortcuts } from '../hooks/useKeyboardShortcuts'
 import KeyboardShortcutsHelp from './KeyboardShortcutsHelp'
 import LanguageSwitcher from './LanguageSwitcher'
+import { ModularNavigation, ModuleStatusIndicator } from './ModularNavigation'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -29,6 +25,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Enable global keyboard shortcuts
   useGlobalShortcuts()
+
+  // 获取当前页面标题
+  const getPageTitle = () => {
+    const path = location.pathname
+    switch (path) {
+      case '/':
+        return '首页'
+      case '/notes':
+        return '笔记'
+      case '/modules':
+        return '模块管理'
+      case '/settings':
+        return '设置'
+      default:
+        return '明志桌面版'
+    }
+  }
 
   // Listen for F1 key to show shortcuts help
   useEffect(() => {
@@ -47,21 +60,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   }, [])
 
-  const navigation = [
-    { name: '首页', href: '/', icon: Home, description: '工作空间概览' },
-    { name: '智能编辑器', href: '/editor', icon: Edit3, description: '创建和编辑笔记' },
-    { name: '块编辑器', href: '/blocks', icon: BookOpen, description: 'Notion风格编辑' },
-    { name: '知识图谱', href: '/graph', icon: Network, description: '可视化关联' },
-    { name: '全局搜索', href: '/search', icon: Search, description: 'Ctrl+K 快速搜索' },
-    { name: '设置', href: '/settings', icon: Settings, description: '个性化配置' },
-  ]
-
-  const isActive = (href: string) => {
-    if (href === '/') {
-      return location.pathname === '/'
-    }
-    return location.pathname.startsWith(href)
-  }
+  // 移除静态导航，使用模块化导航
 
   return (
     <div className="h-full flex bg-gradient-to-br from-gray-50 to-gray-100">
@@ -95,42 +94,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </div>
 
-        {/* 导航菜单 */}
-        <nav className="flex-1 px-4 py-6 space-y-3">
-          {navigation.map((item) => {
-            const Icon = item.icon
-            const active = isActive(item.href)
-
-            return (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={`${
-                  active
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                } group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 hover:shadow-md`}
-                title={!sidebarOpen ? item.name : undefined}
-              >
-                <Icon className={`${sidebarOpen ? 'mr-4' : ''} w-5 h-5 flex-shrink-0 ${active ? 'text-white' : ''}`} />
-                {sidebarOpen && (
-                  <div className="flex-1">
-                    <div className="font-medium">{item.name}</div>
-                    <div className={`text-xs ${active ? 'text-blue-100' : 'text-gray-500'} mt-0.5`}>
-                      {item.description}
-                    </div>
-                  </div>
-                )}
-              </Link>
-            )
-          })}
-        </nav>
+        {/* 模块化导航菜单 */}
+        <div className="flex-1 px-4 py-6">
+          {sidebarOpen ? (
+            <div className="space-y-4">
+              <ModularNavigation />
+              <ModuleStatusIndicator />
+            </div>
+          ) : (
+            <ModularNavigation />
+          )}
+        </div>
 
         {/* 快速操作区 */}
         {sidebarOpen && (
           <div className="px-4 py-6 border-t border-gray-200/50 space-y-4">
             <Link
-              to="/editor"
+              to="/notes/new"
               className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl py-3 px-4 flex items-center justify-center space-x-2 hover:shadow-lg hover:scale-105 transition-all duration-200 font-medium"
             >
               <Plus className="w-5 h-5" />
@@ -181,7 +161,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="flex items-center space-x-3">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
               <h1 className="text-lg font-semibold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent drag-none">
-                {navigation.find(item => isActive(item.href))?.name || '明志桌面版'}
+                {getPageTitle()}
               </h1>
             </div>
           </div>
