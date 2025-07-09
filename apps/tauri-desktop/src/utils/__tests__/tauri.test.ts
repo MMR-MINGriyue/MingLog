@@ -1,11 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import * as tauriUtils from '../tauri'
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest'
 
-// Mock Tauri API
-const mockInvoke = vi.fn()
-vi.mock('@tauri-apps/api/core', () => ({
-  invoke: mockInvoke,
+// Mock Tauri API - 修复hoisting问题
+vi.mock('@tauri-apps/api/tauri', () => ({
+  invoke: vi.fn(),
 }))
+
+import * as tauriUtils from '../tauri'
+import { invoke } from '@tauri-apps/api/tauri'
+
+const mockInvoke = vi.mocked(invoke)
 
 // Mock console methods
 const consoleSpy = {
@@ -42,19 +45,21 @@ describe('tauri utils', () => {
     it('handles function errors', async () => {
       const error = new Error('Test error')
       const mockFn = vi.fn().mockRejectedValue(error)
-      
+
       const result = await tauriUtils.withErrorHandling(mockFn)
-      
-      expect(result).toBeUndefined()
-      expect(consoleSpy.error).toHaveBeenCalledWith('Error:', error)
+
+      expect(result).toBeNull()
+      expect(consoleSpy.error).toHaveBeenCalledWith('Operation failed:', error)
     })
 
-    it('passes arguments to function', async () => {
-      const mockFn = vi.fn().mockResolvedValue('success')
-      
-      await tauriUtils.withErrorHandling(mockFn, 'arg1', 'arg2')
-      
-      expect(mockFn).toHaveBeenCalledWith('arg1', 'arg2')
+    it('passes custom error message', async () => {
+      const error = new Error('Test error')
+      const mockFn = vi.fn().mockRejectedValue(error)
+
+      const result = await tauriUtils.withErrorHandling(mockFn, 'Custom error message')
+
+      expect(result).toBeNull()
+      expect(consoleSpy.error).toHaveBeenCalledWith('Custom error message', error)
     })
   })
 
@@ -79,10 +84,7 @@ describe('tauri utils', () => {
       const result = await tauriUtils.searchBlocks({ query: 'test' })
       
       expect(mockInvoke).toHaveBeenCalledWith('search_blocks', {
-        query: 'test',
-        include_pages: true,
-        include_blocks: true,
-        limit: 20,
+        request: { query: 'test' }
       })
       expect(result).toEqual(mockSearchResults)
     })
@@ -99,18 +101,15 @@ describe('tauri utils', () => {
       
       const result = await tauriUtils.searchBlocks(params)
       
-      expect(mockInvoke).toHaveBeenCalledWith('search_blocks', params)
+      expect(mockInvoke).toHaveBeenCalledWith('search_blocks', { request: params })
       expect(result).toEqual(mockSearchResults)
     })
 
     it('handles search errors', async () => {
       const error = new Error('Search failed')
       mockInvoke.mockRejectedValue(error)
-      
-      const result = await tauriUtils.searchBlocks({ query: 'test' })
-      
-      expect(result).toBeUndefined()
-      expect(consoleSpy.error).toHaveBeenCalledWith('Error:', error)
+
+      await expect(tauriUtils.searchBlocks({ query: 'test' })).rejects.toThrow('Search failed')
     })
   })
 
@@ -126,25 +125,24 @@ describe('tauri utils', () => {
 
     it('creates note successfully', async () => {
       mockInvoke.mockResolvedValue(mockNote)
-      
-      const result = await tauriUtils.createNote('Test Note', 'Test content')
-      
+
+      const request = { title: 'Test Note', content: 'Test content' }
+      const result = await tauriUtils.createNote(request)
+
       expect(mockInvoke).toHaveBeenCalledWith('create_note', {
-        title: 'Test Note',
-        content: 'Test content',
+        request
       })
       expect(result).toEqual(mockNote)
     })
 
     it('creates note with tags', async () => {
       mockInvoke.mockResolvedValue(mockNote)
-      
-      const result = await tauriUtils.createNote('Test Note', 'Test content', ['tag1', 'tag2'])
-      
+
+      const request = { title: 'Test Note', content: 'Test content', tags: ['tag1', 'tag2'] }
+      const result = await tauriUtils.createNote(request)
+
       expect(mockInvoke).toHaveBeenCalledWith('create_note', {
-        title: 'Test Note',
-        content: 'Test content',
-        tags: ['tag1', 'tag2'],
+        request
       })
       expect(result).toEqual(mockNote)
     })
@@ -152,11 +150,9 @@ describe('tauri utils', () => {
     it('handles creation errors', async () => {
       const error = new Error('Creation failed')
       mockInvoke.mockRejectedValue(error)
-      
-      const result = await tauriUtils.createNote('Test Note', 'Test content')
-      
-      expect(result).toBeUndefined()
-      expect(consoleSpy.error).toHaveBeenCalledWith('Error:', error)
+
+      const request = { title: 'Test Note', content: 'Test content' }
+      await expect(tauriUtils.createNote(request)).rejects.toThrow('Creation failed')
     })
   })
 
@@ -172,18 +168,18 @@ describe('tauri utils', () => {
 
     it('updates note successfully', async () => {
       mockInvoke.mockResolvedValue(mockUpdatedNote)
-      
-      const updates = {
+
+      const request = {
+        id: '1',
         title: 'Updated Note',
         content: 'Updated content',
         tags: ['updated'],
       }
-      
-      const result = await tauriUtils.updateNote('1', updates)
-      
+
+      const result = await tauriUtils.updateNote(request)
+
       expect(mockInvoke).toHaveBeenCalledWith('update_note', {
-        id: '1',
-        ...updates,
+        request
       })
       expect(result).toEqual(mockUpdatedNote)
     })
@@ -191,20 +187,18 @@ describe('tauri utils', () => {
     it('handles update errors', async () => {
       const error = new Error('Update failed')
       mockInvoke.mockRejectedValue(error)
-      
-      const result = await tauriUtils.updateNote('1', { title: 'Updated' })
-      
-      expect(result).toBeUndefined()
-      expect(consoleSpy.error).toHaveBeenCalledWith('Error:', error)
+
+      const request = { id: '1', title: 'Updated' }
+      await expect(tauriUtils.updateNote(request)).rejects.toThrow('Update failed')
     })
   })
 
   describe('deleteNote', () => {
     it('deletes note successfully', async () => {
       mockInvoke.mockResolvedValue({ success: true })
-      
+
       const result = await tauriUtils.deleteNote('1')
-      
+
       expect(mockInvoke).toHaveBeenCalledWith('delete_note', { id: '1' })
       expect(result).toEqual({ success: true })
     })
@@ -212,37 +206,43 @@ describe('tauri utils', () => {
     it('handles deletion errors', async () => {
       const error = new Error('Deletion failed')
       mockInvoke.mockRejectedValue(error)
-      
-      const result = await tauriUtils.deleteNote('1')
-      
-      expect(result).toBeUndefined()
-      expect(consoleSpy.error).toHaveBeenCalledWith('Error:', error)
+
+      await expect(tauriUtils.deleteNote('1')).rejects.toThrow('Deletion failed')
     })
   })
 
-  describe('getAllNotes', () => {
+  describe('getNotes', () => {
     const mockNotes = [
       { id: '1', title: 'Note 1', content: 'Content 1' },
       { id: '2', title: 'Note 2', content: 'Content 2' },
     ]
 
-    it('gets all notes successfully', async () => {
-      mockInvoke.mockResolvedValue({ notes: mockNotes })
-      
-      const result = await tauriUtils.getAllNotes()
-      
-      expect(mockInvoke).toHaveBeenCalledWith('get_all_notes')
-      expect(result).toEqual({ notes: mockNotes })
+    it('gets notes successfully', async () => {
+      mockInvoke.mockResolvedValue(mockNotes)
+
+      const result = await tauriUtils.getNotes()
+
+      expect(mockInvoke).toHaveBeenCalledWith('get_notes', { limit: undefined, offset: undefined })
+      expect(result).toEqual(mockNotes)
     })
 
-    it('handles get all notes errors', async () => {
+    it('gets notes with pagination', async () => {
+      mockInvoke.mockResolvedValue(mockNotes)
+
+      const result = await tauriUtils.getNotes(10, 20)
+
+      expect(mockInvoke).toHaveBeenCalledWith('get_notes', {
+        limit: 10,
+        offset: 20,
+      })
+      expect(result).toEqual(mockNotes)
+    })
+
+    it('handles get notes errors', async () => {
       const error = new Error('Get notes failed')
       mockInvoke.mockRejectedValue(error)
-      
-      const result = await tauriUtils.getAllNotes()
-      
-      expect(result).toBeUndefined()
-      expect(consoleSpy.error).toHaveBeenCalledWith('Error:', error)
+
+      await expect(tauriUtils.getNotes()).rejects.toThrow('Get notes failed')
     })
   })
 
@@ -268,11 +268,8 @@ describe('tauri utils', () => {
     it('handles export errors', async () => {
       const error = new Error('Export failed')
       mockInvoke.mockRejectedValue(error)
-      
-      const result = await tauriUtils.exportData('/path/to/export.json')
-      
-      expect(result).toBeUndefined()
-      expect(consoleSpy.error).toHaveBeenCalledWith('Error:', error)
+
+      await expect(tauriUtils.exportData('/path/to/export.json')).rejects.toThrow('Export failed')
     })
   })
 
@@ -291,11 +288,8 @@ describe('tauri utils', () => {
     it('handles import errors', async () => {
       const error = new Error('Import failed')
       mockInvoke.mockRejectedValue(error)
-      
-      const result = await tauriUtils.importData('/path/to/import.json')
-      
-      expect(result).toBeUndefined()
-      expect(consoleSpy.error).toHaveBeenCalledWith('Error:', error)
+
+      await expect(tauriUtils.importData('/path/to/import.json')).rejects.toThrow('Import failed')
     })
   })
 })

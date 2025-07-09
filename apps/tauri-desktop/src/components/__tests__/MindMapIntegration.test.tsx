@@ -1,0 +1,310 @@
+/**
+ * 思维导图集成测试
+ */
+
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { BrowserRouter } from 'react-router-dom'
+import { createMindMap } from '@minglog/mindmap'
+import MindMapPage from '../../pages/MindMapPage'
+
+// Mock hooks
+vi.mock('../../hooks/useNotes', () => ({
+  useNotes: vi.fn(() => ({
+    notes: [
+      {
+        id: 'test-note',
+        title: '测试笔记',
+        blocks: [
+          {
+            id: 'root',
+            content: '主题',
+            type: 'heading',
+            level: 0,
+            parent_id: null,
+            order: 0
+          },
+          {
+            id: 'child1',
+            content: '分支1',
+            type: 'paragraph',
+            level: 1,
+            parent_id: 'root',
+            order: 1
+          },
+          {
+            id: 'child2',
+            content: '分支2',
+            type: 'paragraph',
+            level: 1,
+            parent_id: 'root',
+            order: 2
+          }
+        ]
+      }
+    ],
+    loading: false
+  }))
+}))
+
+// Mock react-router-dom
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
+  return {
+    ...actual,
+    useParams: () => ({ graphId: 'test-graph', pageId: 'test-note' }),
+    useNavigate: () => vi.fn()
+  }
+})
+
+// 测试组件包装器
+const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <BrowserRouter>
+    {children}
+  </BrowserRouter>
+)
+
+describe('思维导图集成测试', () => {
+  it('应该能够创建思维导图数据', () => {
+    const sampleBlocks = [
+      {
+        id: 'root',
+        content: '根节点',
+        type: 'heading',
+        level: 0,
+        parent_id: null,
+        order: 0
+      },
+      {
+        id: 'child1',
+        content: '子节点1',
+        type: 'paragraph',
+        level: 1,
+        parent_id: 'root',
+        order: 1
+      }
+    ]
+
+    const mindMapData = createMindMap(sampleBlocks)
+    
+    expect(mindMapData).toBeDefined()
+    expect(mindMapData.nodes).toHaveLength(2)
+    expect(mindMapData.links).toHaveLength(1)
+    expect(mindMapData.rootId).toBe('root')
+  })
+
+  it('应该正确转换节点层级', () => {
+    const blocks = [
+      {
+        id: 'root',
+        content: '根节点',
+        type: 'heading',
+        level: 0,
+        parent_id: null,
+        order: 0
+      },
+      {
+        id: 'level1',
+        content: '一级节点',
+        type: 'paragraph',
+        level: 1,
+        parent_id: 'root',
+        order: 1
+      },
+      {
+        id: 'level2',
+        content: '二级节点',
+        type: 'paragraph',
+        level: 2,
+        parent_id: 'level1',
+        order: 1
+      }
+    ]
+
+    const mindMapData = createMindMap(blocks)
+    
+    const rootNode = mindMapData.nodes.find(n => n.id === 'root')
+    const level1Node = mindMapData.nodes.find(n => n.id === 'level1')
+    const level2Node = mindMapData.nodes.find(n => n.id === 'level2')
+
+    expect(rootNode?.level).toBe(0)
+    expect(level1Node?.level).toBe(1)
+    expect(level2Node?.level).toBe(2)
+  })
+
+  it('应该正确设置节点样式', () => {
+    const blocks = [
+      {
+        id: 'root',
+        content: '根节点',
+        type: 'heading',
+        level: 0,
+        parent_id: null,
+        order: 0
+      }
+    ]
+
+    const mindMapData = createMindMap(blocks)
+    const rootNode = mindMapData.nodes[0]
+
+    expect(rootNode.style).toBeDefined()
+    expect(rootNode.style?.backgroundColor).toBe('#4F46E5') // 根节点蓝色
+    expect(rootNode.style?.fontColor).toBe('#FFFFFF')
+    expect(rootNode.style?.fontWeight).toBe('bold')
+  })
+
+  it('应该正确创建链接', () => {
+    const blocks = [
+      {
+        id: 'root',
+        content: '根节点',
+        type: 'heading',
+        level: 0,
+        parent_id: null,
+        order: 0
+      },
+      {
+        id: 'child1',
+        content: '子节点1',
+        type: 'paragraph',
+        level: 1,
+        parent_id: 'root',
+        order: 1
+      },
+      {
+        id: 'child2',
+        content: '子节点2',
+        type: 'paragraph',
+        level: 1,
+        parent_id: 'root',
+        order: 2
+      }
+    ]
+
+    const mindMapData = createMindMap(blocks)
+    
+    expect(mindMapData.links).toHaveLength(2)
+    
+    const link1 = mindMapData.links.find(l => l.target === 'child1')
+    const link2 = mindMapData.links.find(l => l.target === 'child2')
+
+    expect(link1?.source).toBe('root')
+    expect(link1?.type).toBe('parent-child')
+    expect(link2?.source).toBe('root')
+    expect(link2?.type).toBe('parent-child')
+  })
+
+  it('应该渲染思维导图页面', async () => {
+    render(
+      <TestWrapper>
+        <MindMapPage />
+      </TestWrapper>
+    )
+
+    // 检查页面标题
+    await waitFor(() => {
+      expect(screen.getByText('测试笔记')).toBeInTheDocument()
+    })
+
+    // 检查返回按钮
+    expect(screen.getByText('← 返回')).toBeInTheDocument()
+
+    // 检查主题选择器
+    expect(screen.getByText('主题:')).toBeInTheDocument()
+    expect(screen.getByText('布局:')).toBeInTheDocument()
+
+    // 检查导出按钮
+    expect(screen.getByText('导出')).toBeInTheDocument()
+  })
+
+  it('应该能够切换主题', async () => {
+    render(
+      <TestWrapper>
+        <MindMapPage />
+      </TestWrapper>
+    )
+
+    const themeSelect = screen.getByDisplayValue('默认')
+    
+    fireEvent.change(themeSelect, { target: { value: 'dark' } })
+    
+    await waitFor(() => {
+      expect(themeSelect).toHaveValue('dark')
+    })
+  })
+
+  it('应该能够切换布局', async () => {
+    render(
+      <TestWrapper>
+        <MindMapPage />
+      </TestWrapper>
+    )
+
+    const layoutSelect = screen.getByDisplayValue('树形')
+    
+    fireEvent.change(layoutSelect, { target: { value: 'radial' } })
+    
+    await waitFor(() => {
+      expect(layoutSelect).toHaveValue('radial')
+    })
+  })
+
+  it('应该处理空数据情况', () => {
+    expect(() => createMindMap([])).toThrow('大纲数据不能为空')
+  })
+
+  it('应该处理无效数据情况', () => {
+    const invalidBlocks = [
+      {
+        id: 'orphan',
+        content: '孤儿节点',
+        type: 'paragraph',
+        level: 1,
+        parent_id: 'nonexistent',
+        order: 1
+      }
+    ]
+
+    const mindMapData = createMindMap(invalidBlocks)
+    
+    // 应该创建虚拟根节点
+    expect(mindMapData.nodes).toHaveLength(2) // 虚拟根节点 + 孤儿节点
+    expect(mindMapData.links).toHaveLength(1)
+  })
+})
+
+describe('思维导图性能测试', () => {
+  it('应该能够处理大量节点', () => {
+    const largeBlocks = []
+    
+    // 创建根节点
+    largeBlocks.push({
+      id: 'root',
+      content: '根节点',
+      type: 'heading',
+      level: 0,
+      parent_id: null,
+      order: 0
+    })
+
+    // 创建100个子节点
+    for (let i = 1; i <= 100; i++) {
+      largeBlocks.push({
+        id: `node-${i}`,
+        content: `节点 ${i}`,
+        type: 'paragraph',
+        level: 1,
+        parent_id: 'root',
+        order: i
+      })
+    }
+
+    const startTime = performance.now()
+    const mindMapData = createMindMap(largeBlocks)
+    const endTime = performance.now()
+
+    expect(mindMapData.nodes).toHaveLength(101)
+    expect(mindMapData.links).toHaveLength(100)
+    expect(endTime - startTime).toBeLessThan(100) // 应该在100ms内完成
+  })
+})

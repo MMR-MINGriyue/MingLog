@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Network, Maximize2, Filter, Download, RefreshCw, Settings } from 'lucide-react'
-import { GraphVisualization } from '@minglog/graph'
+import { GraphView, GraphControls } from '@minglog/graph'
 import { getGraphData, createSampleGraphData, withErrorHandling } from '../utils/tauri'
 import { useNotifications } from '../components/NotificationSystem'
 
@@ -276,17 +276,14 @@ const GraphPage: React.FC = () => {
               </div>
             </div>
           ) : graphData ? (
-            <GraphVisualization
+            <GraphView
               data={graphData}
-              config={{
-                width: window.innerWidth - (showFilters ? 400 : 100),
-                height: window.innerHeight - 200,
-                showLabels,
-                theme: 'light', // TODO: Use theme from context
-                enableZoom: true,
-                enableDrag: true,
-                enablePan: true,
-              }}
+              width={window.innerWidth - (showFilters ? 400 : 100)}
+              height={window.innerHeight - 200}
+              showLabels={showLabels}
+              enableZoom={true}
+              enableDrag={true}
+              enablePan={true}
               onNodeClick={handleNodeClick}
               onNodeHover={handleNodeHover}
               className="w-full h-full bg-white rounded-lg shadow-sm border"

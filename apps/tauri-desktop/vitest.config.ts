@@ -36,7 +36,9 @@ export default defineConfig({
       'node_modules/',
       'dist/',
       'src-tauri/',
+      'src/test/functional.test.ts', // Functional tests need running app
       'src/test/e2e/**', // E2E tests should use Playwright
+      'src/tests/error-reporting.e2e.test.ts', // E2E test
       '.{idea,git,cache,output,temp}/',
     ],
   },

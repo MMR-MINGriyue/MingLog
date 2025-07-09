@@ -15,6 +15,10 @@ Object.defineProperty(window, '__TAURI__', {
 })
 
 // Mock Tauri modules
+vi.mock('@tauri-apps/api/tauri', () => ({
+  invoke: mockTauri.invoke,
+}))
+
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockTauri.invoke,
 }))

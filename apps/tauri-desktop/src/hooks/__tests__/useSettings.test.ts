@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
 // Mock Tauri API
-vi.mock('@tauri-apps/api/core', () => ({
+vi.mock('@tauri-apps/api/tauri', () => ({
   invoke: vi.fn(),
 }))
 
 // Import after mocking
 import { useSettings } from '../useSettings'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from '@tauri-apps/api/tauri'
 
 const mockInvoke = vi.mocked(invoke)
 
