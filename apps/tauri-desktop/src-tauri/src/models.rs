@@ -521,3 +521,279 @@ impl Tag {
         }
     }
 }
+
+// Task model - represents a task in the task management system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Task {
+    pub id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub status: String, // inbox, todo, in-progress, waiting, someday, done, cancelled
+    pub priority: String, // low, medium, high, urgent
+    pub due_date: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub estimated_time: Option<i32>, // minutes
+    pub actual_time: Option<i32>, // minutes
+    pub project_id: Option<String>,
+    pub parent_task_id: Option<String>,
+    pub linked_notes: String, // JSON array of note IDs
+    pub linked_files: String, // JSON array of file IDs
+    pub tags: String, // JSON array of tags
+    pub contexts: String, // JSON array of GTD contexts
+    pub recurrence: Option<String>, // JSON object for recurrence settings
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub created_by: Option<String>,
+}
+
+// Project model - represents a project in the project management system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Project {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub status: String, // active, on-hold, completed, cancelled
+    pub color: Option<String>,
+    pub start_date: Option<DateTime<Utc>>,
+    pub due_date: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub linked_notes: String, // JSON array of note IDs
+    pub linked_files: String, // JSON array of file IDs
+    pub progress: i32, // 0-100
+    pub total_tasks: i32,
+    pub completed_tasks: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub created_by: Option<String>,
+}
+
+// TimeEntry model - represents time tracking entries
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimeEntry {
+    pub id: String,
+    pub task_id: String,
+    pub start_time: DateTime<Utc>,
+    pub end_time: Option<DateTime<Utc>>,
+    pub duration: Option<i32>, // seconds
+    pub description: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+// FromRow implementations for Task
+impl FromRow<'_, sqlx::sqlite::SqliteRow> for Task {
+    fn from_row(row: &sqlx::sqlite::SqliteRow) -> Result<Self, sqlx::Error> {
+        let created_at_str: String = row.try_get("created_at")?;
+        let updated_at_str: String = row.try_get("updated_at")?;
+
+        let created_at = DateTime::parse_from_rfc3339(&created_at_str)
+            .map_err(|e| sqlx::Error::ColumnDecode {
+                index: "created_at".to_string(),
+                source: Box::new(e),
+            })?
+            .with_timezone(&Utc);
+
+        let updated_at = DateTime::parse_from_rfc3339(&updated_at_str)
+            .map_err(|e| sqlx::Error::ColumnDecode {
+                index: "updated_at".to_string(),
+                source: Box::new(e),
+            })?
+            .with_timezone(&Utc);
+
+        let due_date = if let Ok(due_date_str) = row.try_get::<Option<String>, _>("due_date") {
+            due_date_str.and_then(|s| DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Utc)))
+        } else {
+            None
+        };
+
+        let completed_at = if let Ok(completed_at_str) = row.try_get::<Option<String>, _>("completed_at") {
+            completed_at_str.and_then(|s| DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Utc)))
+        } else {
+            None
+        };
+
+        Ok(Task {
+            id: row.try_get("id")?,
+            title: row.try_get("title")?,
+            description: row.try_get("description")?,
+            status: row.try_get("status")?,
+            priority: row.try_get("priority")?,
+            due_date,
+            completed_at,
+            estimated_time: row.try_get("estimated_time")?,
+            actual_time: row.try_get("actual_time")?,
+            project_id: row.try_get("project_id")?,
+            parent_task_id: row.try_get("parent_task_id")?,
+            linked_notes: row.try_get("linked_notes").unwrap_or_else(|_| "[]".to_string()),
+            linked_files: row.try_get("linked_files").unwrap_or_else(|_| "[]".to_string()),
+            tags: row.try_get("tags").unwrap_or_else(|_| "[]".to_string()),
+            contexts: row.try_get("contexts").unwrap_or_else(|_| "[]".to_string()),
+            recurrence: row.try_get("recurrence")?,
+            created_at,
+            updated_at,
+            created_by: row.try_get("created_by")?,
+        })
+    }
+}
+
+// FromRow implementation for Project
+impl FromRow<'_, sqlx::sqlite::SqliteRow> for Project {
+    fn from_row(row: &sqlx::sqlite::SqliteRow) -> Result<Self, sqlx::Error> {
+        let created_at_str: String = row.try_get("created_at")?;
+        let updated_at_str: String = row.try_get("updated_at")?;
+
+        let created_at = DateTime::parse_from_rfc3339(&created_at_str)
+            .map_err(|e| sqlx::Error::ColumnDecode {
+                index: "created_at".to_string(),
+                source: Box::new(e),
+            })?
+            .with_timezone(&Utc);
+
+        let updated_at = DateTime::parse_from_rfc3339(&updated_at_str)
+            .map_err(|e| sqlx::Error::ColumnDecode {
+                index: "updated_at".to_string(),
+                source: Box::new(e),
+            })?
+            .with_timezone(&Utc);
+
+        let start_date = if let Ok(start_date_str) = row.try_get::<Option<String>, _>("start_date") {
+            start_date_str.and_then(|s| DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Utc)))
+        } else {
+            None
+        };
+
+        let due_date = if let Ok(due_date_str) = row.try_get::<Option<String>, _>("due_date") {
+            due_date_str.and_then(|s| DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Utc)))
+        } else {
+            None
+        };
+
+        let completed_at = if let Ok(completed_at_str) = row.try_get::<Option<String>, _>("completed_at") {
+            completed_at_str.and_then(|s| DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Utc)))
+        } else {
+            None
+        };
+
+        Ok(Project {
+            id: row.try_get("id")?,
+            name: row.try_get("name")?,
+            description: row.try_get("description")?,
+            status: row.try_get("status")?,
+            color: row.try_get("color")?,
+            start_date,
+            due_date,
+            completed_at,
+            linked_notes: row.try_get("linked_notes").unwrap_or_else(|_| "[]".to_string()),
+            linked_files: row.try_get("linked_files").unwrap_or_else(|_| "[]".to_string()),
+            progress: row.try_get("progress").unwrap_or(0),
+            total_tasks: row.try_get("total_tasks").unwrap_or(0),
+            completed_tasks: row.try_get("completed_tasks").unwrap_or(0),
+            created_at,
+            updated_at,
+            created_by: row.try_get("created_by")?,
+        })
+    }
+}
+
+// FromRow implementation for TimeEntry
+impl FromRow<'_, sqlx::sqlite::SqliteRow> for TimeEntry {
+    fn from_row(row: &sqlx::sqlite::SqliteRow) -> Result<Self, sqlx::Error> {
+        let created_at_str: String = row.try_get("created_at")?;
+        let start_time_str: String = row.try_get("start_time")?;
+
+        let created_at = DateTime::parse_from_rfc3339(&created_at_str)
+            .map_err(|e| sqlx::Error::ColumnDecode {
+                index: "created_at".to_string(),
+                source: Box::new(e),
+            })?
+            .with_timezone(&Utc);
+
+        let start_time = DateTime::parse_from_rfc3339(&start_time_str)
+            .map_err(|e| sqlx::Error::ColumnDecode {
+                index: "start_time".to_string(),
+                source: Box::new(e),
+            })?
+            .with_timezone(&Utc);
+
+        let end_time = if let Ok(end_time_str) = row.try_get::<Option<String>, _>("end_time") {
+            end_time_str.and_then(|s| DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Utc)))
+        } else {
+            None
+        };
+
+        Ok(TimeEntry {
+            id: row.try_get("id")?,
+            task_id: row.try_get("task_id")?,
+            start_time,
+            end_time,
+            duration: row.try_get("duration")?,
+            description: row.try_get("description")?,
+            created_at,
+        })
+    }
+}
+
+// Request structures for task management
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateTaskRequest {
+    pub title: String,
+    pub description: Option<String>,
+    pub priority: Option<String>,
+    pub due_date: Option<DateTime<Utc>>,
+    pub estimated_time: Option<i32>,
+    pub project_id: Option<String>,
+    pub parent_task_id: Option<String>,
+    pub linked_notes: Option<Vec<String>>,
+    pub linked_files: Option<Vec<String>>,
+    pub tags: Option<Vec<String>>,
+    pub contexts: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateTaskRequest {
+    pub id: String,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub status: Option<String>,
+    pub priority: Option<String>,
+    pub due_date: Option<DateTime<Utc>>,
+    pub estimated_time: Option<i32>,
+    pub actual_time: Option<i32>,
+    pub project_id: Option<String>,
+    pub parent_task_id: Option<String>,
+    pub linked_notes: Option<Vec<String>>,
+    pub linked_files: Option<Vec<String>>,
+    pub tags: Option<Vec<String>>,
+    pub contexts: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateProjectRequest {
+    pub name: String,
+    pub description: Option<String>,
+    pub color: Option<String>,
+    pub start_date: Option<DateTime<Utc>>,
+    pub due_date: Option<DateTime<Utc>>,
+    pub linked_notes: Option<Vec<String>>,
+    pub linked_files: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateProjectRequest {
+    pub id: String,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub status: Option<String>,
+    pub color: Option<String>,
+    pub start_date: Option<DateTime<Utc>>,
+    pub due_date: Option<DateTime<Utc>>,
+    pub linked_notes: Option<Vec<String>>,
+    pub linked_files: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateTimeEntryRequest {
+    pub task_id: String,
+    pub start_time: DateTime<Utc>,
+    pub end_time: Option<DateTime<Utc>>,
+    pub description: Option<String>,
+}
