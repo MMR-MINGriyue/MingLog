@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" 
+           Name="MingLog" 
+           Language="1033" 
+           Version="{{version}}" 
+           Manufacturer="MingLog Team" 
+           UpgradeCode="{{upgrade_code}}">
+    
+    <Package InstallerVersion="200" 
+             Compressed="yes" 
+             InstallScope="perMachine" 
+             Description="MingLog - Modern Knowledge Management Tool"
+             Comments="A high-performance, local-first knowledge management desktop application" />
+
+    <!-- Major upgrade configuration -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of MingLog is already installed." />
+    
+    <!-- Media and cabinet configuration -->
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Feature configuration -->
+    <Feature Id="ProductFeature" Title="MingLog" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+
+    <!-- UI configuration -->
+    <UI>
+      <UIRef Id="WixUI_InstallDir" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2">1</Publish>
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2">1</Publish>
+    </UI>
+
+    <!-- License configuration -->
+    <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
+    
+    <!-- Custom branding -->
+    <WixVariable Id="WixUIBannerBmp" Value="banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="dialog.bmp" />
+
+    <!-- Program Files directory structure -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="MingLog" />
+      </Directory>
+      
+      <!-- Start Menu -->
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="MingLog" />
+      </Directory>
+      
+      <!-- Desktop -->
+      <Directory Id="DesktopFolder" Name="Desktop" />
+    </Directory>
+
+    <!-- Component group for main application files -->
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <!-- Main executable -->
+      <Component Id="MainExecutable" Guid="*">
+        <File Id="MingLogExe" 
+              Source="{{app_exe}}" 
+              KeyPath="yes" 
+              Checksum="yes">
+          <Shortcut Id="ApplicationStartMenuShortcut"
+                    Directory="ApplicationProgramsFolder"
+                    Name="MingLog"
+                    Description="Modern Knowledge Management Tool"
+                    WorkingDirectory="INSTALLFOLDER"
+                    Icon="ApplicationIcon.exe"
+                    IconIndex="0"
+                    Advertise="yes" />
+          <Shortcut Id="ApplicationDesktopShortcut"
+                    Directory="DesktopFolder"
+                    Name="MingLog"
+                    Description="Modern Knowledge Management Tool"
+                    WorkingDirectory="INSTALLFOLDER"
+                    Icon="ApplicationIcon.exe"
+                    IconIndex="0"
+                    Advertise="yes" />
+        </File>
+      </Component>
+
+      <!-- Application resources -->
+      <Component Id="AppResources" Guid="*">
+        <File Id="ResourcesFolder" Source="{{resources_path}}" KeyPath="yes" />
+      </Component>
+
+      <!-- Registry entries -->
+      <Component Id="RegistryEntries" Guid="*">
+        <RegistryKey Root="HKLM" Key="Software\MingLog">
+          <RegistryValue Type="string" Name="InstallPath" Value="[INSTALLFOLDER]" KeyPath="yes" />
+          <RegistryValue Type="string" Name="Version" Value="{{version}}" />
+        </RegistryKey>
+      </Component>
+
+      <!-- File associations -->
+      <Component Id="FileAssociations" Guid="*">
+        <RegistryKey Root="HKLM" Key="Software\Classes\.minglog">
+          <RegistryValue Type="string" Value="MingLog.Document" KeyPath="yes" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\MingLog.Document">
+          <RegistryValue Type="string" Value="MingLog Document" />
+          <RegistryKey Key="DefaultIcon">
+            <RegistryValue Type="string" Value="[INSTALLFOLDER]MingLog.exe,0" />
+          </RegistryKey>
+          <RegistryKey Key="shell\open\command">
+            <RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]MingLog.exe&quot; &quot;%1&quot;" />
+          </RegistryKey>
+        </RegistryKey>
+      </Component>
+    </ComponentGroup>
+
+    <!-- Application icon -->
+    <Icon Id="ApplicationIcon.exe" SourceFile="{{app_exe}}" />
+
+    <!-- Add/Remove Programs configuration -->
+    <Property Id="ARPPRODUCTICON" Value="ApplicationIcon.exe" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/MMR-MINGriyue/MingLog" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/MMR-MINGriyue/MingLog" />
+    <Property Id="ARPNOREPAIR" Value="1" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+
+    <!-- Custom actions for cleanup -->
+    <CustomAction Id="CleanupUserData" 
+                  BinaryKey="WixCA" 
+                  DllEntry="CAQuietExec" 
+                  Execute="deferred" 
+                  Return="ignore" 
+                  Impersonate="no" />
+
+    <!-- Installation sequence -->
+    <InstallExecuteSequence>
+      <Custom Action="CleanupUserData" Before="RemoveFiles">REMOVE="ALL"</Custom>
+    </InstallExecuteSequence>
+
+  </Product>
+</Wix>

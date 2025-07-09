@@ -7,50 +7,40 @@ import './index.css'
 // Initialize i18n
 import './i18n'
 
-// Initialize global error handling
-import './utils/errorHandler'
+// Import Tauri API for desktop functionality
+import { getCurrentWindow } from '@tauri-apps/api/window'
 
-// Initialize app (兼容浏览器和Tauri环境)
-function initializeApp() {
-  // 立即设置事件监听器（同步）
-  document.addEventListener('contextmenu', (e) => {
-    e.preventDefault()
-  })
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+// Initialize Tauri app
+async function initializeApp() {
+  try {
+    // Set up window properties
+    const appWindow = getCurrentWindow()
+    await appWindow.setTitle('MingLog Desktop')
+    
+    // Prevent default context menu
+    document.addEventListener('contextmenu', (e) => {
       e.preventDefault()
-      window.location.reload()
-    }
-  })
-
-  // 异步初始化Tauri功能（如果可用）
-  setTimeout(async () => {
-    try {
-      // 检查是否在Tauri环境中
-      if (window.__TAURI__) {
-        const { appWindow } = await import('@tauri-apps/api/window')
-        await appWindow.setTitle('MingLog Desktop')
-
-        // 添加F11全屏切换
-        document.addEventListener('keydown', (e) => {
-          if (e.key === 'F11') {
-            appWindow.toggleMaximize()
-          }
-        })
-
-        console.log('MingLog Desktop (Tauri) initialized successfully')
-      } else {
-        console.log('MingLog Desktop (Browser) initialized successfully')
+    })
+    
+    // Handle window close
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'F11') {
+        appWindow.toggleMaximize()
       }
-    } catch (error) {
-      console.error('Failed to initialize app:', error)
-    }
-  }, 0)
+      if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+        e.preventDefault()
+        window.location.reload()
+      }
+    })
+    
+    console.log('MingLog Desktop initialized successfully')
+  } catch (error) {
+    console.error('Failed to initialize Tauri app:', error)
+  }
 }
 
-// 立即初始化（不等待DOM）
-initializeApp()
+// Initialize app when DOM is ready
+document.addEventListener('DOMContentLoaded', initializeApp)
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

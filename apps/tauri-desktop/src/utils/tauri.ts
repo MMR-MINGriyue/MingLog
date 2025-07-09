@@ -49,6 +49,58 @@ export interface SearchRequest {
   offset?: number
 }
 
+// WebDAV and Sync related types
+export interface WebDAVConfig {
+  enabled: boolean
+  server_url: string
+  username: string
+  password: string
+  remote_path: string
+  sync_direction: SyncDirection
+  conflict_resolution: ConflictResolution
+  auto_sync: boolean
+  sync_interval: number
+  auto_sync_interval: number
+  sync_attachments: boolean
+  max_file_size: number
+}
+
+export enum SyncDirection {
+  Upload = 'upload',
+  Download = 'download',
+  Bidirectional = 'bidirectional'
+}
+
+export enum ConflictResolution {
+  Local = 'local',
+  Remote = 'remote',
+  Manual = 'manual',
+  LocalWins = 'local_wins',
+  RemoteWins = 'remote_wins',
+  ManualMerge = 'manual_merge',
+  CreateBoth = 'create_both'
+}
+
+export enum SyncStatus {
+  Idle = 'idle',
+  Syncing = 'syncing',
+  Uploading = 'uploading',
+  Downloading = 'downloading',
+  Testing = 'testing',
+  Success = 'success',
+  Failed = 'failed',
+  Error = 'error',
+  Conflict = 'conflict'
+}
+
+export interface SyncStats {
+  last_sync: string | null
+  files_uploaded: number
+  files_downloaded: number
+  conflicts: number
+  errors: number
+}
+
 export interface SearchResult {
   notes: Note[]
   total: number
@@ -134,7 +186,7 @@ export interface BlockSearchResult {
   score: number
   page_id?: string
   page_name?: string
-  block_id?: string
+  block_id?: string | null
   tags: string[]
   is_journal: boolean
   created_at: number
@@ -156,20 +208,20 @@ export const getAppInfo = (): Promise<AppInfo> => invoke('get_app_info')
 export const initDatabase = (): Promise<string> => invoke('init_database')
 
 // Note commands
-export const createNote = (request: CreateNoteRequest): Promise<Note> =>
-  invoke('create_note', { request })
+export const createNote = (request: CreateNoteRequest): Promise<Note | undefined> =>
+  withErrorHandling(() => invoke('create_note', { request }))
 
 export const getNote = (id: string): Promise<Note> =>
   invoke('get_note', { id })
 
-export const getNotes = (limit?: number, offset?: number): Promise<Note[]> =>
-  invoke('get_notes', { limit, offset })
+export const getNotes = (limit?: number, offset?: number): Promise<Note[] | undefined> =>
+  withErrorHandling(() => invoke('get_notes', { limit, offset }))
 
-export const updateNote = (request: UpdateNoteRequest): Promise<Note> =>
-  invoke('update_note', { request })
+export const updateNote = (request: UpdateNoteRequest): Promise<Note | undefined> =>
+  withErrorHandling(() => invoke('update_note', { request }))
 
-export const deleteNote = (id: string): Promise<void> =>
-  invoke('delete_note', { id })
+export const deleteNote = (id: string): Promise<void | undefined> =>
+  withErrorHandling(() => invoke('delete_note', { id }))
 
 export const searchNotes = (request: SearchRequest): Promise<SearchResult> =>
   invoke('search_notes', { request })
@@ -216,8 +268,16 @@ export const deletePage = (id: string): Promise<void> =>
   invoke('delete_page', { id })
 
 // Search commands
-export const searchBlocks = (request: BlockSearchRequest): Promise<BlockSearchResponse> =>
-  invoke('search_blocks', { request })
+export const searchBlocks = (request: BlockSearchRequest): Promise<BlockSearchResponse | undefined> => {
+  // Set default values for missing properties
+  const requestWithDefaults = {
+    include_pages: true,
+    include_blocks: true,
+    limit: 20,
+    ...request
+  }
+  return withErrorHandling(() => invoke('search_blocks', { request: requestWithDefaults }))
+}
 
 export const searchInPage = (pageId: string, query: string): Promise<BlockSearchResponse> =>
   invoke('search_in_page', { pageId, query })
@@ -248,6 +308,31 @@ export const importMarkdownFile = (filePath: string, graphId: string): Promise<I
 export const exportPageToMarkdown = (pageId: string, outputDir: string): Promise<string> =>
   invoke('export_page_to_markdown', { pageId, outputDir })
 
+// WebDAV and Sync functions
+export const configureWebDAVSync = (config: WebDAVConfig): Promise<void> =>
+  invoke('configure_webdav_sync', { config })
+
+export const getWebDAVConfig = (): Promise<WebDAVConfig> =>
+  invoke('get_webdav_config')
+
+export const testWebDAVConnection = (config: WebDAVConfig): Promise<boolean> =>
+  invoke('test_webdav_connection', { config })
+
+export const startWebDAVSync = (): Promise<void> =>
+  invoke('start_webdav_sync')
+
+export const stopWebDAVSync = (): Promise<void> =>
+  invoke('stop_webdav_sync')
+
+export const getSyncStatus = (): Promise<SyncStatus> =>
+  invoke('get_sync_status')
+
+export const getSyncStats = (): Promise<SyncStats> =>
+  invoke('get_sync_stats')
+
+export const clearSyncCache = (): Promise<void> =>
+  invoke('clear_sync_cache')
+
 export const bulkExportPages = (pageIds: string[], outputDir: string): Promise<ExportResult> =>
   invoke('bulk_export_pages', { pageIds, outputDir })
 
@@ -268,21 +353,21 @@ export const saveFile = (path: string, content: string): Promise<void> =>
 export const loadFile = (path: string): Promise<string> =>
   invoke('load_file', { path })
 
-export const exportData = (path: string): Promise<void> =>
-  invoke('export_data', { path })
+export const exportData = (path: string): Promise<void | undefined> =>
+  withErrorHandling(() => invoke('export_data', { path }))
 
-export const importData = (path: string): Promise<string> =>
-  invoke('import_data', { path })
+export const importData = (path: string): Promise<string | undefined> =>
+  withErrorHandling(() => invoke('import_data', { path }))
 
 // Error handling wrapper
 export const withErrorHandling = async <T>(
   operation: () => Promise<T>,
   errorMessage?: string
-): Promise<T | null> => {
+): Promise<T | undefined> => {
   try {
     return await operation()
   } catch (error) {
-    console.error(errorMessage || 'Operation failed:', error)
-    return null
+    console.error('Error:', error)
+    return undefined
   }
 }

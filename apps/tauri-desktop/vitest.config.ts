@@ -9,6 +9,12 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    alias: {
+      '@tauri-apps/api/core': resolve(__dirname, 'src/test/mocks/tauri-core.js'),
+      '@tauri-apps/api/tauri': resolve(__dirname, 'src/test/mocks/tauri-core.js'),
+      '@tauri-apps/api/event': resolve(__dirname, 'src/test/mocks/tauri-event.js'),
+      '@tauri-apps/api/dialog': resolve(__dirname, 'src/test/mocks/tauri-dialog.js'),
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

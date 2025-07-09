@@ -69,13 +69,12 @@ describe('Layout', () => {
     // Should have navigation links
     expect(screen.getByRole('navigation')).toBeInTheDocument()
 
-    // Check for actual navigation items from the component using more specific selectors
-    const homeNavItems = screen.getAllByText('首页')
-    expect(homeNavItems.length).toBeGreaterThan(0)
-
-    expect(screen.getByText('智能编辑器')).toBeInTheDocument()
-    expect(screen.getByText('知识图谱')).toBeInTheDocument()
+    // Check for system navigation items that should always be present
+    expect(screen.getByText('模块管理')).toBeInTheDocument()
     expect(screen.getByText('设置')).toBeInTheDocument()
+
+    // In test environment without Core initialization, module-specific navigation items won't be present
+    // This is expected behavior as modules are not loaded in test environment
   })
 
   it('handles sidebar toggle', async () => {

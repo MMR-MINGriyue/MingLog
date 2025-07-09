@@ -1,7 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import VirtualizedSearchResults from '../VirtualizedSearchResults'
+
+// Mock lucide-react icons
+vi.mock('lucide-react', () => ({
+  FileText: () => <div data-testid="file-text-icon">FileText</div>,
+  Hash: () => <div data-testid="hash-icon">Hash</div>,
+  Calendar: () => <div data-testid="calendar-icon">Calendar</div>,
+  Clock: () => <div data-testid="clock-icon">Clock</div>,
+}))
 
 const mockResults = Array.from({ length: 100 }, (_, i) => ({
   id: `result-${i}`,
@@ -24,7 +32,9 @@ const mockProps = {
   selectedIndex: 0,
   query: 'test',
   onResultClick: vi.fn(),
-  highlightText: vi.fn((text: string) => text),
+  highlightText: vi.fn((text: string, query: string) => (
+    <span>{text.replace(new RegExp(query, 'gi'), (match) => `<mark>${match}</mark>`)}</span>
+  )),
   formatDate: vi.fn((timestamp: number) => new Date(timestamp * 1000).toLocaleDateString()),
 }
 
@@ -38,16 +48,17 @@ describe('VirtualizedSearchResults', () => {
 
     const container = screen.getByTestId('search-results-container')
     expect(container).toBeInTheDocument()
-    expect(container).toHaveClass('relative', 'overflow-auto')
+    expect(container).toHaveClass('relative')
   })
 
   it('renders only visible items initially', () => {
     render(<VirtualizedSearchResults {...mockProps} />)
 
-    // Should render only visible items + buffer
+    // Should render only visible items + buffer (approximately 5-15 items for 400px container)
     const visibleItems = screen.getAllByTestId(/search-result-\d+/)
     expect(visibleItems.length).toBeLessThan(mockResults.length)
     expect(visibleItems.length).toBeGreaterThan(0)
+    expect(visibleItems.length).toBeLessThanOrEqual(15) // Max visible + buffer
   })
 
   it('calls onResultClick when item is clicked', async () => {

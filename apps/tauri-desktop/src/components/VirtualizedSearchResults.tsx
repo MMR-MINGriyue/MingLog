@@ -1,192 +1,214 @@
-import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react'
-import { FileText, Hash, Calendar, Clock } from 'lucide-react'
+import React, { useMemo } from 'react';
+import { FixedSizeList as List } from 'react-window';
+import { FileText, Hash, Calendar, Clock } from 'lucide-react';
 
 interface SearchResult {
-  id: string
-  result_type: string
-  title: string
-  content: string
-  excerpt: string
-  score: number
-  page_id?: string
-  page_name?: string
-  block_id?: string
-  tags: string[]
-  is_journal: boolean
-  created_at: number
-  updated_at: number
+  id: string;
+  title: string;
+  content: string;
+  excerpt?: string;
+  type?: 'note' | 'page' | 'block';
+  result_type?: 'page' | 'block';
+  score: number;
+  highlights?: string[];
+  tags?: string[];
+  page_id?: string;
+  page_name?: string;
+  block_id?: string | null;
+  is_journal?: boolean;
+  created_at?: number;
+  updated_at?: number;
 }
 
 interface VirtualizedSearchResultsProps {
-  results: SearchResult[]
-  selectedIndex: number
-  query: string
-  onResultClick: (result: SearchResult, index: number) => void
-  highlightText: (text: string, query: string) => React.ReactNode
-  formatDate: (timestamp: number) => string
+  results: SearchResult[];
+  onResultClick: (result: SearchResult, index?: number) => void;
+  selectedIndex?: number;
+  query?: string;
+  highlightText?: (text: string, query: string) => React.ReactNode;
+  formatDate?: (date: string | Date) => string;
+  height?: number;
+  itemHeight?: number;
+  className?: string;
 }
 
-const ITEM_HEIGHT = 80 // Height of each search result item
-const CONTAINER_HEIGHT = 400 // Max height of the results container
-const BUFFER_SIZE = 5 // Number of items to render outside visible area
+interface ResultItemProps {
+  index: number;
+  style: React.CSSProperties;
+  data: {
+    results: SearchResult[];
+    onResultClick: (result: SearchResult, index?: number) => void;
+    selectedIndex?: number;
+    query?: string;
+    highlightText?: (text: string, query: string) => React.ReactNode;
+    formatDate?: (date: string | Date) => string;
+  };
+}
 
-const VirtualizedSearchResults: React.FC<VirtualizedSearchResultsProps> = ({
-  results,
-  selectedIndex,
-  query,
-  onResultClick,
-  highlightText,
-  formatDate,
-}) => {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [scrollTop, setScrollTop] = useState(0)
+const ResultItem: React.FC<ResultItemProps> = ({ index, style, data }) => {
+  const { results, onResultClick, selectedIndex, query, highlightText, formatDate } = data;
+  const result = results[index];
 
-  // Calculate visible range
-  const visibleRange = useMemo(() => {
-    const visibleCount = Math.ceil(CONTAINER_HEIGHT / ITEM_HEIGHT)
-    const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - BUFFER_SIZE)
-    const endIndex = Math.min(results.length, startIndex + visibleCount + BUFFER_SIZE * 2)
-    
-    return { startIndex, endIndex, visibleCount }
-  }, [scrollTop, results.length])
+  if (!result) return null;
 
-  // Handle scroll
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop)
-  }, [])
+  const isSelected = selectedIndex === index;
 
-  // Scroll to selected item
-  useEffect(() => {
-    if (containerRef.current && selectedIndex >= 0) {
-      const itemTop = selectedIndex * ITEM_HEIGHT
-      const itemBottom = itemTop + ITEM_HEIGHT
-      const containerTop = scrollTop
-      const containerBottom = scrollTop + CONTAINER_HEIGHT
+  // Determine result type - support both 'type' and 'result_type'
+  const resultType = result.type || result.result_type || 'note';
 
-      if (itemTop < containerTop) {
-        containerRef.current.scrollTop = itemTop
-      } else if (itemBottom > containerBottom) {
-        containerRef.current.scrollTop = itemBottom - CONTAINER_HEIGHT
-      }
-    }
-  }, [selectedIndex, scrollTop])
-
-  // Render visible items
-  const visibleItems = useMemo(() => {
-    const items = []
-    const { startIndex, endIndex } = visibleRange
-
-    for (let i = startIndex; i < endIndex; i++) {
-      const result = results[i]
-      if (!result) continue
-
-      const isSelected = i === selectedIndex
-      const isPage = result.result_type === 'page'
-
-      items.push(
-        <div
-          key={result.id}
-          data-testid={`search-result-${i}`}
-          data-result-id={result.id}
-          className={`
-            absolute left-0 right-0 px-4 py-3 cursor-pointer border-b border-gray-100 dark:border-gray-700
-            transition-colors duration-150
-            ${isSelected
-              ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700'
-              : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-            }
-          `}
-          style={{
-            top: i * ITEM_HEIGHT,
-            height: ITEM_HEIGHT,
-          }}
-          onClick={() => onResultClick(result, i)}
-        >
-          <div className="flex items-start space-x-3 h-full">
-            <div className="flex-shrink-0 mt-1">
-              {isPage ? (
-                <FileText className="w-4 h-4 text-blue-500" data-testid="file-text-icon" />
-              ) : (
-                <Hash className="w-4 h-4 text-gray-500" data-testid="hash-icon" />
-              )}
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                  {highlightText(result.title, query)}
-                </h4>
-                <div className="flex items-center space-x-2 text-xs text-gray-500">
-                  {result.is_journal && (
-                    <Calendar className="w-3 h-3" data-testid="calendar-icon" />
-                  )}
-                  <Clock className="w-3 h-3" data-testid="clock-icon" />
-                  <span>{formatDate(result.updated_at)}</span>
-                </div>
-              </div>
-              
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                {highlightText(result.excerpt, query)}
-              </p>
-              
-              <div className="flex items-center justify-between mt-2">
-                <div className="flex items-center space-x-2 text-xs">
-                  {result.page_name && !isPage && (
-                    <span className="text-gray-500">
-                      in {highlightText(result.page_name, query)}
-                    </span>
-                  )}
-                  {result.tags.length > 0 && (
-                    <div className="flex space-x-1">
-                      {result.tags.slice(0, 2).map((tag, tagIndex) => (
-                        <span
-                          key={tagIndex}
-                          className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded text-xs"
-                        >
-                          {highlightText(tag, query)}
-                        </span>
-                      ))}
-                      {result.tags.length > 2 && (
-                        <span className="text-gray-400 text-xs">
-                          +{result.tags.length - 2}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                
-                <div className="text-xs text-gray-400">
-                  {Math.round(result.score * 100)}% match
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )
+  // Get icon based on type and journal status
+  const getIcon = () => {
+    if (result.is_journal) {
+      return <Calendar data-testid="calendar-icon" className="w-4 h-4" />;
     }
 
-    return items
-  }, [results, visibleRange, selectedIndex, query, onResultClick, highlightText, formatDate])
+    switch (resultType) {
+      case 'page':
+        return <FileText data-testid="file-text-icon" className="w-4 h-4" />;
+      case 'block':
+        return <Hash data-testid="hash-icon" className="w-4 h-4" />;
+      default:
+        return <FileText data-testid="file-text-icon" className="w-4 h-4" />;
+    }
+  };
 
-  const totalHeight = results.length * ITEM_HEIGHT
+  // Format score as percentage
+  const scorePercentage = Math.round(result.score * 100);
+
+  // Get display content - use excerpt if available, otherwise content
+  const displayContent = result.excerpt || result.content;
+
+  // Apply text highlighting if function is provided
+  const highlightedTitle = highlightText && query ?
+    highlightText(result.title, query) : result.title;
+  const highlightedContent = highlightText && query ?
+    highlightText(displayContent, query) : displayContent;
 
   return (
     <div
-      ref={containerRef}
-      data-testid="search-results-container"
-      className="relative overflow-auto"
-      style={{ height: Math.min(CONTAINER_HEIGHT, totalHeight) }}
-      onScroll={handleScroll}
+      style={style}
+      role="option"
+      aria-selected={isSelected}
+      data-testid={`search-result-${index}`}
+      className={`absolute px-4 py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer ${
+        isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+      }`}
+      onClick={() => onResultClick(result, index)}
     >
-      {/* Virtual container to maintain scroll height */}
-      <div
-        data-testid="search-results-virtual-container"
-        style={{ height: totalHeight, position: 'relative' }}
-      >
-        {visibleItems}
+      <div className="flex items-start space-x-3">
+        <div className="flex-shrink-0">
+          {getIcon()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+            {highlightedTitle}
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+            {highlightedContent}
+          </p>
+
+          {/* Tags display */}
+          {result.tags && result.tags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {result.tags.slice(0, 2).map((tag, idx) => (
+                <span
+                  key={idx}
+                  className="inline-block px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded"
+                >
+                  {tag}
+                </span>
+              ))}
+              {result.tags.length > 2 && (
+                <span className="inline-block px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">
+                  +{result.tags.length - 2}
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-xs text-gray-400 dark:text-gray-500 capitalize">
+              {resultType === 'block' && result.page_name ?
+                `${resultType} in ${result.page_name}` :
+                resultType}
+            </span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">
+              {scorePercentage}% match
+            </span>
+          </div>
+
+          {/* Date display if formatDate is provided and timestamp exists */}
+          {formatDate && result.created_at && (
+            <div className="mt-1">
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                <Clock data-testid="clock-icon" className="w-3 h-3 inline mr-1" />
+                {formatDate(result.created_at)}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default React.memo(VirtualizedSearchResults)
+const VirtualizedSearchResults: React.FC<VirtualizedSearchResultsProps> = ({
+  results,
+  onResultClick,
+  selectedIndex,
+  query,
+  highlightText,
+  formatDate,
+  height = 400,
+  itemHeight = 120,
+  className = '',
+}) => {
+  const itemData = useMemo(() => ({
+    results,
+    onResultClick,
+    selectedIndex,
+    query,
+    highlightText,
+    formatDate,
+  }), [results, onResultClick, selectedIndex, query, highlightText, formatDate]);
+
+  if (results.length === 0) {
+    return (
+      <div
+        className={`flex items-center justify-center h-32 text-gray-500 dark:text-gray-400 ${className}`}
+        data-testid="search-results-container"
+      >
+        <div className="text-center">
+          <p className="text-sm">No results found</p>
+          <p className="text-xs mt-1">Try adjusting your search terms</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`relative overflow-auto border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden ${className}`}
+      data-testid="search-results-container"
+    >
+      <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          {results.length} result{results.length !== 1 ? 's' : ''} found
+        </p>
+      </div>
+      <div>
+        <List
+          height={height}
+          itemCount={results.length}
+          itemSize={itemHeight}
+          itemData={itemData}
+          overscanCount={5}
+        >
+          {ResultItem}
+        </List>
+      </div>
+    </div>
+  );
+};
+
+export default VirtualizedSearchResults;

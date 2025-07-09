@@ -2,13 +2,15 @@
 mod tests {
     use super::*;
     use crate::models::*;
+    use crate::database::Database;
     use tempfile::tempdir;
     use tokio;
+    use serde_json;
 
-    async fn create_test_database() -> Result<Database> {
+    async fn create_test_database() -> Result<Database, Box<dyn std::error::Error>> {
         let temp_dir = tempdir().unwrap();
         let db_path = temp_dir.path().join("test.db");
-        Database::new_with_path(db_path.to_str().unwrap()).await
+        Ok(Database::new_with_path(db_path.to_str().unwrap()).await?)
     }
 
     #[tokio::test]
@@ -25,9 +27,10 @@ mod tests {
             name: "Test Page".to_string(),
             title: Some("Test Page Title".to_string()),
             graph_id: "default".to_string(),
-            is_journal: false,
+            is_journal: Some(false),
             journal_date: None,
-            tags: Some(vec!["test".to_string(), "page".to_string()]),
+            tags: Some("test,page".to_string()),
+            properties: None,
         };
 
         let created_page = db.create_page(request).await.unwrap();
@@ -49,9 +52,10 @@ mod tests {
             name: "Test Page".to_string(),
             title: None,
             graph_id: "default".to_string(),
-            is_journal: false,
+            is_journal: Some(false),
             journal_date: None,
             tags: None,
+            properties: None,
         };
         let page = db.create_page(page_request).await.unwrap();
 
@@ -61,8 +65,9 @@ mod tests {
             page_id: page.id.clone(),
             graph_id: "default".to_string(),
             parent_id: None,
-            order: 0,
-            refs: Some(vec!["reference".to_string()]),
+            order: Some(0),
+            refs: Some(serde_json::to_string(&vec!["reference".to_string()]).unwrap()),
+            properties: None,
         };
 
         let created_block = db.create_block(block_request).await.unwrap();
@@ -83,22 +88,25 @@ mod tests {
             name: "Original Name".to_string(),
             title: Some("Original Title".to_string()),
             graph_id: "default".to_string(),
-            is_journal: false,
+            is_journal: Some(false),
             journal_date: None,
             tags: None,
+            properties: None,
         };
 
         let page = db.create_page(request).await.unwrap();
 
         let update_request = UpdatePageRequest {
+            id: page.id.clone(),
             name: Some("Updated Name".to_string()),
             title: Some("Updated Title".to_string()),
             is_journal: None,
             journal_date: None,
-            tags: Some(vec!["updated".to_string()]),
+            tags: Some(serde_json::to_string(&vec!["updated".to_string()]).unwrap()),
+            properties: None,
         };
 
-        let updated_page = db.update_page(&page.id, update_request).await.unwrap();
+        let updated_page = db.update_page(update_request).await.unwrap();
         assert_eq!(updated_page.name, "Updated Name");
         assert_eq!(updated_page.title, Some("Updated Title".to_string()));
     }
@@ -111,9 +119,10 @@ mod tests {
             name: "To Delete".to_string(),
             title: None,
             graph_id: "default".to_string(),
-            is_journal: false,
+            is_journal: Some(false),
             journal_date: None,
             tags: None,
+            properties: None,
         };
 
         let page = db.create_page(request).await.unwrap();
@@ -140,9 +149,10 @@ mod tests {
                 name: format!("Page {}", i),
                 title: None,
                 graph_id: "default".to_string(),
-                is_journal: false,
+                is_journal: Some(false),
                 journal_date: None,
                 tags: None,
+                properties: None,
             };
             db.create_page(request).await.unwrap();
         }
@@ -160,9 +170,10 @@ mod tests {
             name: "Test Page".to_string(),
             title: None,
             graph_id: "default".to_string(),
-            is_journal: false,
+            is_journal: Some(false),
             journal_date: None,
             tags: None,
+            properties: None,
         };
         let page = db.create_page(page_request).await.unwrap();
 
@@ -173,8 +184,9 @@ mod tests {
                 page_id: page.id.clone(),
                 graph_id: "default".to_string(),
                 parent_id: None,
-                order: i,
+                order: Some(i),
                 refs: None,
+                properties: None,
             };
             db.create_block(block_request).await.unwrap();
         }
@@ -197,9 +209,10 @@ mod tests {
             name: "Searchable Page".to_string(),
             title: Some("This is a searchable title".to_string()),
             graph_id: "default".to_string(),
-            is_journal: false,
+            is_journal: Some(false),
             journal_date: None,
-            tags: Some(vec!["searchable".to_string()]),
+            tags: Some(serde_json::to_string(&vec!["searchable".to_string()]).unwrap()),
+            properties: None,
         };
         let page = db.create_page(page_request).await.unwrap();
 
@@ -208,8 +221,9 @@ mod tests {
             page_id: page.id.clone(),
             graph_id: "default".to_string(),
             parent_id: None,
-            order: 0,
+            order: Some(0),
             refs: None,
+            properties: None,
         };
         db.create_block(block_request).await.unwrap();
 
@@ -238,9 +252,10 @@ mod tests {
                 name: format!("Performance Page {}", i),
                 title: None,
                 graph_id: "default".to_string(),
-                is_journal: false,
+                is_journal: Some(false),
                 journal_date: None,
                 tags: None,
+                properties: None,
             };
             let page = db.create_page(page_request).await.unwrap();
 
@@ -251,8 +266,9 @@ mod tests {
                     page_id: page.id.clone(),
                     graph_id: "default".to_string(),
                     parent_id: None,
-                    order: j,
+                    order: Some(j),
                     refs: None,
+                    properties: None,
                 };
                 db.create_block(block_request).await.unwrap();
             }
@@ -274,21 +290,22 @@ mod tests {
 
     #[tokio::test]
     async fn test_concurrent_operations() {
-        let db = create_test_database().await.unwrap();
-        
+        let db = std::sync::Arc::new(create_test_database().await.unwrap());
+
         // Test concurrent page creation
         let mut handles = vec![];
-        
+
         for i in 0..10 {
-            let db_clone = db.clone(); // Assuming Database implements Clone or we use Arc
+            let db_clone = db.clone();
             let handle = tokio::spawn(async move {
                 let request = CreatePageRequest {
                     name: format!("Concurrent Page {}", i),
                     title: None,
                     graph_id: "default".to_string(),
-                    is_journal: false,
+                    is_journal: Some(false),
                     journal_date: None,
                     tags: None,
+                    properties: None,
                 };
                 db_clone.create_page(request).await
             });

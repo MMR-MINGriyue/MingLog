@@ -2,12 +2,17 @@ use crate::error::{AppError, Result};
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod integration_tests;
 use crate::models::{
-    Graph, Page, Block, Note, Tag, Settings,
+    Graph, Page, Block, Note, Tag, Settings, Task, Project, TimeEntry,
     CreateGraphRequest, UpdateGraphRequest,
     CreatePageRequest, UpdatePageRequest,
     CreateBlockRequest, UpdateBlockRequest,
     CreateNoteRequest, UpdateNoteRequest, CreateTagRequest,
+    CreateTaskRequest, UpdateTaskRequest,
+    CreateProjectRequest, UpdateProjectRequest,
+    CreateTimeEntryRequest,
     SearchRequest, SearchResult
 };
 use chrono::Utc;
@@ -61,8 +66,26 @@ impl Database {
 
     #[allow(dead_code)]
     pub async fn new_with_path(db_path: &str) -> Result<Self> {
+        // Ensure the parent directory exists
+        let path = std::path::Path::new(db_path);
+        if let Some(parent) = path.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+
         let database_url = format!("sqlite:{}", db_path);
-        let pool = SqlitePool::connect(&database_url).await?;
+
+        // Use the same optimized settings as the main constructor
+        let pool = SqlitePoolOptions::new()
+            .max_connections(10)
+            .acquire_timeout(std::time::Duration::from_secs(30))
+            .connect_with(
+                sqlx::sqlite::SqliteConnectOptions::from_str(&database_url)?
+                    .create_if_missing(true)
+                    .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
+                    .synchronous(sqlx::sqlite::SqliteSynchronous::Normal)
+                    .busy_timeout(std::time::Duration::from_secs(30))
+            )
+            .await?;
 
         let db = Self { pool };
         db.migrate().await?;
@@ -397,6 +420,143 @@ impl Database {
             .execute(&self.pool)
             .await
             .ok(); // Ignore errors if FTS table doesn't exist
+
+        // Create task management tables
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS tasks (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                status TEXT NOT NULL DEFAULT 'todo',
+                priority TEXT NOT NULL DEFAULT 'medium',
+                due_date TEXT,
+                completed_at TEXT,
+                estimated_time INTEGER,
+                actual_time INTEGER,
+                project_id TEXT,
+                parent_task_id TEXT,
+                linked_notes TEXT DEFAULT '[]',
+                linked_files TEXT DEFAULT '[]',
+                tags TEXT DEFAULT '[]',
+                contexts TEXT DEFAULT '[]',
+                recurrence TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                created_by TEXT,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+                FOREIGN KEY (parent_task_id) REFERENCES tasks(id) ON DELETE CASCADE
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS projects (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                status TEXT NOT NULL DEFAULT 'active',
+                color TEXT,
+                start_date TEXT,
+                due_date TEXT,
+                completed_at TEXT,
+                linked_notes TEXT DEFAULT '[]',
+                linked_files TEXT DEFAULT '[]',
+                progress INTEGER DEFAULT 0,
+                total_tasks INTEGER DEFAULT 0,
+                completed_tasks INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                created_by TEXT
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS task_time_entries (
+                id TEXT PRIMARY KEY,
+                task_id TEXT NOT NULL,
+                start_time TEXT NOT NULL,
+                end_time TEXT,
+                duration INTEGER,
+                description TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Create indexes for task management tables
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_projects_due_date ON projects(due_date)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_time_entries_task_id ON task_time_entries(task_id)")
+            .execute(&self.pool)
+            .await?;
+
+        // Create FTS tables for task search
+        sqlx::query(
+            r#"
+            CREATE VIRTUAL TABLE IF NOT EXISTS tasks_fts USING fts5(
+                id UNINDEXED,
+                title,
+                description,
+                tags UNINDEXED,
+                contexts UNINDEXED,
+                content='tasks',
+                content_rowid='rowid'
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            r#"
+            CREATE VIRTUAL TABLE IF NOT EXISTS projects_fts USING fts5(
+                id UNINDEXED,
+                name,
+                description,
+                content='projects',
+                content_rowid='rowid'
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
 
         // Run VACUUM to reclaim space (only if needed)
         // Note: This is expensive, so we only do it occasionally
@@ -837,6 +997,43 @@ impl Database {
         Ok(pages)
     }
 
+    pub async fn get_pages(&self, limit: Option<usize>) -> Result<Vec<Page>> {
+        let query = if let Some(limit) = limit {
+            format!(
+                r#"
+                SELECT id, name, title, properties, tags, is_journal, journal_date, created_at, updated_at, graph_id
+                FROM pages ORDER BY created_at DESC LIMIT {}
+                "#,
+                limit
+            )
+        } else {
+            r#"
+            SELECT id, name, title, properties, tags, is_journal, journal_date, created_at, updated_at, graph_id
+            FROM pages ORDER BY created_at DESC
+            "#.to_string()
+        };
+
+        let pages = sqlx::query_as::<_, Page>(&query)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(pages)
+    }
+
+    pub async fn get_recent_pages(&self, limit: usize) -> Result<Vec<Page>> {
+        let pages = sqlx::query_as::<_, Page>(
+            r#"
+            SELECT id, name, title, properties, tags, is_journal, journal_date, created_at, updated_at, graph_id
+            FROM pages ORDER BY updated_at DESC LIMIT ?
+            "#
+        )
+        .bind(limit as i64)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(pages)
+    }
+
     pub async fn update_page(&self, request: UpdatePageRequest) -> Result<Page> {
         let now = Utc::now();
 
@@ -1023,5 +1220,582 @@ impl Database {
             .await?;
 
         Ok(())
+    }
+
+    // Task management operations
+    pub async fn create_task(&self, request: CreateTaskRequest) -> Result<Task> {
+        let task = Task {
+            id: uuid::Uuid::new_v4().to_string(),
+            title: request.title,
+            description: request.description,
+            status: "todo".to_string(),
+            priority: request.priority.unwrap_or_else(|| "medium".to_string()),
+            due_date: request.due_date,
+            completed_at: None,
+            estimated_time: request.estimated_time,
+            actual_time: None,
+            project_id: request.project_id,
+            parent_task_id: request.parent_task_id,
+            linked_notes: serde_json::to_string(&request.linked_notes.unwrap_or_default()).unwrap_or_else(|_| "[]".to_string()),
+            linked_files: serde_json::to_string(&request.linked_files.unwrap_or_default()).unwrap_or_else(|_| "[]".to_string()),
+            tags: serde_json::to_string(&request.tags.unwrap_or_default()).unwrap_or_else(|_| "[]".to_string()),
+            contexts: serde_json::to_string(&request.contexts.unwrap_or_default()).unwrap_or_else(|_| "[]".to_string()),
+            recurrence: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            created_by: None,
+        };
+
+        sqlx::query(
+            r#"
+            INSERT INTO tasks (
+                id, title, description, status, priority, due_date, estimated_time,
+                project_id, parent_task_id, linked_notes, linked_files, tags, contexts,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            "#,
+        )
+        .bind(&task.id)
+        .bind(&task.title)
+        .bind(&task.description)
+        .bind(&task.status)
+        .bind(&task.priority)
+        .bind(task.due_date.map(|d| d.to_rfc3339()))
+        .bind(task.estimated_time)
+        .bind(&task.project_id)
+        .bind(&task.parent_task_id)
+        .bind(&task.linked_notes)
+        .bind(&task.linked_files)
+        .bind(&task.tags)
+        .bind(&task.contexts)
+        .bind(task.created_at.to_rfc3339())
+        .bind(task.updated_at.to_rfc3339())
+        .execute(&self.pool)
+        .await?;
+
+        Ok(task)
+    }
+
+    pub async fn get_task(&self, id: &str) -> Result<Task> {
+        let task = sqlx::query_as::<_, Task>(
+            r#"
+            SELECT id, title, description, status, priority, due_date, completed_at,
+                   estimated_time, actual_time, project_id, parent_task_id,
+                   linked_notes, linked_files, tags, contexts, recurrence,
+                   created_at, updated_at, created_by
+            FROM tasks WHERE id = ?
+            "#
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(task)
+    }
+
+    pub async fn update_task(&self, request: UpdateTaskRequest) -> Result<Task> {
+        let now = Utc::now();
+
+        if let Some(title) = &request.title {
+            sqlx::query("UPDATE tasks SET title = ?, updated_at = ? WHERE id = ?")
+                .bind(title)
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        if let Some(description) = &request.description {
+            sqlx::query("UPDATE tasks SET description = ?, updated_at = ? WHERE id = ?")
+                .bind(description)
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        if let Some(status) = &request.status {
+            sqlx::query("UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?")
+                .bind(status)
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+
+            // If marking as completed, set completed_at
+            if status == "done" {
+                sqlx::query("UPDATE tasks SET completed_at = ?, updated_at = ? WHERE id = ?")
+                    .bind(now.to_rfc3339())
+                    .bind(now.to_rfc3339())
+                    .bind(&request.id)
+                    .execute(&self.pool)
+                    .await?;
+            }
+        }
+
+        if let Some(priority) = &request.priority {
+            sqlx::query("UPDATE tasks SET priority = ?, updated_at = ? WHERE id = ?")
+                .bind(priority)
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        if let Some(due_date) = &request.due_date {
+            sqlx::query("UPDATE tasks SET due_date = ?, updated_at = ? WHERE id = ?")
+                .bind(due_date.to_rfc3339())
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        if let Some(estimated_time) = &request.estimated_time {
+            sqlx::query("UPDATE tasks SET estimated_time = ?, updated_at = ? WHERE id = ?")
+                .bind(estimated_time)
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        if let Some(actual_time) = &request.actual_time {
+            sqlx::query("UPDATE tasks SET actual_time = ?, updated_at = ? WHERE id = ?")
+                .bind(actual_time)
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        if let Some(project_id) = &request.project_id {
+            sqlx::query("UPDATE tasks SET project_id = ?, updated_at = ? WHERE id = ?")
+                .bind(project_id)
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        if let Some(tags) = &request.tags {
+            let tags_json = serde_json::to_string(tags).unwrap_or_else(|_| "[]".to_string());
+            sqlx::query("UPDATE tasks SET tags = ?, updated_at = ? WHERE id = ?")
+                .bind(tags_json)
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        if let Some(contexts) = &request.contexts {
+            let contexts_json = serde_json::to_string(contexts).unwrap_or_else(|_| "[]".to_string());
+            sqlx::query("UPDATE tasks SET contexts = ?, updated_at = ? WHERE id = ?")
+                .bind(contexts_json)
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        self.get_task(&request.id).await
+    }
+
+    pub async fn delete_task(&self, id: &str) -> Result<()> {
+        sqlx::query("DELETE FROM tasks WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_tasks(&self, limit: Option<usize>) -> Result<Vec<Task>> {
+        let query = if let Some(limit) = limit {
+            format!(
+                r#"
+                SELECT id, title, description, status, priority, due_date, completed_at,
+                       estimated_time, actual_time, project_id, parent_task_id,
+                       linked_notes, linked_files, tags, contexts, recurrence,
+                       created_at, updated_at, created_by
+                FROM tasks ORDER BY created_at DESC LIMIT {}
+                "#,
+                limit
+            )
+        } else {
+            r#"
+            SELECT id, title, description, status, priority, due_date, completed_at,
+                   estimated_time, actual_time, project_id, parent_task_id,
+                   linked_notes, linked_files, tags, contexts, recurrence,
+                   created_at, updated_at, created_by
+            FROM tasks ORDER BY created_at DESC
+            "#.to_string()
+        };
+
+        let tasks = sqlx::query_as::<_, Task>(&query)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(tasks)
+    }
+
+    // Project management operations
+    pub async fn create_project(&self, request: CreateProjectRequest) -> Result<Project> {
+        let project = Project {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: request.name,
+            description: request.description,
+            status: "active".to_string(),
+            color: request.color,
+            start_date: request.start_date,
+            due_date: request.due_date,
+            completed_at: None,
+            linked_notes: serde_json::to_string(&request.linked_notes.unwrap_or_default()).unwrap_or_else(|_| "[]".to_string()),
+            linked_files: serde_json::to_string(&request.linked_files.unwrap_or_default()).unwrap_or_else(|_| "[]".to_string()),
+            progress: 0,
+            total_tasks: 0,
+            completed_tasks: 0,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            created_by: None,
+        };
+
+        sqlx::query(
+            r#"
+            INSERT INTO projects (
+                id, name, description, status, color, start_date, due_date,
+                linked_notes, linked_files, progress, total_tasks, completed_tasks,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            "#,
+        )
+        .bind(&project.id)
+        .bind(&project.name)
+        .bind(&project.description)
+        .bind(&project.status)
+        .bind(&project.color)
+        .bind(project.start_date.map(|d| d.to_rfc3339()))
+        .bind(project.due_date.map(|d| d.to_rfc3339()))
+        .bind(&project.linked_notes)
+        .bind(&project.linked_files)
+        .bind(project.progress)
+        .bind(project.total_tasks)
+        .bind(project.completed_tasks)
+        .bind(project.created_at.to_rfc3339())
+        .bind(project.updated_at.to_rfc3339())
+        .execute(&self.pool)
+        .await?;
+
+        Ok(project)
+    }
+
+    pub async fn get_project(&self, id: &str) -> Result<Project> {
+        let project = sqlx::query_as::<_, Project>(
+            r#"
+            SELECT id, name, description, status, color, start_date, due_date, completed_at,
+                   linked_notes, linked_files, progress, total_tasks, completed_tasks,
+                   created_at, updated_at, created_by
+            FROM projects WHERE id = ?
+            "#
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(project)
+    }
+
+    pub async fn update_project(&self, request: UpdateProjectRequest) -> Result<Project> {
+        let now = Utc::now();
+
+        if let Some(name) = &request.name {
+            sqlx::query("UPDATE projects SET name = ?, updated_at = ? WHERE id = ?")
+                .bind(name)
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        if let Some(description) = &request.description {
+            sqlx::query("UPDATE projects SET description = ?, updated_at = ? WHERE id = ?")
+                .bind(description)
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        if let Some(status) = &request.status {
+            sqlx::query("UPDATE projects SET status = ?, updated_at = ? WHERE id = ?")
+                .bind(status)
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+
+            // If marking as completed, set completed_at
+            if status == "completed" {
+                sqlx::query("UPDATE projects SET completed_at = ?, updated_at = ? WHERE id = ?")
+                    .bind(now.to_rfc3339())
+                    .bind(now.to_rfc3339())
+                    .bind(&request.id)
+                    .execute(&self.pool)
+                    .await?;
+            }
+        }
+
+        if let Some(color) = &request.color {
+            sqlx::query("UPDATE projects SET color = ?, updated_at = ? WHERE id = ?")
+                .bind(color)
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        if let Some(start_date) = &request.start_date {
+            sqlx::query("UPDATE projects SET start_date = ?, updated_at = ? WHERE id = ?")
+                .bind(start_date.to_rfc3339())
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        if let Some(due_date) = &request.due_date {
+            sqlx::query("UPDATE projects SET due_date = ?, updated_at = ? WHERE id = ?")
+                .bind(due_date.to_rfc3339())
+                .bind(now.to_rfc3339())
+                .bind(&request.id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        self.get_project(&request.id).await
+    }
+
+    pub async fn delete_project(&self, id: &str) -> Result<()> {
+        // First, update all tasks in this project to remove project_id
+        sqlx::query("UPDATE tasks SET project_id = NULL WHERE project_id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+        // Then delete the project
+        sqlx::query("DELETE FROM projects WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_projects(&self, limit: Option<usize>) -> Result<Vec<Project>> {
+        let query = if let Some(limit) = limit {
+            format!(
+                r#"
+                SELECT id, name, description, status, color, start_date, due_date, completed_at,
+                       linked_notes, linked_files, progress, total_tasks, completed_tasks,
+                       created_at, updated_at, created_by
+                FROM projects ORDER BY created_at DESC LIMIT {}
+                "#,
+                limit
+            )
+        } else {
+            r#"
+            SELECT id, name, description, status, color, start_date, due_date, completed_at,
+                   linked_notes, linked_files, progress, total_tasks, completed_tasks,
+                   created_at, updated_at, created_by
+            FROM projects ORDER BY created_at DESC
+            "#.to_string()
+        };
+
+        let projects = sqlx::query_as::<_, Project>(&query)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(projects)
+    }
+
+    pub async fn get_tasks_by_project(&self, project_id: &str) -> Result<Vec<Task>> {
+        let tasks = sqlx::query_as::<_, Task>(
+            r#"
+            SELECT id, title, description, status, priority, due_date, completed_at,
+                   estimated_time, actual_time, project_id, parent_task_id,
+                   linked_notes, linked_files, tags, contexts, recurrence,
+                   created_at, updated_at, created_by
+            FROM tasks WHERE project_id = ? ORDER BY created_at DESC
+            "#
+        )
+        .bind(project_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(tasks)
+    }
+
+    // Time tracking operations
+    pub async fn create_time_entry(&self, request: CreateTimeEntryRequest) -> Result<TimeEntry> {
+        let time_entry = TimeEntry {
+            id: uuid::Uuid::new_v4().to_string(),
+            task_id: request.task_id,
+            start_time: request.start_time,
+            end_time: request.end_time,
+            duration: request.end_time.map(|end| {
+                (end - request.start_time).num_seconds() as i32
+            }),
+            description: request.description,
+            created_at: Utc::now(),
+        };
+
+        sqlx::query(
+            r#"
+            INSERT INTO task_time_entries (
+                id, task_id, start_time, end_time, duration, description, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            "#,
+        )
+        .bind(&time_entry.id)
+        .bind(&time_entry.task_id)
+        .bind(time_entry.start_time.to_rfc3339())
+        .bind(time_entry.end_time.map(|d| d.to_rfc3339()))
+        .bind(time_entry.duration)
+        .bind(&time_entry.description)
+        .bind(time_entry.created_at.to_rfc3339())
+        .execute(&self.pool)
+        .await?;
+
+        Ok(time_entry)
+    }
+
+    pub async fn get_time_entries_by_task(&self, task_id: &str) -> Result<Vec<TimeEntry>> {
+        let entries = sqlx::query_as::<_, TimeEntry>(
+            r#"
+            SELECT id, task_id, start_time, end_time, duration, description, created_at
+            FROM task_time_entries WHERE task_id = ? ORDER BY start_time DESC
+            "#
+        )
+        .bind(task_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(entries)
+    }
+
+    pub async fn update_time_entry_end(&self, id: &str, end_time: chrono::DateTime<Utc>) -> Result<TimeEntry> {
+        // Get the existing entry to calculate duration
+        let entry = sqlx::query_as::<_, TimeEntry>(
+            "SELECT id, task_id, start_time, end_time, duration, description, created_at FROM task_time_entries WHERE id = ?"
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        let duration = (end_time - entry.start_time).num_seconds() as i32;
+
+        sqlx::query(
+            "UPDATE task_time_entries SET end_time = ?, duration = ? WHERE id = ?"
+        )
+        .bind(end_time.to_rfc3339())
+        .bind(duration)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+
+        // Return updated entry
+        let updated_entry = TimeEntry {
+            id: entry.id,
+            task_id: entry.task_id,
+            start_time: entry.start_time,
+            end_time: Some(end_time),
+            duration: Some(duration),
+            description: entry.description,
+            created_at: entry.created_at,
+        };
+
+        Ok(updated_entry)
+    }
+
+    pub async fn delete_time_entry(&self, id: &str) -> Result<()> {
+        sqlx::query("DELETE FROM task_time_entries WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    // Search operations for tasks and projects
+    pub async fn search_tasks(&self, query: &str, limit: Option<usize>) -> Result<Vec<Task>> {
+        let search_query = format!("%{}%", query);
+        let sql = if let Some(limit) = limit {
+            format!(
+                r#"
+                SELECT id, title, description, status, priority, due_date, completed_at,
+                       estimated_time, actual_time, project_id, parent_task_id,
+                       linked_notes, linked_files, tags, contexts, recurrence,
+                       created_at, updated_at, created_by
+                FROM tasks
+                WHERE title LIKE ? OR description LIKE ? OR tags LIKE ? OR contexts LIKE ?
+                ORDER BY created_at DESC LIMIT {}
+                "#,
+                limit
+            )
+        } else {
+            r#"
+            SELECT id, title, description, status, priority, due_date, completed_at,
+                   estimated_time, actual_time, project_id, parent_task_id,
+                   linked_notes, linked_files, tags, contexts, recurrence,
+                   created_at, updated_at, created_by
+            FROM tasks
+            WHERE title LIKE ? OR description LIKE ? OR tags LIKE ? OR contexts LIKE ?
+            ORDER BY created_at DESC
+            "#.to_string()
+        };
+
+        let tasks = sqlx::query_as::<_, Task>(&sql)
+            .bind(&search_query)
+            .bind(&search_query)
+            .bind(&search_query)
+            .bind(&search_query)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(tasks)
+    }
+
+    pub async fn search_projects(&self, query: &str, limit: Option<usize>) -> Result<Vec<Project>> {
+        let search_query = format!("%{}%", query);
+        let sql = if let Some(limit) = limit {
+            format!(
+                r#"
+                SELECT id, name, description, status, color, start_date, due_date, completed_at,
+                       linked_notes, linked_files, progress, total_tasks, completed_tasks,
+                       created_at, updated_at, created_by
+                FROM projects
+                WHERE name LIKE ? OR description LIKE ?
+                ORDER BY created_at DESC LIMIT {}
+                "#,
+                limit
+            )
+        } else {
+            r#"
+            SELECT id, name, description, status, color, start_date, due_date, completed_at,
+                   linked_notes, linked_files, progress, total_tasks, completed_tasks,
+                   created_at, updated_at, created_by
+            FROM projects
+            WHERE name LIKE ? OR description LIKE ?
+            ORDER BY created_at DESC
+            "#.to_string()
+        };
+
+        let projects = sqlx::query_as::<_, Project>(&sql)
+            .bind(&search_query)
+            .bind(&search_query)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(projects)
     }
 }

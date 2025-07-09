@@ -46,6 +46,8 @@ class SyncEngine {
     status: 'idle'
   }
   private listeners: ((status: SyncStatus) => void)[] = []
+  private syncIntervalId: NodeJS.Timeout | null = null
+  private eventHandlers: { online?: () => void; offline?: () => void } = {}
 
   constructor(config: SyncConfig) {
     this.config = config
@@ -53,26 +55,36 @@ class SyncEngine {
   }
 
   private initializeEngine() {
-    // Listen for online/offline events
-    window.addEventListener('online', () => {
+    // 在线/离线事件处理器
+    const handleOnline = () => {
       this.status.isOnline = true
       this.notifyListeners()
       if (this.config.enabled) {
         this.triggerSync()
       }
-    })
+    }
 
-    window.addEventListener('offline', () => {
+    const handleOffline = () => {
       this.status.isOnline = false
       this.notifyListeners()
-    })
+    }
+
+    // Listen for online/offline events
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    // 存储事件处理器引用以便清理
+    this.eventHandlers = {
+      online: handleOnline,
+      offline: handleOffline
+    }
 
     // Load change log from localStorage
     this.loadChangeLog()
 
     // Set up periodic sync if enabled
     if (this.config.enabled && this.config.syncInterval > 0) {
-      setInterval(() => {
+      this.syncIntervalId = setInterval(() => {
         if (this.status.isOnline && this.status.status === 'idle') {
           this.triggerSync()
         }
@@ -84,6 +96,27 @@ class SyncEngine {
   updateConfig(newConfig: Partial<SyncConfig>) {
     this.config = { ...this.config, ...newConfig }
     this.saveConfig()
+  }
+
+  // 清理资源
+  destroy() {
+    // 清理定时器
+    if (this.syncIntervalId) {
+      clearInterval(this.syncIntervalId)
+      this.syncIntervalId = null
+    }
+
+    // 清理事件监听器
+    if (this.eventHandlers.online) {
+      window.removeEventListener('online', this.eventHandlers.online)
+    }
+    if (this.eventHandlers.offline) {
+      window.removeEventListener('offline', this.eventHandlers.offline)
+    }
+
+    // 清空监听器数组
+    this.listeners = []
+    this.eventHandlers = {}
   }
 
   getConfig(): SyncConfig {
@@ -299,11 +332,7 @@ class SyncEngine {
     this.notifyListeners()
   }
 
-  destroy() {
-    this.listeners = []
-    window.removeEventListener('online', () => {})
-    window.removeEventListener('offline', () => {})
-  }
+
 }
 
 // Singleton instance

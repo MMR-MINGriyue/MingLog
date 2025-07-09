@@ -365,7 +365,7 @@ export const UpdateManager: React.FC = () => {
       {renderUpdateStatus()}
       {renderSettings()}
 
-      <style jsx>{`
+      <style>{`
         .update-manager {
           max-width: 600px;
           margin: 0 auto;

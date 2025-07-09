@@ -7,6 +7,7 @@ mod error;
 // mod error_reporting; // 暂时禁用，避免Sentry依赖问题
 // mod error_testing; // 暂时禁用，避免Sentry依赖问题
 mod models;
+// mod monitoring; // 暂时禁用监控模块，避免依赖问题
 // mod updater; // 暂时禁用，避免tokio process依赖问题
 mod state;
 mod file_operations;
@@ -33,14 +34,24 @@ async fn main() {
             // Initialize database
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
+                let startup_start = std::time::Instant::now();
+
                 match Database::new().await {
                     Ok(db) => {
+                        // 预热数据库连接池
+                        let _ = db.get_pages(Some(1)).await;
+
+                        // 预加载关键数据（最近访问的页面）
+                        let _ = db.get_recent_pages(5).await;
+
                         let state = AppState {
                             db: Arc::new(Mutex::new(db)),
                             sync_manager: Arc::new(Mutex::new(sync::WebDAVSyncManager::new())),
                         };
                         app_handle.manage(state);
-                        log::info!("Database initialized successfully");
+
+                        let startup_time = startup_start.elapsed();
+                        log::info!("Database initialized successfully in {:?}", startup_time);
                     }
                     Err(e) => {
                         log::error!("Failed to initialize database: {}", e);
@@ -48,6 +59,11 @@ async fn main() {
                     }
                 }
             });
+
+            // Initialize performance monitor (暂时禁用)
+            // let performance_monitor = monitoring::PerformanceMonitor::new(app.handle().clone());
+            // app.manage(performance_monitor);
+            // log::info!("Performance monitor initialized");
 
             Ok(())
         })
@@ -171,6 +187,15 @@ async fn main() {
             load_file,
             export_data,
             import_data,
+
+            // Performance monitoring commands (暂时禁用)
+            // monitoring::performance::get_performance_metrics,
+            // monitoring::performance::get_current_performance_metrics,
+            // monitoring::performance::start_performance_event,
+            // monitoring::performance::end_performance_event,
+            get_system_info,
+            measure_db_performance,
+            analyze_performance_bottlenecks,
 
             // Error reporting commands (暂时禁用)
             // error_reporting::configure_error_reporting,
