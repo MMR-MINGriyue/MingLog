@@ -558,6 +558,69 @@ impl Database {
         .execute(&self.pool)
         .await?;
 
+        // Create links table for bidirectional linking
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS links (
+                id TEXT PRIMARY KEY,
+                source_type TEXT NOT NULL CHECK (source_type IN ('page', 'block')),
+                source_id TEXT NOT NULL,
+                target_type TEXT NOT NULL CHECK (target_type IN ('page', 'block')),
+                target_id TEXT NOT NULL,
+                link_type TEXT NOT NULL CHECK (link_type IN ('page-reference', 'block-reference')),
+                context TEXT,
+                position INTEGER,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE(source_type, source_id, target_type, target_id, position)
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Create page aliases table
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS page_aliases (
+                id TEXT PRIMARY KEY,
+                page_id TEXT NOT NULL,
+                alias TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (page_id) REFERENCES notes(id) ON DELETE CASCADE,
+                UNIQUE(alias)
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Create indexes for links table
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_links_source ON links(source_type, source_id)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_links_target ON links(target_type, target_id)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_links_type ON links(link_type)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_links_created_at ON links(created_at)")
+            .execute(&self.pool)
+            .await?;
+
+        // Create indexes for page aliases table
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_page_aliases_page_id ON page_aliases(page_id)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_page_aliases_alias ON page_aliases(alias)")
+            .execute(&self.pool)
+            .await?;
+
         // Run VACUUM to reclaim space (only if needed)
         // Note: This is expensive, so we only do it occasionally
         sqlx::query("PRAGMA auto_vacuum = INCREMENTAL")

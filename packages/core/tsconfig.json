@@ -1,30 +1,108 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "lib": ["ES2020", "DOM"],
+    // 基本选项
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "moduleResolution": "node",
-    "declaration": true,
-    "declarationMap": true,
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "checkJs": false,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
+
+    // 严格类型检查
     "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": true,
+
+    // 模块解析
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/components/*": ["src/components/*"],
+      "@/services/*": ["src/services/*"],
+      "@/utils/*": ["src/utils/*"],
+      "@/types/*": ["src/types/*"],
+      "@/hooks/*": ["src/hooks/*"],
+      "@/test/*": ["src/test/*"]
+    },
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // JSX
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+
+    // 代码生成
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "removeComments": false,
+    "importHelpers": true,
+    "downlevelIteration": true,
+    "isolatedModules": true,
+
+    // 实验性功能
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "composite": true
+
+    // 高级选项
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "useDefineForClassFields": true,
+
+    // 类型检查
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noPropertyAccessFromIndexSignature": false,
+    "allowUnusedLabels": false,
+    "allowUnreachableCode": false,
+
+    // 输出
+    "noEmit": false,
+    "preserveConstEnums": true,
+    "verbatimModuleSyntax": true,
+
+    // 增量编译
+    "incremental": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "src/**/*.json",
+    "types/**/*",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "playwright.config.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
+    "build",
+    "coverage",
     "**/*.test.ts",
-    "**/*.spec.ts"
-  ]
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "src/test/**/*"
+  ],
+  "ts-node": {
+    "esm": true,
+    "compilerOptions": {
+      "module": "ESNext",
+      "moduleResolution": "node"
+    }
+  }
 }

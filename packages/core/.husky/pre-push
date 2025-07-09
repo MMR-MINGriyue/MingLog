@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# MingLog Pre-push Hook
+# 在推送前执行完整的质量检查
+
+echo "🚀 执行 pre-push 检查..."
+
+# 运行完整的质量检查
+echo "🔍 运行完整质量检查..."
+npm run quality-check
+if [ $? -ne 0 ]; then
+  echo "❌ 质量检查失败，请修复问题后再推送"
+  exit 1
+fi
+
+echo "✅ Pre-push 检查通过！"

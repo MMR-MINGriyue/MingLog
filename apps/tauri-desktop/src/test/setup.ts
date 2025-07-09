@@ -91,22 +91,68 @@ Object.defineProperty(window, 'sessionStorage', {
   value: sessionStorageMock,
 })
 
-// Reset all mocks before each test
-beforeEach(async () => {
-  vi.clearAllMocks()
-  localStorageMock.getItem.mockClear()
-  localStorageMock.setItem.mockClear()
-  localStorageMock.removeItem.mockClear()
-  localStorageMock.clear.mockClear()
-  sessionStorageMock.getItem.mockClear()
-  sessionStorageMock.setItem.mockClear()
-  sessionStorageMock.removeItem.mockClear()
-  sessionStorageMock.clear.mockClear()
+// Note: Chart.js mocks are handled in individual test files to avoid conflicts
 
-  // Initialize i18n for tests
-  if (!i18n.isInitialized) {
-    await i18n.init()
+// Mock D3 modules globally
+vi.mock('d3-selection', () => ({
+  select: vi.fn(() => ({
+    selectAll: vi.fn(() => ({
+      data: vi.fn(() => ({
+        enter: vi.fn(() => ({
+          append: vi.fn(() => ({
+            attr: vi.fn(),
+            style: vi.fn(),
+            text: vi.fn(),
+          })),
+        })),
+        exit: vi.fn(() => ({
+          remove: vi.fn(),
+        })),
+      })),
+      attr: vi.fn(),
+      style: vi.fn(),
+      text: vi.fn(),
+    })),
+    append: vi.fn(),
+    attr: vi.fn(),
+    style: vi.fn(),
+  })),
+}))
+
+// Note: react-window mocks are handled in individual test files when needed
+
+// Note: mindmap package mocks are handled in individual test files when needed
+
+// Initialize i18n once globally to avoid repeated initialization
+let i18nInitialized = false
+
+const initializeI18n = async () => {
+  if (!i18nInitialized) {
+    try {
+      if (!i18n.isInitialized) {
+        await i18n.init()
+      }
+      await i18n.changeLanguage('en')
+      i18nInitialized = true
+    } catch (error) {
+      console.warn('i18n initialization failed in tests:', error)
+    }
   }
-  // Set to English for consistent testing
-  await i18n.changeLanguage('en')
+}
+
+// Initialize i18n once at startup
+initializeI18n()
+
+// Reset all mocks before each test (optimized)
+beforeEach(() => {
+  vi.clearAllMocks()
+
+  // Reset storage mocks efficiently
+  Object.values(localStorageMock).forEach(mock => mock.mockClear())
+  Object.values(sessionStorageMock).forEach(mock => mock.mockClear())
+
+  // Reset Tauri mocks
+  mockTauri.invoke.mockClear()
+  mockTauri.listen.mockClear()
+  mockTauri.emit.mockClear()
 })

@@ -1,0 +1,41 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# MingLog Pre-commit Hook
+# 在提交前执行代码质量检查
+
+echo "🔍 执行 pre-commit 检查..."
+
+# 1. 运行 lint 检查
+echo "📝 检查代码规范..."
+npm run lint:check
+if [ $? -ne 0 ]; then
+  echo "❌ ESLint 检查失败，请修复代码规范问题"
+  exit 1
+fi
+
+# 2. 运行格式检查
+echo "🎨 检查代码格式..."
+npm run format:check
+if [ $? -ne 0 ]; then
+  echo "❌ Prettier 格式检查失败，请运行 npm run format 修复格式"
+  exit 1
+fi
+
+# 3. 运行类型检查
+echo "🔧 检查 TypeScript 类型..."
+npm run type-check
+if [ $? -ne 0 ]; then
+  echo "❌ TypeScript 类型检查失败，请修复类型错误"
+  exit 1
+fi
+
+# 4. 运行单元测试
+echo "🧪 运行单元测试..."
+npm run test:unit
+if [ $? -ne 0 ]; then
+  echo "❌ 单元测试失败，请修复测试问题"
+  exit 1
+fi
+
+echo "✅ Pre-commit 检查通过！"

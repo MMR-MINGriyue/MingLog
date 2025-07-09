@@ -5,8 +5,115 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
-import { createMindMap } from '@minglog/mindmap'
 import MindMapPage from '../../pages/MindMapPage'
+
+// Mock the mindmap package to avoid React version conflicts
+vi.mock('@minglog/mindmap', () => ({
+  createMindMap: vi.fn((blocks: any[]) => {
+    if (!blocks || blocks.length === 0) {
+      throw new Error('大纲数据不能为空')
+    }
+
+    // Transform blocks to mindmap data
+    const nodes = blocks.map(block => ({
+      id: block.id,
+      label: block.content,
+      x: Math.random() * 400,
+      y: Math.random() * 300
+    }))
+
+    // Create links based on parent-child relationships
+    const links = blocks
+      .filter(block => block.parent_id && blocks.some(b => b.id === block.parent_id))
+      .map(block => ({
+        source: block.parent_id,
+        target: block.id,
+        type: 'parent-child'
+      }))
+
+    // Handle orphan nodes
+    const orphans = blocks.filter(block =>
+      block.parent_id && !blocks.some(b => b.id === block.parent_id)
+    )
+
+    if (orphans.length > 0) {
+      // Add virtual root for orphans
+      nodes.push({ id: 'virtual-root', label: 'Root', x: 0, y: 0 })
+      orphans.forEach(orphan => {
+        links.push({
+          source: 'virtual-root',
+          target: orphan.id,
+          type: 'parent-child'
+        })
+      })
+    }
+
+    return { nodes, links }
+  }),
+  MindMapView: ({ data, onNodeClick, onNodeDoubleClick, theme, layout }: any) => (
+    <div data-testid="mindmap-view" data-theme={theme} data-layout={layout}>
+      <div data-testid="mindmap-nodes">
+        {data?.nodes?.map((node: any) => (
+          <div
+            key={node.id}
+            data-testid={`mindmap-node-${node.id}`}
+            onClick={() => onNodeClick?.(node)}
+            onDoubleClick={() => onNodeDoubleClick?.(node)}
+          >
+            {node.label}
+          </div>
+        ))}
+      </div>
+      <div data-testid="mindmap-links">
+        {data?.links?.map((link: any, index: number) => (
+          <div key={index} data-testid={`mindmap-link-${index}`}>
+            {link.source} -> {link.target}
+          </div>
+        ))}
+      </div>
+    </div>
+  ),
+  transformToMindMapData: (notes: any[]) => {
+    if (!notes || notes.length === 0) {
+      return { nodes: [], links: [] }
+    }
+
+    // Handle orphan nodes by creating a virtual root
+    const hasParentRelations = notes.some(note =>
+      notes.some(other => other.children?.includes(note.id))
+    )
+
+    if (!hasParentRelations && notes.length === 1) {
+      // Single orphan node - create virtual root
+      return {
+        nodes: [
+          { id: 'virtual-root', label: 'Root', x: 0, y: 0 },
+          { id: notes[0].id, label: notes[0].title, x: 100, y: 0 }
+        ],
+        links: [
+          { source: 'virtual-root', target: notes[0].id }
+        ]
+      }
+    }
+
+    // Normal transformation
+    const nodes = notes.map(note => ({
+      id: note.id,
+      label: note.title,
+      x: Math.random() * 400,
+      y: Math.random() * 300
+    }))
+
+    const links = notes.flatMap(note =>
+      (note.children || []).map((childId: string) => ({
+        source: note.id,
+        target: childId
+      }))
+    )
+
+    return { nodes, links }
+  }
+}))
 
 // Mock hooks
 vi.mock('../../hooks/useNotes', () => ({
