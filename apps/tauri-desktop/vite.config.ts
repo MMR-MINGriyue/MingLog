@@ -6,6 +6,9 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [react()],
 
+  // Base path for assets - use relative paths for Tauri
+  base: './',
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent vite from obscuring rust errors
@@ -36,7 +39,26 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
       },
+      output: {
+        // 代码分割优化 - 只分割实际存在的包
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'vendor'
+            }
+            if (id.includes('i18next')) {
+              return 'i18n'
+            }
+            if (id.includes('lucide-react')) {
+              return 'ui'
+            }
+          }
+        },
+      },
     },
+    // 构建性能优化
+    chunkSizeWarningLimit: 1000,
+    reportCompressedSize: false,
   },
 
   resolve: {

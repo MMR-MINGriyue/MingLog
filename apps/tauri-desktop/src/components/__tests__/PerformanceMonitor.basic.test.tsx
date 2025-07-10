@@ -148,7 +148,7 @@ describe('PerformanceMonitor Basic Tests', () => {
     // Chart container should always be present
     expect(screen.getByTestId('performance-chart')).toBeInTheDocument()
 
-    // With history data, should show chart data
+    // With history data, should show chart data and options
     expect(screen.getByTestId('chart-data')).toBeInTheDocument()
     expect(screen.getByTestId('chart-options')).toBeInTheDocument()
   })

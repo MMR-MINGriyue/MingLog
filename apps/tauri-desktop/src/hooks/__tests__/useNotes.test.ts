@@ -3,12 +3,12 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 import { useNotes } from '../useNotes'
 
 // Mock Tauri API with proper hoisting
-vi.mock('@tauri-apps/api/core', () => ({
+vi.mock('@tauri-apps/api/tauri', () => ({
   invoke: vi.fn(),
 }))
 
 // Import the mocked invoke function
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from '@tauri-apps/api/tauri'
 const mockInvoke = vi.mocked(invoke)
 
 // Mock sample data

@@ -9,6 +9,37 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // 性能优化配置
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: false,
+        maxThreads: 4,
+        minThreads: 1,
+      },
+    },
+    // 超时配置
+    testTimeout: 10000,
+    hookTimeout: 10000,
+    teardownTimeout: 5000,
+    // 并发控制
+    maxConcurrency: 5,
+    // 文件监听优化
+    watch: false,
+    // 缓存配置
+    cache: {
+      dir: 'node_modules/.vitest',
+    },
+    // 依赖优化
+    deps: {
+      inline: [
+        '@minglog/mindmap',
+        '@minglog/editor',
+        '@minglog/graph',
+        'react-window',
+        'clsx'
+      ],
+    },
     alias: {
       '@tauri-apps/api/core': resolve(__dirname, 'src/test/mocks/tauri-core.js'),
       '@tauri-apps/api/tauri': resolve(__dirname, 'src/test/mocks/tauri-core.js'),
@@ -42,7 +73,9 @@ export default defineConfig({
       'node_modules/',
       'dist/',
       'src-tauri/',
+      'src/test/functional.test.ts', // Functional tests need running app
       'src/test/e2e/**', // E2E tests should use Playwright
+      'src/tests/error-reporting.e2e.test.ts', // E2E test
       '.{idea,git,cache,output,temp}/',
     ],
   },
