@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useCallback, memo } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -22,6 +22,16 @@ ChartJS.register(
   Tooltip,
   Legend
 );
+
+// 优化的图表组件 - 使用memo避免不必要的重渲染
+const OptimizedChart = memo<{
+  data: any;
+  options: any;
+}>(({ data, options }) => {
+  return <Line data={data} options={options} />;
+});
+
+OptimizedChart.displayName = 'OptimizedChart';
 
 interface OptimizedPerformanceMonitorProps {
   isOpen: boolean;
@@ -53,13 +63,104 @@ const OptimizedPerformanceMonitor: React.FC<OptimizedPerformanceMonitorProps> = 
     enableAlerts: true,
   });
   // Toggle monitoring function
-  const toggleCollection = () => {
+  const toggleCollection = useCallback(() => {
     if (isMonitoring) {
       stopMonitoring();
     } else {
       startMonitoring();
     }
-  };
+  }, [isMonitoring, stopMonitoring, startMonitoring]);
+
+  // 优化的图表数据计算 - 使用useMemo缓存结果
+  const chartData = useMemo(() => {
+    // 确保metrics是数组
+    const metricsArray = Array.isArray(metrics) ? metrics : [];
+
+    if (metricsArray.length === 0) {
+      return {
+        labels: [],
+        datasets: []
+      };
+    }
+
+    // 限制数据点数量以提升性能
+    const displayMetrics = metricsArray.slice(-30); // 只显示最近30个数据点
+    const labels = displayMetrics.map((_, index) => `${index + 1}`);
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Memory (MB)',
+          data: displayMetrics.map(m => m.memoryUsage),
+          borderColor: 'rgb(59, 130, 246)',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          tension: 0.1,
+          pointRadius: 0, // 隐藏数据点以提升性能
+          pointHoverRadius: 4,
+        },
+        {
+          label: 'CPU (%)',
+          data: displayMetrics.map(m => m.cpuUsage),
+          borderColor: 'rgb(239, 68, 68)',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          tension: 0.1,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+        },
+        {
+          label: 'Render Time (ms)',
+          data: displayMetrics.map(m => m.renderTime),
+          borderColor: 'rgb(34, 197, 94)',
+          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+          tension: 0.1,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+        },
+      ],
+    };
+  }, [metrics]);
+
+  // 优化的图表选项 - 禁用动画和减少重绘
+  const chartOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false, // 禁用动画以提升性能
+    interaction: {
+      intersect: false,
+      mode: 'index' as const,
+    },
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      tooltip: {
+        enabled: true,
+        mode: 'index' as const,
+        intersect: false,
+      },
+    },
+    scales: {
+      x: {
+        display: true,
+        grid: {
+          display: false, // 隐藏网格线以提升性能
+        },
+      },
+      y: {
+        display: true,
+        grid: {
+          display: false,
+        },
+        beginAtZero: true,
+      },
+    },
+    elements: {
+      line: {
+        borderWidth: 2,
+      },
+    },
+  }), []);
 
   // Keyboard navigation
   useEffect(() => {
@@ -75,69 +176,9 @@ const OptimizedPerformanceMonitor: React.FC<OptimizedPerformanceMonitorProps> = 
     }
   }, [isOpen, onClose]);
 
-  // 图表数据
-  const chartData = useMemo(() => {
-    // 确保metrics是数组
-    const metricsArray = Array.isArray(metrics) ? metrics : [];
-    const labels = metricsArray.map(m => new Date(m.timestamp).toLocaleTimeString());
-    
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'Memory (MB)',
-          data: metricsArray.map(m => m.memoryUsage),
-          borderColor: 'rgb(59, 130, 246)',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          tension: 0.1,
-        },
-        {
-          label: 'CPU (%)',
-          data: metricsArray.map(m => m.cpuUsage),
-          borderColor: 'rgb(239, 68, 68)',
-          backgroundColor: 'rgba(239, 68, 68, 0.1)',
-          tension: 0.1,
-        },
-        {
-          label: 'Render Time (ms)',
-          data: metricsArray.map(m => m.renderTime),
-          borderColor: 'rgb(34, 197, 94)',
-          backgroundColor: 'rgba(34, 197, 94, 0.1)',
-          tension: 0.1,
-        },
-        {
-          label: 'FPS',
-          data: metricsArray.map(m => m.fps),
-          borderColor: 'rgb(168, 85, 247)',
-          backgroundColor: 'rgba(168, 85, 247, 0.1)',
-          tension: 0.1,
-        },
-      ],
-    };
-  }, [metrics]);
 
-  // 图表选项
-  const chartOptions = useMemo(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-      title: {
-        display: true,
-        text: 'Real-time Performance Metrics',
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-      },
-    },
-    animation: {
-      duration: 0, // 禁用动画以提高性能
-    },
-  }), []);
+
+
 
 
 
@@ -257,10 +298,9 @@ const OptimizedPerformanceMonitor: React.FC<OptimizedPerformanceMonitorProps> = 
         {/* Chart */}
         <div className="flex-1 p-4" data-testid="performance-chart-container">
           {metrics.length > 0 ? (
-            <div className="h-full">
-              <div data-testid="performance-chart">
-                <div data-testid="chart-data">{JSON.stringify(chartData)}</div>
-                <div data-testid="chart-options">{JSON.stringify(chartOptions)}</div>
+            <div className="h-full min-h-[300px]">
+              <div data-testid="performance-chart" className="h-full">
+                <OptimizedChart data={chartData} options={chartOptions} />
               </div>
             </div>
           ) : (

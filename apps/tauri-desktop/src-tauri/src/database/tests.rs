@@ -3,30 +3,42 @@ mod tests {
     use super::*;
     use crate::models::*;
     use crate::database::Database;
+    use crate::error::{AppError, Result};
     use tempfile::tempdir;
     use tokio;
     use serde_json;
 
-    async fn create_test_database() -> Result<Database, Box<dyn std::error::Error>> {
+    async fn create_test_database() -> Result<(Database, tempfile::TempDir, String)> {
         let temp_dir = tempdir().unwrap();
         let db_path = temp_dir.path().join("test.db");
-        Ok(Database::new_with_path(db_path.to_str().unwrap()).await?)
+        let db = Database::new_with_path(db_path.to_str().unwrap()).await?;
+
+        // Create a default graph for testing
+        let graph_request = crate::models::CreateGraphRequest {
+            name: "Test Graph".to_string(),
+            path: "test".to_string(),
+            settings: None,
+        };
+        let graph = db.create_graph(graph_request).await?;
+
+        Ok((db, temp_dir, graph.id))
     }
 
     #[tokio::test]
     async fn test_database_creation() {
-        let db = create_test_database().await;
-        assert!(db.is_ok());
+        let result = create_test_database().await;
+        assert!(result.is_ok());
+        let (_db, _temp_dir, _graph_id) = result.unwrap();
     }
 
     #[tokio::test]
     async fn test_create_and_get_page() {
-        let db = create_test_database().await.unwrap();
-        
+        let (db, _temp_dir, graph_id) = create_test_database().await.unwrap();
+
         let request = CreatePageRequest {
             name: "Test Page".to_string(),
             title: Some("Test Page Title".to_string()),
-            graph_id: "default".to_string(),
+            graph_id: graph_id.clone(),
             is_journal: Some(false),
             journal_date: None,
             tags: Some("test,page".to_string()),
@@ -36,7 +48,7 @@ mod tests {
         let created_page = db.create_page(request).await.unwrap();
         assert_eq!(created_page.name, "Test Page");
         assert_eq!(created_page.title, Some("Test Page Title".to_string()));
-        assert_eq!(created_page.graph_id, "default");
+        assert_eq!(created_page.graph_id, graph_id);
 
         let retrieved_page = db.get_page(&created_page.id).await.unwrap();
         assert_eq!(retrieved_page.id, created_page.id);
@@ -45,13 +57,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_and_get_block() {
-        let db = create_test_database().await.unwrap();
-        
+        let (db, _temp_dir, graph_id) = create_test_database().await.unwrap();
+
         // First create a page
         let page_request = CreatePageRequest {
             name: "Test Page".to_string(),
             title: None,
-            graph_id: "default".to_string(),
+            graph_id: graph_id.clone(),
             is_journal: Some(false),
             journal_date: None,
             tags: None,
@@ -63,7 +75,7 @@ mod tests {
         let block_request = CreateBlockRequest {
             content: "Test block content".to_string(),
             page_id: page.id.clone(),
-            graph_id: "default".to_string(),
+            graph_id: graph_id.clone(),
             parent_id: None,
             order: Some(0),
             refs: Some(serde_json::to_string(&vec!["reference".to_string()]).unwrap()),
@@ -82,12 +94,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_page() {
-        let db = create_test_database().await.unwrap();
-        
+        let (db, _temp_dir, graph_id) = create_test_database().await.unwrap();
+
         let request = CreatePageRequest {
             name: "Original Name".to_string(),
             title: Some("Original Title".to_string()),
-            graph_id: "default".to_string(),
+            graph_id: graph_id.clone(),
             is_journal: Some(false),
             journal_date: None,
             tags: None,
@@ -113,12 +125,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_page() {
-        let db = create_test_database().await.unwrap();
-        
+        let (db, _temp_dir, graph_id) = create_test_database().await.unwrap();
+
         let request = CreatePageRequest {
             name: "To Delete".to_string(),
             title: None,
-            graph_id: "default".to_string(),
+            graph_id: graph_id.clone(),
             is_journal: Some(false),
             journal_date: None,
             tags: None,
@@ -141,14 +153,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_pages_by_graph() {
-        let db = create_test_database().await.unwrap();
-        
+        let (db, _temp_dir, graph_id) = create_test_database().await.unwrap();
+
         // Create multiple pages
         for i in 0..5 {
             let request = CreatePageRequest {
                 name: format!("Page {}", i),
                 title: None,
-                graph_id: "default".to_string(),
+                graph_id: graph_id.clone(),
                 is_journal: Some(false),
                 journal_date: None,
                 tags: None,
@@ -157,19 +169,19 @@ mod tests {
             db.create_page(request).await.unwrap();
         }
 
-        let pages = db.get_pages_by_graph("default").await.unwrap();
+        let pages = db.get_pages_by_graph(&graph_id).await.unwrap();
         assert_eq!(pages.len(), 5);
     }
 
     #[tokio::test]
     async fn test_get_blocks_by_page() {
-        let db = create_test_database().await.unwrap();
-        
+        let (db, _temp_dir, graph_id) = create_test_database().await.unwrap();
+
         // Create a page
         let page_request = CreatePageRequest {
             name: "Test Page".to_string(),
             title: None,
-            graph_id: "default".to_string(),
+            graph_id: graph_id.clone(),
             is_journal: Some(false),
             journal_date: None,
             tags: None,
@@ -182,7 +194,7 @@ mod tests {
             let block_request = CreateBlockRequest {
                 content: format!("Block content {}", i),
                 page_id: page.id.clone(),
-                graph_id: "default".to_string(),
+                graph_id: graph_id.clone(),
                 parent_id: None,
                 order: Some(i),
                 refs: None,
@@ -202,13 +214,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_search_functionality() {
-        let db = create_test_database().await.unwrap();
-        
+        let (db, _temp_dir, graph_id) = create_test_database().await.unwrap();
+
         // Create test data
         let page_request = CreatePageRequest {
             name: "Searchable Page".to_string(),
             title: Some("This is a searchable title".to_string()),
-            graph_id: "default".to_string(),
+            graph_id: graph_id.clone(),
             is_journal: Some(false),
             journal_date: None,
             tags: Some(serde_json::to_string(&vec!["searchable".to_string()]).unwrap()),
@@ -219,7 +231,7 @@ mod tests {
         let block_request = CreateBlockRequest {
             content: "This block contains searchable content".to_string(),
             page_id: page.id.clone(),
-            graph_id: "default".to_string(),
+            graph_id: graph_id.clone(),
             parent_id: None,
             order: Some(0),
             refs: None,
@@ -229,7 +241,7 @@ mod tests {
 
         // Test search (this would require implementing a search method in Database)
         // For now, we'll test that we can retrieve the data
-        let pages = db.get_pages_by_graph("default").await.unwrap();
+        let pages = db.get_pages_by_graph(&graph_id).await.unwrap();
         let blocks = db.get_blocks_by_page(&page.id).await.unwrap();
         
         assert!(!pages.is_empty());
@@ -242,7 +254,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_database_performance() {
-        let db = create_test_database().await.unwrap();
+        let (db, _temp_dir, graph_id) = create_test_database().await.unwrap();
         
         let start_time = std::time::Instant::now();
         
@@ -251,7 +263,7 @@ mod tests {
             let page_request = CreatePageRequest {
                 name: format!("Performance Page {}", i),
                 title: None,
-                graph_id: "default".to_string(),
+                graph_id: graph_id.clone(),
                 is_journal: Some(false),
                 journal_date: None,
                 tags: None,
@@ -264,7 +276,7 @@ mod tests {
                 let block_request = CreateBlockRequest {
                     content: format!("Performance block {} for page {}", j, i),
                     page_id: page.id.clone(),
-                    graph_id: "default".to_string(),
+                    graph_id: graph_id.clone(),
                     parent_id: None,
                     order: Some(j),
                     refs: None,
@@ -278,7 +290,7 @@ mod tests {
         
         // Test retrieval performance
         let retrieval_start = std::time::Instant::now();
-        let pages = db.get_pages_by_graph("default").await.unwrap();
+        let pages = db.get_pages_by_graph(&graph_id).await.unwrap();
         let retrieval_time = retrieval_start.elapsed();
         
         assert_eq!(pages.len(), 100);
@@ -290,18 +302,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_concurrent_operations() {
-        let db = std::sync::Arc::new(create_test_database().await.unwrap());
+        let (db, _temp_dir, graph_id) = create_test_database().await.unwrap();
+        let db = std::sync::Arc::new(db);
+        let graph_id = std::sync::Arc::new(graph_id);
 
         // Test concurrent page creation
         let mut handles = vec![];
 
         for i in 0..10 {
             let db_clone = db.clone();
+            let graph_id_clone = graph_id.clone();
             let handle = tokio::spawn(async move {
                 let request = CreatePageRequest {
                     name: format!("Concurrent Page {}", i),
                     title: None,
-                    graph_id: "default".to_string(),
+                    graph_id: (*graph_id_clone).clone(),
                     is_journal: Some(false),
                     journal_date: None,
                     tags: None,
@@ -319,7 +334,7 @@ mod tests {
         }
         
         // Verify all pages were created
-        let pages = db.get_pages_by_graph("default").await.unwrap();
+        let pages = db.get_pages_by_graph(&graph_id).await.unwrap();
         assert_eq!(pages.len(), 10);
     }
 }

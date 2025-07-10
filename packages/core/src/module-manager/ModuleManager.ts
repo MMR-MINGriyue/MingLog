@@ -4,8 +4,8 @@
  * 支持热重载、依赖解析、错误隔离等高级功能
  */
 
-import { EventBus, CORE_EVENTS } from '../event-system/EventBus'
-import { VersionManager } from '../utils/version-manager'
+import { EventBus, CORE_EVENTS } from '../event-system/EventBus.js'
+import { VersionManager } from '../utils/version-manager.js'
 import {
   Module,
   ModuleConfig,
@@ -14,7 +14,7 @@ import {
   CoreAPI,
   ModuleFactory,
   VersionConstraint
-} from '../types'
+} from '../types/index.js'
 
 export interface ModuleManagerOptions {
   enableHotReload?: boolean

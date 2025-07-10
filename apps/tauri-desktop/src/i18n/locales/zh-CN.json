@@ -37,6 +37,17 @@
     "settings": "设置",
     "help": "帮助"
   },
+  "modules": {
+    "title": "模块管理",
+    "description": "管理和配置应用模块",
+    "active": "已激活",
+    "inactive": "未激活",
+    "available": "可用模块",
+    "installed": "已安装",
+    "activate": "激活",
+    "deactivate": "停用",
+    "configure": "配置"
+  },
   "page": {
     "title": "页面",
     "pages": "页面",

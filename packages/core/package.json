@@ -2,6 +2,7 @@
   "name": "@minglog/core",
   "version": "1.0.0",
   "description": "MingLog核心模块管理框架",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

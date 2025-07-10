@@ -11,7 +11,7 @@ const mockUseOptimizedPerformanceMonitor = vi.mocked(useOptimizedPerformanceMoni
 // Mock Chart.js
 vi.mock('react-chartjs-2', () => ({
   Line: ({ data, options }: any) => (
-    <div data-testid="performance-chart">
+    <div data-testid="mocked-chart-component">
       <div data-testid="chart-data">{JSON.stringify(data)}</div>
       <div data-testid="chart-options">{JSON.stringify(options)}</div>
     </div>
@@ -234,10 +234,15 @@ describe('PerformanceMonitor', () => {
   describe('Chart Integration', () => {
     it('should render performance chart with correct data', () => {
       render(<PerformanceMonitor isOpen={true} onClose={vi.fn()} />)
-      
-      const chart = screen.getByTestId('performance-chart')
-      expect(chart).toBeInTheDocument()
-      
+
+      // Check for the chart container from the actual component
+      const chartContainer = screen.getByTestId('performance-chart-container')
+      expect(chartContainer).toBeInTheDocument()
+
+      // Check for the mocked chart component
+      const mockedChart = screen.getByTestId('mocked-chart-component')
+      expect(mockedChart).toBeInTheDocument()
+
       const chartData = screen.getByTestId('chart-data')
       expect(chartData).toBeInTheDocument()
     })

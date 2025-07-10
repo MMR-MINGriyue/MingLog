@@ -37,6 +37,17 @@
     "settings": "Settings",
     "help": "Help"
   },
+  "modules": {
+    "title": "Module Management",
+    "description": "Manage and configure application modules",
+    "active": "Active",
+    "inactive": "Inactive",
+    "available": "Available Modules",
+    "installed": "Installed",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "configure": "Configure"
+  },
   "page": {
     "title": "Page",
     "pages": "Pages",

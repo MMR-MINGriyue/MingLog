@@ -40,14 +40,14 @@ export const ModularNavigation: React.FC = () => {
     items.push(
       {
         id: 'modules',
-        label: '模块管理',
+        label: t('modules.title') || '模块管理',
         path: '/modules',
         icon: Puzzle,
         order: 999
       },
       {
         id: 'settings',
-        label: '设置',
+        label: t('common.settings') || '设置',
         path: '/settings',
         icon: Settings,
         order: 1000

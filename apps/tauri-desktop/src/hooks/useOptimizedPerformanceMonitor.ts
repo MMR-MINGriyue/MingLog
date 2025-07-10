@@ -50,11 +50,18 @@ export const useOptimizedPerformanceMonitor = (
   const {
     enableNetworkMonitoring = false,
     enableQueryTimeTracking = false,
+    updateInterval = 2000, // 增加更新间隔以减少性能开销
+    maxDataPoints = 30, // 减少数据点数量
     ...virtualizedOptions
   } = options;
 
-  // Use the base virtualized performance monitor
-  const baseMonitor = useVirtualizedPerformanceMonitor(virtualizedOptions);
+  // Use the base virtualized performance monitor with optimized settings
+  const baseMonitor = useVirtualizedPerformanceMonitor({
+    ...virtualizedOptions,
+    updateInterval,
+    maxDataPoints,
+    enableThrottling: true, // 启用节流
+  });
 
   // Additional state for optimized features
   const isLoading = false; // Can be enhanced based on monitoring state

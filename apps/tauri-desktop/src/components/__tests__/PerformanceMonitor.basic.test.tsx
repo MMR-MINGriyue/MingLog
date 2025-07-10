@@ -73,6 +73,8 @@ vi.mock('../../hooks/useOptimizedPerformanceMonitor', () => ({
 vi.mock('react-chartjs-2', () => ({
   Line: ({ data }: any) => (
     <div data-testid="chart-component" data-chart-data={JSON.stringify(data)}>
+      <div data-testid="chart-data">{JSON.stringify(data)}</div>
+      <div data-testid="chart-options">{JSON.stringify({responsive: true, maintainAspectRatio: false})}</div>
       Performance Chart
     </div>
   )
@@ -146,8 +148,9 @@ describe('PerformanceMonitor Basic Tests', () => {
     // Chart container should always be present
     expect(screen.getByTestId('performance-chart')).toBeInTheDocument()
 
-    // With history data, should show actual chart
-    expect(screen.getByTestId('chart-component')).toBeInTheDocument()
+    // With history data, should show chart data
+    expect(screen.getByTestId('chart-data')).toBeInTheDocument()
+    expect(screen.getByTestId('chart-options')).toBeInTheDocument()
   })
 
   it('should display control buttons', async () => {

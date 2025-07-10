@@ -43,24 +43,46 @@ vi.mock('../../utils/environment', () => ({
 }))
 
 // Mock performance monitoring hook
-vi.mock('../../hooks/useOptimizedPerformanceMonitor', () => ({
-  useOptimizedPerformanceMonitor: vi.fn().mockReturnValue({
-    metrics: {
-      memoryUsage: { used: 100, total: 1000, percentage: 10 },
+const mockHookReturn = {
+  metrics: [
+    {
+      timestamp: Date.now(),
+      memoryUsage: 100,
+      cpuUsage: 50,
       renderTime: 16,
-      dbQueryTime: 5,
-      componentCount: 50,
-      lastUpdate: new Date(),
-    },
-    history: [],
-    isMonitoring: false,
-    isLoading: false,
-    error: null,
-    startMonitoring: vi.fn(),
-    stopMonitoring: vi.fn(),
-    clearHistory: vi.fn(),
-    getOptimizationSuggestions: vi.fn().mockReturnValue([]),
-  }),
+      fps: 60,
+      domNodes: 100,
+      eventListeners: 10
+    }
+  ],
+  currentMetrics: {
+    timestamp: Date.now(),
+    memoryUsage: 100,
+    cpuUsage: 50,
+    renderTime: 16,
+    fps: 60,
+    domNodes: 100,
+    eventListeners: 10
+  },
+  alerts: [],
+  isMonitoring: false,
+  isLoading: false,
+  error: null,
+  startMonitoring: vi.fn(),
+  stopMonitoring: vi.fn(),
+  clearData: vi.fn(),
+  clearAlerts: vi.fn(),
+  exportData: vi.fn().mockReturnValue(''),
+  getAverageMetrics: vi.fn().mockReturnValue({}),
+  getPerformanceScore: vi.fn().mockReturnValue(85),
+  history: [],
+  clearHistory: vi.fn(),
+  getOptimizationSuggestions: vi.fn().mockReturnValue([]),
+}
+
+vi.mock('../../hooks/useOptimizedPerformanceMonitor', () => ({
+  useOptimizedPerformanceMonitor: vi.fn(() => mockHookReturn),
+  default: vi.fn(() => mockHookReturn),
 }))
 
 describe('Performance Optimizations', () => {

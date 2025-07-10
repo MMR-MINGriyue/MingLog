@@ -430,12 +430,10 @@ mod tests {
 
     #[test]
     fn test_config_validation() {
-        let validator = SyncConfigValidator;
-        
-        assert!(validator.validate_server_url("https://example.com").is_ok());
-        assert!(validator.validate_server_url("invalid-url").is_err());
-        
-        assert!(validator.validate_remote_path("/valid/path").is_ok());
-        assert!(validator.validate_remote_path("invalid-path").is_err());
+        assert!(SyncConfigValidator::validate_server_url("https://example.com").is_ok());
+        assert!(SyncConfigValidator::validate_server_url("invalid-url").is_err());
+
+        assert!(SyncConfigValidator::validate_remote_path("/valid/path").is_ok());
+        assert!(SyncConfigValidator::validate_remote_path("invalid-path").is_err());
     }
 }

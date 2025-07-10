@@ -70,8 +70,9 @@ describe('Layout', () => {
     expect(screen.getByRole('navigation')).toBeInTheDocument()
 
     // Check for system navigation items that should always be present
-    expect(screen.getByText('模块管理')).toBeInTheDocument()
-    expect(screen.getByText('设置')).toBeInTheDocument()
+    // Since test environment is set to English, expect English translations
+    expect(screen.getByText('Module Management')).toBeInTheDocument()
+    expect(screen.getByText('Settings')).toBeInTheDocument()
 
     // In test environment without Core initialization, module-specific navigation items won't be present
     // This is expected behavior as modules are not loaded in test environment
@@ -242,15 +243,35 @@ describe('Layout', () => {
         </Layout>
       </TestWrapper>
     )
-    
+
     // Should have proper ARIA roles
     expect(screen.getByRole('main')).toBeInTheDocument()
     expect(screen.getByRole('navigation')).toBeInTheDocument()
-    
+
     // Should have skip links for accessibility
     const skipLink = screen.queryByText(/skip to main content/i)
     if (skipLink) {
       expect(skipLink).toBeInTheDocument()
     }
+  })
+
+  it('handles Chinese localization correctly', async () => {
+    // Switch to Chinese language
+    await i18n.changeLanguage('zh-CN')
+
+    render(
+      <TestWrapper>
+        <Layout>
+          <div>Test Content</div>
+        </Layout>
+      </TestWrapper>
+    )
+
+    // Should display Chinese navigation items
+    expect(screen.getByText('模块管理')).toBeInTheDocument()
+    expect(screen.getByText('设置')).toBeInTheDocument()
+
+    // Reset to English for other tests
+    await i18n.changeLanguage('en')
   })
 })

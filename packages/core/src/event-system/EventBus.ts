@@ -6,7 +6,7 @@
 
 import { EventEmitter } from 'eventemitter3'
 import { v4 as uuidv4 } from 'uuid'
-import { ModuleEvent, ModuleEventType } from '../types'
+import { ModuleEvent, ModuleEventType } from '../types/index.js'
 
 export interface EventBusOptions {
   maxHistorySize?: number

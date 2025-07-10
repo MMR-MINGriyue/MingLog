@@ -3,11 +3,11 @@
  * 整合所有核心功能，提供统一的API接口
  */
 
-import { EventBus } from './event-system/EventBus'
-import { ModuleManager } from './module-manager/ModuleManager'
-import { DatabaseManager, DatabaseConnection } from './database/DatabaseManager'
-import { SettingsManager } from './settings/SettingsManager'
-import { CoreAPI, ModuleConfig, ModuleFactory } from './types'
+import { EventBus } from './event-system/EventBus.js'
+import { ModuleManager } from './module-manager/ModuleManager.js'
+import { DatabaseManager, DatabaseConnection } from './database/DatabaseManager.js'
+import { SettingsManager } from './settings/SettingsManager.js'
+import { CoreAPI, ModuleConfig, ModuleFactory } from './types/index.js'
 
 export interface MingLogCoreOptions {
   database: DatabaseConnection

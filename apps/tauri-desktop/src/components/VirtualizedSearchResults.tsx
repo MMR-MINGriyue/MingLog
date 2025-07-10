@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, memo, useCallback } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import { FileText, Hash, Calendar, Clock } from 'lucide-react';
 
@@ -45,13 +45,18 @@ interface ResultItemProps {
   };
 }
 
-const ResultItem: React.FC<ResultItemProps> = ({ index, style, data }) => {
+const ResultItem: React.FC<ResultItemProps> = memo(({ index, style, data }) => {
   const { results, onResultClick, selectedIndex, query, highlightText, formatDate } = data;
   const result = results[index];
 
   if (!result) return null;
 
   const isSelected = selectedIndex === index;
+
+  // 优化点击处理函数，使用useCallback避免重新创建
+  const handleClick = useCallback(() => {
+    onResultClick(result, index);
+  }, [onResultClick, result, index]);
 
   // Determine result type - support both 'type' and 'result_type'
   const resultType = result.type || result.result_type || 'note';
@@ -78,11 +83,14 @@ const ResultItem: React.FC<ResultItemProps> = ({ index, style, data }) => {
   // Get display content - use excerpt if available, otherwise content
   const displayContent = result.excerpt || result.content;
 
-  // Apply text highlighting if function is provided
-  const highlightedTitle = highlightText && query ?
-    highlightText(result.title, query) : result.title;
-  const highlightedContent = highlightText && query ?
-    highlightText(displayContent, query) : displayContent;
+  // 优化文本高亮处理，使用useMemo缓存结果
+  const highlightedTitle = useMemo(() => {
+    return highlightText && query ? highlightText(result.title, query) : result.title;
+  }, [highlightText, query, result.title]);
+
+  const highlightedContent = useMemo(() => {
+    return highlightText && query ? highlightText(displayContent, query) : displayContent;
+  }, [highlightText, query, displayContent]);
 
   return (
     <div
@@ -93,7 +101,7 @@ const ResultItem: React.FC<ResultItemProps> = ({ index, style, data }) => {
       className={`absolute px-4 py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer ${
         isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''
       }`}
-      onClick={() => onResultClick(result, index)}
+      onClick={handleClick}
     >
       <div className="flex items-start space-x-3">
         <div className="flex-shrink-0">
@@ -150,7 +158,9 @@ const ResultItem: React.FC<ResultItemProps> = ({ index, style, data }) => {
       </div>
     </div>
   );
-};
+});
+
+ResultItem.displayName = 'ResultItem';
 
 const VirtualizedSearchResults: React.FC<VirtualizedSearchResultsProps> = ({
   results,
@@ -163,6 +173,7 @@ const VirtualizedSearchResults: React.FC<VirtualizedSearchResultsProps> = ({
   itemHeight = 120,
   className = '',
 }) => {
+  // 优化itemData缓存，减少不必要的重新计算
   const itemData = useMemo(() => ({
     results,
     onResultClick,
@@ -171,6 +182,16 @@ const VirtualizedSearchResults: React.FC<VirtualizedSearchResultsProps> = ({
     highlightText,
     formatDate,
   }), [results, onResultClick, selectedIndex, query, highlightText, formatDate]);
+
+  // 优化虚拟化配置
+  const virtualizedConfig = useMemo(() => ({
+    height,
+    itemCount: results.length,
+    itemSize: itemHeight,
+    itemData,
+    overscanCount: 3, // 减少预渲染项目数量以提升性能
+    useIsScrolling: true, // 启用滚动状态优化
+  }), [height, results.length, itemHeight, itemData]);
 
   if (results.length === 0) {
     return (
@@ -198,11 +219,7 @@ const VirtualizedSearchResults: React.FC<VirtualizedSearchResultsProps> = ({
       </div>
       <div>
         <List
-          height={height}
-          itemCount={results.length}
-          itemSize={itemHeight}
-          itemData={itemData}
-          overscanCount={5}
+          {...virtualizedConfig}
         >
           {ResultItem}
         </List>

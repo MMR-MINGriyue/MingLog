@@ -87,6 +87,49 @@ Object.defineProperty(window, 'sessionStorage', {
   value: sessionStorageMock,
 })
 
+// Mock Canvas API for Chart.js
+const mockCanvas = {
+  getContext: vi.fn(() => ({
+    fillRect: vi.fn(),
+    clearRect: vi.fn(),
+    getImageData: vi.fn(() => ({ data: new Array(4) })),
+    putImageData: vi.fn(),
+    createImageData: vi.fn(() => ({ data: new Array(4) })),
+    setTransform: vi.fn(),
+    drawImage: vi.fn(),
+    save: vi.fn(),
+    fillText: vi.fn(),
+    restore: vi.fn(),
+    beginPath: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    closePath: vi.fn(),
+    stroke: vi.fn(),
+    translate: vi.fn(),
+    scale: vi.fn(),
+    rotate: vi.fn(),
+    arc: vi.fn(),
+    fill: vi.fn(),
+    measureText: vi.fn(() => ({ width: 0 })),
+    transform: vi.fn(),
+    rect: vi.fn(),
+    clip: vi.fn(),
+  })),
+  toDataURL: vi.fn(() => 'data:image/png;base64,'),
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  width: 300,
+  height: 150,
+}
+
+Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+  value: mockCanvas.getContext,
+})
+
+Object.defineProperty(HTMLCanvasElement.prototype, 'toDataURL', {
+  value: mockCanvas.toDataURL,
+})
+
 // Reset all mocks before each test
 beforeEach(async () => {
   vi.clearAllMocks()
