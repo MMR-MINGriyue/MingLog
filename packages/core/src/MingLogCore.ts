@@ -5,9 +5,10 @@
 
 import { EventBus } from './event-system/EventBus.js'
 import { ModuleManager } from './module-manager/ModuleManager.js'
-import { DatabaseManager, DatabaseConnection } from './database/DatabaseManager.js'
+import { DatabaseManager } from './database/DatabaseManager.js'
+import type { DatabaseConnection } from './database/DatabaseManager.js'
 import { SettingsManager } from './settings/SettingsManager.js'
-import { CoreAPI, ModuleConfig, ModuleFactory } from './types/index.js'
+import type { CoreAPI, ModuleConfig, ModuleFactory } from './types/index.js'
 
 export interface MingLogCoreOptions {
   database: DatabaseConnection
@@ -269,6 +270,41 @@ export class MingLogCore {
           return this.settingsManager.setModuleSettings(moduleId, settings)
         }
       }
+    }
+  }
+
+  /**
+   * 检查是否已初始化
+   */
+  isInitialized(): boolean {
+    return this.initialized
+  }
+
+  /**
+   * 关闭核心系统
+   */
+  async shutdown(): Promise<void> {
+    if (!this.initialized) {
+      return
+    }
+
+    try {
+      // 停用所有模块
+      await this.moduleManager.deactivateAllModules()
+
+      // 关闭数据库连接
+      await this.databaseManager.close()
+
+      // 清理事件监听器
+      this.eventBus.removeAllListeners()
+
+      // 发送关闭完成事件
+      this.eventBus.emit('core:shutdown', {}, 'MingLogCore')
+
+      this.initialized = false
+    } catch (error) {
+      this.eventBus.emit('core:error', { error }, 'MingLogCore')
+      throw error
     }
   }
 }

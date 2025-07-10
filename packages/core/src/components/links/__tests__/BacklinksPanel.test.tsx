@@ -213,8 +213,8 @@ describe('BacklinksPanel', () => {
       fireEvent.change(groupSelect, { target: { value: 'type' } });
       
       // 应该显示类型分组
-      expect(screen.getByText('页面引用')).toBeInTheDocument();
-      expect(screen.getByText('块引用')).toBeInTheDocument();
+      expect(screen.getAllByText('页面引用')).toHaveLength(2); // 一个在过滤器，一个在分组标题
+      expect(screen.getAllByText('块引用')).toHaveLength(2); // 一个在过滤器，一个在分组标题
     });
   });
 

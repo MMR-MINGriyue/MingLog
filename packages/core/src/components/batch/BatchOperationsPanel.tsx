@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { LinkManagerService } from '../../services/LinkManagerService';
+import { LinkManagerService } from '../../links/LinkManagerService';
 import { PageLink, BlockLink } from '../../types/links';
 
 export interface BatchOperationItem {

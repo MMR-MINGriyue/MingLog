@@ -6,6 +6,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import MindMapPage from '../../pages/MindMapPage'
+import { createMindMap } from '@minglog/mindmap'
 
 // Mock the mindmap package to avoid React version conflicts
 vi.mock('@minglog/mindmap', () => ({
@@ -14,13 +15,38 @@ vi.mock('@minglog/mindmap', () => ({
       throw new Error('大纲数据不能为空')
     }
 
-    // Transform blocks to mindmap data
-    const nodes = blocks.map(block => ({
-      id: block.id,
-      label: block.content,
-      x: Math.random() * 400,
-      y: Math.random() * 300
-    }))
+    // Find root node (node without parent_id)
+    const rootNode = blocks.find(block => !block.parent_id) || blocks[0]
+    const rootId = rootNode?.id || 'root'
+
+    // Transform blocks to mindmap data with levels and styles
+    const nodes = blocks.map(block => {
+      // Calculate level based on parent hierarchy
+      let level = 0
+      let currentBlock = block
+      while (currentBlock.parent_id) {
+        level++
+        currentBlock = blocks.find(b => b.id === currentBlock.parent_id) || { parent_id: null }
+      }
+
+      // Set style based on level
+      const style = {
+        backgroundColor: level === 0 ? '#4F46E5' : level === 1 ? '#10B981' : '#F59E0B',
+        fontColor: '#FFFFFF',
+        fontWeight: level === 0 ? 'bold' : 'normal',
+        borderColor: '#E5E7EB',
+        borderWidth: 2
+      }
+
+      return {
+        id: block.id,
+        label: block.content,
+        level,
+        style,
+        x: Math.random() * 400,
+        y: Math.random() * 300
+      }
+    })
 
     // Create links based on parent-child relationships
     const links = blocks
@@ -48,7 +74,7 @@ vi.mock('@minglog/mindmap', () => ({
       })
     }
 
-    return { nodes, links }
+    return { nodes, links, rootId }
   }),
   MindMapView: ({ data, onNodeClick, onNodeDoubleClick, theme, layout }: any) => (
     <div data-testid="mindmap-view" data-theme={theme} data-layout={layout}>
@@ -67,7 +93,7 @@ vi.mock('@minglog/mindmap', () => ({
       <div data-testid="mindmap-links">
         {data?.links?.map((link: any, index: number) => (
           <div key={index} data-testid={`mindmap-link-${index}`}>
-            {link.source} -> {link.target}
+            {link.source} {'->'} {link.target}
           </div>
         ))}
       </div>
@@ -112,6 +138,16 @@ vi.mock('@minglog/mindmap', () => ({
     )
 
     return { nodes, links }
+  },
+  themes: {
+    default: { name: 'default', colors: { primary: '#007acc' } },
+    dark: { name: 'dark', colors: { primary: '#ffffff' } },
+    light: { name: 'light', colors: { primary: '#000000' } }
+  },
+  layoutConfigs: {
+    tree: { type: 'tree', direction: 'vertical' },
+    radial: { type: 'radial', center: { x: 0, y: 0 } },
+    force: { type: 'force', strength: 0.5 }
   }
 }))
 
@@ -166,7 +202,12 @@ vi.mock('react-router-dom', async () => {
 
 // 测试组件包装器
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <BrowserRouter>
+  <BrowserRouter
+    future={{
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+    }}
+  >
     {children}
   </BrowserRouter>
 )

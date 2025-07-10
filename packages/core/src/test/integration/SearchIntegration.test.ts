@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SearchEngine } from '../../search/SearchEngine';
-import { LinkManagerService } from '../../services/LinkManagerService';
+import { LinkManagerService } from '../../links/LinkManagerService';
 import { PageLinkParser } from '../../parsers/PageLinkParser';
 import { CacheManager } from '../../services/CacheManager';
 import { PerformanceMonitor } from '../../services/PerformanceMonitor';

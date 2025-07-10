@@ -3,7 +3,7 @@
  * 演示如何创建一个主题切换插件
  */
 
-import { Plugin, PluginContext, PluginManifest } from '../PluginSystem';
+import type { Plugin, PluginContext, PluginManifest } from '../PluginSystem';
 
 export interface ThemeConfig {
   /** 默认主题 */

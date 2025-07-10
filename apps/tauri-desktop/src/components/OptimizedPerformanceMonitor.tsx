@@ -83,8 +83,8 @@ const OptimizedPerformanceMonitor: React.FC<OptimizedPerformanceMonitorProps> = 
       };
     }
 
-    // 限制数据点数量以提升性能
-    const displayMetrics = metricsArray.slice(-30); // 只显示最近30个数据点
+    // 进一步限制数据点数量以提升性能 - 从30减少到20
+    const displayMetrics = metricsArray.slice(-20); // 只显示最近20个数据点
     const labels = displayMetrics.map((_, index) => `${index + 1}`);
 
     return {

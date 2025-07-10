@@ -22,6 +22,8 @@
     "test:ci": "npm run test:all"
   },
   "dependencies": {
+    "@minglog/core": "workspace:*",
+    "@minglog/mindmap": "workspace:*",
     "@minglog/notes": "workspace:*",
     "@tauri-apps/api": "^1.6.0",
     "@types/react-window": "^1.8.8",

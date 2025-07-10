@@ -46,7 +46,12 @@ import { ModularNavigation } from '../components/ModularNavigation'
 
 // 测试组件包装器
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <BrowserRouter>
+  <BrowserRouter
+    future={{
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+    }}
+  >
     <CoreProvider>
       <CoreWrapper>
         {children}
@@ -62,7 +67,12 @@ describe('模块化架构测试', () => {
 
   it('应该能够渲染CoreProvider', async () => {
     render(
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <CoreProvider>
           <div data-testid="test-content">测试内容</div>
         </CoreProvider>

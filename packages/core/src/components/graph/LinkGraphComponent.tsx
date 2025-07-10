@@ -128,8 +128,9 @@ export const LinkGraphComponent: React.FC<LinkGraphComponentProps> = ({
     
     root.descendants().forEach((d, i) => {
       if (d.data.id !== 'root') {
-        d.data.x = d.x + 50;
-        d.data.y = d.y + 50;
+        // 将D3计算的位置赋值给节点数据
+        (d.data as any).x = d.x + 50;
+        (d.data as any).y = d.y + 50;
       }
     });
 

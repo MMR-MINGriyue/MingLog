@@ -3,7 +3,7 @@
  * 提供模块化的数据库访问和管理功能
  */
 
-import { DatabaseSchema } from '../types'
+import type { DatabaseSchema } from '../types'
 
 export interface DatabaseConnection {
   query<T = any>(sql: string, params?: any[]): Promise<T[]>
@@ -313,5 +313,31 @@ export class DatabaseManager {
       return value ? '1' : '0'
     }
     return String(value)
+  }
+
+  /**
+   * 关闭数据库连接
+   */
+  async close(): Promise<void> {
+    if (this.connection) {
+      await this.connection.close()
+    }
+  }
+
+  /**
+   * 检查数据库连接状态
+   */
+  async isConnected(): Promise<boolean> {
+    if (!this.connection) {
+      return false
+    }
+
+    try {
+      // 尝试执行一个简单的查询来检查连接
+      await this.connection.query('SELECT 1')
+      return true
+    } catch (error) {
+      return false
+    }
   }
 }

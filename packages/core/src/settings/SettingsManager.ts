@@ -3,7 +3,7 @@
  * 负责模块设置的存储、读取、验证和管理
  */
 
-import { CoreAPI, SettingItem } from '../types'
+import type { CoreAPI, SettingItem } from '../types'
 import { EventBus } from '../event-system/EventBus'
 
 export interface SettingsValidationResult {

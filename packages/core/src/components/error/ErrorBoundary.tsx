@@ -3,13 +3,13 @@
  * 提供错误捕获、错误报告和用户友好的错误界面
  */
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo as ReactErrorInfo, ReactNode } from 'react';
 
-export interface ErrorInfo {
+export interface ErrorDetails {
   /** 错误对象 */
   error: Error;
   /** 错误信息 */
-  errorInfo: ErrorInfo;
+  errorInfo: ReactErrorInfo;
   /** 错误ID */
   errorId: string;
   /** 发生时间 */
@@ -25,7 +25,7 @@ export interface ErrorInfo {
 export interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
-  errorInfo: ErrorInfo | null;
+  errorInfo: ReactErrorInfo | null;
   errorId: string | null;
   retryCount: number;
 }
@@ -33,9 +33,9 @@ export interface ErrorBoundaryState {
 export interface ErrorBoundaryProps {
   children: ReactNode;
   /** 错误回调函数 */
-  onError?: (error: Error, errorInfo: ErrorInfo, errorId: string) => void;
+  onError?: (error: Error, errorInfo: ReactErrorInfo, errorId: string) => void;
   /** 自定义错误UI */
-  fallback?: (error: Error, errorInfo: ErrorInfo, retry: () => void) => ReactNode;
+  fallback?: (error: Error, errorInfo: ReactErrorInfo, retry: () => void) => ReactNode;
   /** 是否启用错误报告 */
   enableReporting?: boolean;
   /** 最大重试次数 */
@@ -69,7 +69,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: ReactErrorInfo) {
     const { onError, enableReporting = true, componentName } = this.props;
     const errorId = this.state.errorId || generateErrorId();
 
@@ -79,7 +79,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     });
 
     // 创建错误报告
-    const errorReport: ErrorInfo = {
+    const errorReport: ErrorDetails = {
       error,
       errorInfo,
       errorId,
@@ -107,7 +107,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     console.groupEnd();
   }
 
-  private async reportError(errorReport: ErrorInfo, componentName?: string) {
+  private async reportError(errorReport: ErrorDetails, componentName?: string) {
     try {
       // 发送到错误监控服务
       await fetch('/api/errors', {
@@ -155,13 +155,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     window.location.reload();
   };
 
-  componentWillUnmount() {
+  override componentWillUnmount() {
     if (this.retryTimeoutId) {
       clearTimeout(this.retryTimeoutId);
     }
   }
 
-  render() {
+  override render() {
     const { hasError, error, errorInfo, retryCount } = this.state;
     const { children, fallback, maxRetries = 3, showDetailedError = false } = this.props;
 
@@ -192,7 +192,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 // 默认错误回退组件
 interface ErrorFallbackProps {
   error: Error;
-  errorInfo: ErrorInfo;
+  errorInfo: ReactErrorInfo;
   onRetry: () => void;
   onReload: () => void;
   retryCount: number;

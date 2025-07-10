@@ -106,6 +106,12 @@ export interface LinkGraphNode {
   y?: number;
   size?: number;
   color?: string;
+  // D3.js force simulation properties
+  fx?: number | null;
+  fy?: number | null;
+  vx?: number;
+  vy?: number;
+  connections?: number;
 }
 
 /**
@@ -176,7 +182,7 @@ export interface LinkSuggestion {
   type: 'page' | 'block';
   preview: string;
   score: number;
-  matchType: 'title' | 'content' | 'alias';
+  matchType?: 'exact' | 'fuzzy' | 'history' | 'create';
 }
 
 /**

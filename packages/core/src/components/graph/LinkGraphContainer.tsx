@@ -180,9 +180,9 @@ export const LinkGraphContainer: React.FC<LinkGraphContainerProps> = ({
   }, [data, layout, filters, style, enableDrag, enableZoom]);
 
   // 计算布局样式
-  const getContainerStyle = () => {
+  const getContainerStyle = (): React.CSSProperties => {
     const isHorizontal = controlsPosition === 'left' || controlsPosition === 'right';
-    
+
     return {
       display: 'flex',
       flexDirection: isHorizontal ? 'row' : 'column',

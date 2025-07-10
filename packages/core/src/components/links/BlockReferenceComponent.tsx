@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { BlockLink } from '../../types/links';
-import { BlockPreviewTooltip } from './BlockPreviewTooltip';
+import { BlockPreviewTooltip } from './LinkTooltip';
 
 export interface BlockReferenceComponentProps {
   /** 块引用数据 */
@@ -244,7 +244,7 @@ export const BlockReferenceComponent: React.FC<BlockReferenceComponentProps> = (
       </Element>
 
       {/* 预览提示 */}
-      {isHovered && showPreview && exists && displayMode === 'inline' && (
+      {isHovered && showPreview && exists && (displayMode as string) !== 'inline' && (
         <BlockPreviewTooltip
           position={tooltipPosition}
           blockId={link.blockId}

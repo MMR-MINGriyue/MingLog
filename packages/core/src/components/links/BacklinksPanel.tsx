@@ -182,7 +182,7 @@ export const BacklinksPanel: React.FC<BacklinksPanelProps> = ({
 
   return (
     <div
-      className={`backlinks-panel backlinks-panel--${position}`}
+      className={`backlinks-panel backlinks-panel--${position} ${loading ? 'loading' : ''}`}
       style={{
         width: panelSize.width,
         height: panelSize.height

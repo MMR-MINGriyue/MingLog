@@ -2,7 +2,7 @@
  * MingLog核心类型定义
  */
 
-import { ComponentType } from 'react'
+import type { ComponentType } from 'react'
 
 // 基础类型
 export interface BaseEntity {

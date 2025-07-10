@@ -8,13 +8,11 @@ import {
   CreateLinkRequest, 
   BacklinkInfo, 
   LinkManager, 
-  SourceType, 
-  TargetType,
-  LinkGraphData,
-  LinkGraphNode,
-  LinkGraphEdge
+  SourceType,
+  TargetType
 } from '../types/links';
-import { DatabaseConnection, DatabaseQueryResult } from '../database/DatabaseConnection';
+import type { LinkGraphData, LinkGraphNode, LinkGraphEdge } from '../types/links';
+import type { DatabaseConnection, DatabaseQueryResult } from '../database/DatabaseConnection';
 import { EventBus } from '../event-system/EventBus';
 import { UnifiedLinkParser } from './UnifiedLinkParser';
 

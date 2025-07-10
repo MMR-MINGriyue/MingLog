@@ -85,7 +85,11 @@ export const PageLinkComponent: React.FC<PageLinkComponentProps> = ({
 
     // 延时显示提示
     hoverTimeoutRef.current = setTimeout(() => {
+      if (!event.currentTarget) return;
+
       const rect = event.currentTarget.getBoundingClientRect();
+      if (!rect) return;
+
       setTooltipPosition({
         x: rect.left + rect.width / 2,
         y: rect.bottom + 8

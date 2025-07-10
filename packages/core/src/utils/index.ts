@@ -2,7 +2,7 @@
  * 核心工具函数
  */
 
-import { Module, ModuleConfig, ModuleFactory } from '../types/index.js'
+import type { Module, ModuleConfig, ModuleFactory } from '../types/index.js'
 
 /**
  * 创建简单的模块工厂

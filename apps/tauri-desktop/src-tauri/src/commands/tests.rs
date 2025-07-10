@@ -110,6 +110,9 @@ mod tests {
         let temp_dir = tempdir().unwrap();
         let db_path = temp_dir.path().join("test.db");
         let db = Database::new_with_path(db_path.to_str().unwrap()).await.unwrap();
+
+        // Default graph is now created automatically in migrate()
+
         let sync_manager = crate::sync::WebDAVSyncManager::new();
 
         AppState {
@@ -138,7 +141,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_and_get_page() {
         let state = create_test_app_state().await;
-        
+
         let request = CreatePageRequest {
             name: "Test Page".to_string(),
             title: Some("Test Title".to_string()),
@@ -151,6 +154,7 @@ mod tests {
 
         let created_page = test_create_page(request, &state).await.unwrap();
         assert_eq!(created_page.name, "Test Page");
+        assert_eq!(created_page.graph_id, "default");
 
         let retrieved_page = test_get_page(created_page.id.clone(), &state).await.unwrap();
         assert_eq!(retrieved_page.id, created_page.id);
@@ -160,7 +164,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_and_get_block() {
         let state = create_test_app_state().await;
-        
+
         // First create a page
         let page_request = CreatePageRequest {
             name: "Test Page".to_string(),

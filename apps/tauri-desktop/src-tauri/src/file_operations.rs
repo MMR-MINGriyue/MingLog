@@ -46,6 +46,7 @@ pub struct BackupData {
 
 pub struct FileOperations;
 
+#[allow(dead_code)]
 impl FileOperations {
     /// Parse Markdown file with frontmatter
     pub fn parse_markdown_file(content: &str) -> Result<(MarkdownFrontmatter, String)> {
@@ -277,15 +278,118 @@ impl FileOperations {
     ) -> Result<PathBuf> {
         let page = db.get_page(page_id).await?;
         let blocks = db.get_blocks_by_page(page_id).await?;
-        
+
         let markdown_content = Self::page_to_markdown(&page, &blocks);
-        
+
         // Create safe filename
         let filename = format!("{}.md", page.name.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "_"));
         let file_path = output_dir.join(filename);
-        
+
         fs::write(&file_path, markdown_content)?;
-        
+
         Ok(file_path)
+    }
+
+    /// Export all pages to Markdown files
+    pub async fn export_all_pages(
+        db: &Database,
+        output_dir: &Path,
+    ) -> Result<ExportResult> {
+        let pages = db.get_all_pages().await?;
+        let mut files_exported = 0;
+        let mut total_size = 0;
+
+        // Ensure output directory exists
+        fs::create_dir_all(output_dir)?;
+
+        for page in pages {
+            let blocks = db.get_blocks_by_page(&page.id).await?;
+            let markdown_content = Self::page_to_markdown(&page, &blocks);
+
+            // Create safe filename
+            let filename = format!("{}.md", page.name.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "_"));
+            let file_path = output_dir.join(filename);
+
+            fs::write(&file_path, &markdown_content)?;
+
+            files_exported += 1;
+            total_size += markdown_content.len() as u64;
+        }
+
+        Ok(ExportResult {
+            files_exported,
+            total_size,
+            export_path: output_dir.to_string_lossy().to_string(),
+        })
+    }
+
+    /// Create backup of all data
+    pub async fn create_backup(
+        db: &Database,
+        output_path: &str,
+    ) -> Result<()> {
+        let pages = db.get_all_pages().await?;
+        let mut all_blocks = Vec::new();
+        for page in &pages {
+            let blocks = db.get_blocks_by_page(&page.id).await?;
+            all_blocks.extend(blocks);
+        }
+        let tags = db.get_tags().await?;
+
+        let backup_data = BackupData {
+            version: "1.0".to_string(),
+            created_at: chrono::Utc::now(),
+            pages,
+            blocks: all_blocks,
+            tags,
+        };
+
+        let json_content = serde_json::to_string_pretty(&backup_data)?;
+        fs::write(output_path, json_content)?;
+
+        Ok(())
+    }
+
+    /// Restore backup data
+    pub async fn restore_backup(
+        db: &Database,
+        backup_path: &str,
+    ) -> Result<()> {
+        let backup_content = fs::read_to_string(backup_path)?;
+        let backup_data: BackupData = serde_json::from_str(&backup_content)?;
+
+        // Clear existing data (in a transaction)
+        // Note: This is a simplified implementation
+        // In production, you'd want proper transaction handling
+
+        // Restore pages
+        for page in backup_data.pages {
+            let create_request = crate::models::CreatePageRequest {
+                name: page.name,
+                title: page.title,
+                graph_id: page.graph_id,
+                is_journal: Some(page.is_journal),
+                journal_date: page.journal_date,
+                tags: Some(page.tags),
+                properties: page.properties,
+            };
+            db.create_page(create_request).await?;
+        }
+
+        // Restore blocks
+        for block in backup_data.blocks {
+            let create_request = crate::models::CreateBlockRequest {
+                content: block.content,
+                page_id: block.page_id,
+                graph_id: block.graph_id,
+                parent_id: block.parent_id,
+                order: Some(block.order),
+                refs: Some(block.refs),
+                properties: block.properties,
+            };
+            db.create_block(create_request).await?;
+        }
+
+        Ok(())
     }
 }

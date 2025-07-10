@@ -57,8 +57,8 @@ export const useVirtualizedPerformanceMonitor = (
   options: UseVirtualizedPerformanceMonitorOptions = {}
 ): UseVirtualizedPerformanceMonitorReturn => {
   const {
-    maxDataPoints = 100,
-    updateInterval = 1000,
+    maxDataPoints = 50, // 减少到50个数据点以提升性能
+    updateInterval = 2000, // 增加到2秒以减少渲染开销
     enableAlerts = true,
     thresholds = DEFAULT_THRESHOLDS,
   } = options;
@@ -113,10 +113,9 @@ export const useVirtualizedPerformanceMonitor = (
     // FPS calculation
     const fps = calculateFPS();
     
-    // DOM metrics
-    const domNodes = document.querySelectorAll('*').length;
-    const eventListeners = (window as any).getEventListeners ? 
-      Object.keys((window as any).getEventListeners(document)).length : 0;
+    // DOM metrics - 优化计算，减少性能开销
+    const domNodes = document.body ? document.body.getElementsByTagName('*').length : 0;
+    const eventListeners = 0; // 简化事件监听器计数以提升性能
 
     return {
       timestamp: Date.now(),

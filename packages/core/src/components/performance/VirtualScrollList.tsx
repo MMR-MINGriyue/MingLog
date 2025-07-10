@@ -211,11 +211,13 @@ export const VirtualScrollList = <T,>({
       className={`virtual-scroll-list ${className} ${isScrolling ? 'scrolling' : ''}`}
       style={{ height, overflow: 'auto' }}
       onScroll={handleScroll}
+      data-testid="virtual-scroll-list"
     >
       {/* 虚拟容器，用于设置正确的滚动高度 */}
       <div
         className="virtual-scroll-spacer"
         style={{ height: totalHeight, position: 'relative' }}
+        data-testid="virtual-scroll-spacer"
       >
         {/* 渲染可见项目 */}
         {visibleItems.map(({ index, item, style }) => (
@@ -234,6 +236,7 @@ export const VirtualScrollList = <T,>({
         {loading && (
           <div
             className="virtual-scroll-loading"
+            data-testid="virtual-scroll-loading"
             style={{
               position: 'absolute',
               top: totalHeight,

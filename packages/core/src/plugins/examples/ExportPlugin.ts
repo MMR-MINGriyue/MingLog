@@ -3,7 +3,7 @@
  * 演示如何创建一个数据导出插件
  */
 
-import { Plugin, PluginContext, PluginManifest } from '../PluginSystem';
+import type { Plugin, PluginContext, PluginManifest } from '../PluginSystem';
 
 export interface ExportConfig {
   /** 默认导出格式 */

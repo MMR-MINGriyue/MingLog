@@ -40,6 +40,7 @@ const mockBlockLink: BlockLink = {
 };
 
 const mockBrokenLink: BrokenLink = {
+  type: 'broken-link',
   originalText: '[[不完整的链接',
   position: 0,
   length: 8,
@@ -53,26 +54,20 @@ const mockBacklinks: BacklinkInfo[] = [
     sourceType: 'page',
     sourceId: 'page-1',
     sourceTitle: '项目介绍',
-    targetType: 'page',
-    targetId: 'target-page',
     linkType: 'page-reference',
     context: '本项目使用了先进的双向链接系统来组织知识',
     position: 10,
-    createdAt: '2024-01-01T10:00:00Z',
-    updatedAt: '2024-01-01T10:00:00Z'
+    createdAt: '2024-01-01T10:00:00Z'
   },
   {
     id: 'link-2',
     sourceType: 'page',
     sourceId: 'page-2',
     sourceTitle: '技术架构',
-    targetType: 'page',
-    targetId: 'target-page',
     linkType: 'page-reference',
     context: '双向链接系统的核心组件包括解析器和渲染器',
     position: 20,
-    createdAt: '2024-01-02T10:00:00Z',
-    updatedAt: '2024-01-02T10:00:00Z'
+    createdAt: '2024-01-02T10:00:00Z'
   }
 ];
 

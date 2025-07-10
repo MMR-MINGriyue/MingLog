@@ -15,7 +15,12 @@ vi.mock('@tauri-apps/api/core', () => ({
 
 // Test wrapper with i18n and router
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <BrowserRouter>
+  <BrowserRouter
+    future={{
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+    }}
+  >
     <I18nextProvider i18n={i18n}>
       <NotificationProvider>
         {children}

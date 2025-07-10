@@ -1,5 +1,9 @@
 import '@testing-library/jest-dom'
 import { vi, beforeEach } from 'vitest'
+import { act } from '@testing-library/react'
+
+// Export act for easy use in tests
+export { act }
 import i18n from '../i18n'
 
 // Mock Tauri APIs

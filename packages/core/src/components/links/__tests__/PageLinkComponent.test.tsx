@@ -218,7 +218,7 @@ describe('PageLinkComponent', () => {
       render(<PageLinkComponent link={mockPageLink} style={customStyle} />);
       
       const linkElement = screen.getByTestId('page-link');
-      expect(linkElement).toHaveStyle('color: red');
+      expect(linkElement).toHaveStyle('color: rgb(255, 0, 0)');
       expect(linkElement).toHaveStyle('font-size: 16px');
     });
   });

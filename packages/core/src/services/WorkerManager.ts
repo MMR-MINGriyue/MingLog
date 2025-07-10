@@ -3,7 +3,7 @@
  * 管理多个Web Worker实例，提供任务调度和负载均衡
  */
 
-import { WorkerMessage, WorkerResponse } from '../workers/SearchWorker';
+import type { WorkerMessage, WorkerResponse } from '../workers/SearchWorker';
 
 export interface WorkerTask {
   id: string;

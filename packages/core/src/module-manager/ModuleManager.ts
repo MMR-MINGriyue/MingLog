@@ -6,11 +6,11 @@
 
 import { EventBus, CORE_EVENTS } from '../event-system/EventBus.js'
 import { VersionManager } from '../utils/version-manager.js'
-import {
+import { ModuleStatus } from '../types/index.js'
+import type {
   Module,
   ModuleConfig,
   ModuleRegistration,
-  ModuleStatus,
   CoreAPI,
   ModuleFactory,
   VersionConstraint
@@ -986,5 +986,24 @@ export class ModuleManager {
     }
 
     return { success, failed }
+  }
+
+  /**
+   * 停用所有模块
+   */
+  async deactivateAllModules(): Promise<void> {
+    const activeModules = Array.from(this.activeModules.keys())
+
+    // 按依赖关系逆序停用模块
+    const sortedModules = this.sortModulesByDependencies(activeModules).reverse()
+
+    for (const moduleId of sortedModules) {
+      try {
+        await this.deactivateModule(moduleId)
+      } catch (error) {
+        console.error(`Failed to deactivate module ${moduleId}:`, error)
+        // 继续停用其他模块，不要因为一个模块失败而停止
+      }
+    }
   }
 }

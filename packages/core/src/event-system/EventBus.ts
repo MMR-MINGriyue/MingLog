@@ -6,7 +6,8 @@
 
 import { EventEmitter } from 'eventemitter3'
 import { v4 as uuidv4 } from 'uuid'
-import { ModuleEvent, ModuleEventType } from '../types/index.js'
+import { ModuleEventType } from '../types/index.js'
+import type { ModuleEvent } from '../types/index.js'
 
 export interface EventBusOptions {
   maxHistorySize?: number
@@ -525,6 +526,20 @@ export class EventBus {
     if (this.eventHistory.length > this.maxHistorySize) {
       this.eventHistory = this.eventHistory.slice(-this.maxHistorySize)
     }
+  }
+
+  /**
+   * 移除所有事件监听器
+   */
+  removeAllListeners(): void {
+    this.emitter.removeAllListeners()
+  }
+
+  /**
+   * 移除指定类型的所有监听器
+   */
+  removeAllListenersForType(type: string): void {
+    this.emitter.removeAllListeners(type)
   }
 }
 

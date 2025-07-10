@@ -3,7 +3,8 @@
  * 在后台线程中执行搜索操作，避免阻塞主线程
  */
 
-import { SearchEngine, SearchDocument, SearchResult, SearchOptions } from '../search/SearchEngine';
+import { SearchEngine } from '../search/SearchEngine';
+import type { SearchDocument, SearchResult, SearchOptions } from '../search/SearchEngine';
 import { SearchQueryParser } from '../search/SearchQueryParser';
 
 // Worker消息类型

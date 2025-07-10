@@ -3,7 +3,7 @@
  * 整合页面链接和块引用解析功能
  */
 
-import { PageLink, BlockLink, LinkParser, BrokenLink } from '../types/links';
+import type { PageLink, BlockLink, LinkParser, BrokenLink } from '../types/links';
 import { PageLinkParser } from './PageLinkParser';
 import { BlockLinkParser } from './BlockLinkParser';
 

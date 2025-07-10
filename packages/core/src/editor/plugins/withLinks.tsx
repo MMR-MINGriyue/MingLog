@@ -3,14 +3,14 @@
  * 支持实时链接解析、可视化渲染和编辑功能
  */
 
-import { Editor, Element, Node, Path, Point, Range, Text, Transforms } from 'slate';
+import { BaseEditor, Editor, Element, Node, Path, Point, Range, Text, Transforms } from 'slate';
 import { ReactEditor } from 'slate-react';
 import { PageLinkParser } from '../../links/PageLinkParser';
 import { BlockLinkParser } from '../../links/BlockLinkParser';
 import { UnifiedLinkParser } from '../../links/UnifiedLinkParser';
 
 // 链接元素类型
-export interface LinkElement extends Element {
+export interface LinkElement {
   type: 'page-link' | 'block-link' | 'broken-link';
   linkType: 'page-reference' | 'block-reference';
   target: string;
@@ -42,6 +42,10 @@ declare module 'slate' {
     Editor: BaseEditor & ReactEditor & {
       linkParser: UnifiedLinkParser;
       linkOptions: LinkPluginOptions;
+      insertPageLink: (pageName: string, displayText?: string) => void;
+      insertBlockLink: (blockId: string) => void;
+      isLinkActive: () => boolean;
+      getCurrentLink: () => LinkElement | null;
     };
     Element: LinkElement;
   }
@@ -133,9 +137,9 @@ export const withLinks = (editor: Editor, options: LinkPluginOptions = {}): Edit
           type: 'broken-link',
           linkType: 'page-reference', // 默认类型
           target: '',
-          displayText: error.text || '',
+          displayText: error.message || '',
           start: error.position,
-          end: error.position + (error.text?.length || 0)
+          end: error.position + error.length
         });
       });
     }
@@ -355,7 +359,8 @@ export const withLinks = (editor: Editor, options: LinkPluginOptions = {}): Edit
   };
 
   editor.getCurrentLink = () => {
-    return getCurrentLink(editor);
+    const result = getCurrentLink(editor);
+    return result ? result[0] : null;
   };
 
   return editor;

@@ -3,7 +3,8 @@
  * 提供插件的安装、更新、卸载和管理功能
  */
 
-import { PluginSystem, Plugin, PluginManifest } from './PluginSystem';
+import { PluginSystem } from './PluginSystem';
+import type { Plugin, PluginManifest } from './PluginSystem';
 
 export interface PluginPackage {
   /** 包名 */
@@ -183,8 +184,9 @@ export class PluginManager {
    */
   async updatePlugin(pluginId: string, onProgress?: (progress: number, message: string) => void): Promise<void> {
     try {
-      const updateInfo = await this.checkForUpdates(pluginId);
-      
+      const updateInfoResult = await this.checkForUpdates(pluginId);
+      const updateInfo = Array.isArray(updateInfoResult) ? updateInfoResult[0] : updateInfoResult;
+
       if (!updateInfo.hasUpdate) {
         throw new Error('No updates available');
       }

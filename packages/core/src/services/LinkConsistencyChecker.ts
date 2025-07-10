@@ -3,8 +3,8 @@
  * 检查和修复链接系统中的一致性问题
  */
 
-import { LinkManagerService } from './LinkManagerService';
-import { PageLink, BlockLink, BacklinkInfo } from '../types/links';
+import { LinkManagerService } from '../links/LinkManagerService';
+import type { PageLink, BlockLink, BacklinkInfo } from '../types/links';
 
 export interface ConsistencyIssue {
   /** 问题ID */

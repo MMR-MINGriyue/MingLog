@@ -13,7 +13,7 @@ export default defineConfig({
     // 测试环境配置
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ['./src/test-setup.ts'],
 
     // 覆盖率配置
     coverage: {
@@ -76,16 +76,20 @@ export default defineConfig({
     testTimeout: 10000,
     hookTimeout: 10000,
 
-    // 并发配置
-    threads: true,
-    maxThreads: 4,
-    minThreads: 1,
+    // 并发配置 (vitest 3.x)
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        maxThreads: 4,
+        minThreads: 1
+      }
+    },
 
     // 监听模式配置
     watch: false,
 
-    // 报告器配置
-    reporter: ['verbose', 'json', 'html'],
+    // 报告器配置 (vitest 3.x)
+    reporters: ['verbose', 'json', 'html'],
     outputFile: {
       json: './test-results/results.json',
       html: './test-results/results.html'

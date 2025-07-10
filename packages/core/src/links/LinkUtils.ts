@@ -2,7 +2,7 @@
  * MingLog 链接系统工具函数
  */
 
-import { PageLink, BlockLink, Link, LinkType } from '../types/links';
+import type { PageLink, BlockLink, Link, LinkType } from '../types/links';
 
 export class LinkUtils {
   /**

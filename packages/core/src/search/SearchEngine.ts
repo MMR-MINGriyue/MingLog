@@ -3,7 +3,8 @@
  * 提供全文搜索、索引管理和结果排序功能
  */
 
-import { SearchQueryParser, SearchQuery, SearchNode, SearchFilter } from './SearchQueryParser';
+import { SearchQueryParser } from './SearchQueryParser';
+import type { SearchQuery, SearchNode, SearchFilter } from './SearchQueryParser';
 
 export interface SearchDocument {
   /** 文档ID */

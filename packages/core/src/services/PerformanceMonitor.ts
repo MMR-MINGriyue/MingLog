@@ -330,7 +330,7 @@ export class PerformanceMonitor {
     this.recordMetric('request-response', entry.responseEnd - entry.requestStart, 'ms');
     this.recordMetric('dom-parse', entry.domContentLoadedEventEnd - entry.domContentLoadedEventStart, 'ms');
     this.recordMetric('page-load', entry.loadEventEnd - entry.loadEventStart, 'ms');
-    this.recordMetric('total-load-time', entry.loadEventEnd - entry.navigationStart, 'ms');
+    this.recordMetric('total-load-time', entry.loadEventEnd - entry.startTime, 'ms');
   }
 
   /**

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { SearchResult, SearchDocument } from '../../search/SearchEngine';
+import type { SearchResult, SearchDocument } from '../../search/SearchEngine';
 
 export interface SearchResultsComponentProps {
   /** 搜索结果 */

@@ -3,7 +3,7 @@
  * 支持 [[页面名称]] 和 [[页面名称|显示文本]] 语法
  */
 
-import { PageLink, LinkParser } from '../types/links';
+import type { PageLink, LinkParser } from '../types/links';
 
 export class PageLinkParser implements Partial<LinkParser> {
   // 页面链接正则表达式：[[页面名称]] 或 [[页面名称|显示文本]]
@@ -169,30 +169,36 @@ export class PageLinkParser implements Partial<LinkParser> {
     while (start >= 1 && content.substring(start - 2, start) !== '[[') {
       start--;
     }
-    
+
     if (start < 1 || content.substring(start - 2, start) !== '[[') {
       return null;
     }
-    
+
     start -= 2; // 包含 [[
-    
+
     // 向后查找 ]] 或内容结束
-    let end = cursorPosition;
+    let end = start + 2; // 从 [[ 之后开始查找
     while (end < content.length && content.substring(end, end + 2) !== ']]') {
       end++;
     }
-    
-    // 如果找到了 ]]，说明链接已完成
+
+    // 如果找到了 ]]，检查光标是否在完整链接内部
     if (end < content.length && content.substring(end, end + 2) === ']]') {
+      // 如果光标在 ]] 之后，说明链接已完成
+      if (cursorPosition > end + 1) {
+        return null;
+      }
+      // 如果光标在完整链接内部，也返回null（链接已完成）
       return null;
     }
-    
-    const text = content.substring(start, end);
-    
+
+    // 链接未完成，返回当前输入的部分
+    const text = content.substring(start, Math.max(end, cursorPosition));
+
     return {
       text,
       start,
-      end
+      end: Math.max(end, cursorPosition)
     };
   }
 

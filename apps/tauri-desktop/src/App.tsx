@@ -64,33 +64,57 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <NotificationProvider>
-          <BrowserRouter>
-            <CoreProvider>
-              <CoreWrapper>
-                <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors">
-                  <Layout>
-                    <ModularRouter />
-                  </Layout>
-                </div>
-              </CoreWrapper>
-            </CoreProvider>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
+            <AppContent
+              showOnboarding={showOnboarding}
+              setShowOnboarding={setShowOnboarding}
+              showSearch={showSearch}
+              setShowSearch={setShowSearch}
+            />
           </BrowserRouter>
         </NotificationProvider>
-
-        {/* Onboarding Tour */}
-        <OnboardingTour
-          isOpen={showOnboarding}
-          onClose={() => setShowOnboarding(false)}
-          onComplete={() => setShowOnboarding(false)}
-        />
-
-        {/* Global Search */}
-        <SearchComponent
-          isOpen={showSearch}
-          onClose={() => setShowSearch(false)}
-        />
       </ThemeProvider>
     </ErrorBoundary>
+  )
+}
+
+// Separate component for app content (for testing)
+export const AppContent: React.FC<{
+  showOnboarding: boolean
+  setShowOnboarding: (show: boolean) => void
+  showSearch: boolean
+  setShowSearch: (show: boolean) => void
+}> = ({ showOnboarding, setShowOnboarding, showSearch, setShowSearch }) => {
+  return (
+    <>
+      <CoreProvider>
+        <CoreWrapper>
+          <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors">
+            <Layout>
+              <ModularRouter />
+            </Layout>
+          </div>
+        </CoreWrapper>
+      </CoreProvider>
+
+      {/* Onboarding Tour */}
+      <OnboardingTour
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onComplete={() => setShowOnboarding(false)}
+      />
+
+      {/* Global Search */}
+      <SearchComponent
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
+      />
+    </>
   )
 }
 

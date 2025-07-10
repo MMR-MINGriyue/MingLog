@@ -25,6 +25,7 @@ pub struct Database {
     pool: SqlitePool,
 }
 
+#[allow(dead_code)]
 impl Database {
     pub async fn new() -> Result<Self> {
         let db_path = Self::get_database_path()?;
@@ -394,7 +395,17 @@ impl Database {
         )
         .execute(&self.pool)
         .await?;
-        
+
+        // Create default graph if it doesn't exist (for testing compatibility)
+        sqlx::query(
+            r#"
+            INSERT OR IGNORE INTO graphs (id, name, path, settings, created_at, updated_at)
+            VALUES ('default', 'Default Graph', 'default', '{}', datetime('now'), datetime('now'))
+            "#
+        )
+        .execute(&self.pool)
+        .await?;
+
         Ok(())
     }
 
@@ -421,7 +432,32 @@ impl Database {
             .await
             .ok(); // Ignore errors if FTS table doesn't exist
 
-        // Create task management tables
+        // Create task management tables - projects first, then tasks
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS projects (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                status TEXT NOT NULL DEFAULT 'active',
+                color TEXT,
+                start_date TEXT,
+                due_date TEXT,
+                completed_at TEXT,
+                linked_notes TEXT DEFAULT '[]',
+                linked_files TEXT DEFAULT '[]',
+                progress INTEGER DEFAULT 0,
+                total_tasks INTEGER DEFAULT 0,
+                completed_tasks INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                created_by TEXT
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
         sqlx::query(
             r#"
             CREATE TABLE IF NOT EXISTS tasks (
@@ -446,31 +482,6 @@ impl Database {
                 created_by TEXT,
                 FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
                 FOREIGN KEY (parent_task_id) REFERENCES tasks(id) ON DELETE CASCADE
-            )
-            "#,
-        )
-        .execute(&self.pool)
-        .await?;
-
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS projects (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                description TEXT,
-                status TEXT NOT NULL DEFAULT 'active',
-                color TEXT,
-                start_date TEXT,
-                due_date TEXT,
-                completed_at TEXT,
-                linked_notes TEXT DEFAULT '[]',
-                linked_files TEXT DEFAULT '[]',
-                progress INTEGER DEFAULT 0,
-                total_tasks INTEGER DEFAULT 0,
-                completed_tasks INTEGER DEFAULT 0,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                created_by TEXT
             )
             "#,
         )
@@ -587,7 +598,7 @@ impl Database {
                 page_id TEXT NOT NULL,
                 alias TEXT NOT NULL,
                 created_at TEXT NOT NULL,
-                FOREIGN KEY (page_id) REFERENCES notes(id) ON DELETE CASCADE,
+                FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE,
                 UNIQUE(alias)
             )
             "#,
@@ -765,9 +776,11 @@ impl Database {
         let mut params: Vec<Box<dyn sqlx::Encode<'_, sqlx::Sqlite> + Send + Sync>> = Vec::new();
         
         if !request.query.is_empty() {
-            query.push_str(" JOIN notes_fts fts ON n.id = fts.id ");
-            conditions.push("fts MATCH ?");
-            params.push(Box::new(request.query.clone()));
+            // Use LIKE search for better compatibility and reliability
+            conditions.push("(n.title LIKE ? OR n.content LIKE ?)");
+            let search_pattern = format!("%{}%", request.query);
+            params.push(Box::new(search_pattern.clone()));
+            params.push(Box::new(search_pattern));
         }
         
         if !include_archived {
@@ -793,21 +806,34 @@ impl Database {
         params.push(Box::new(limit));
         params.push(Box::new(offset));
         
-        // This is a simplified version - in a real implementation, you'd need to handle dynamic queries properly
-        let notes = if request.query.is_empty() {
-            sqlx::query_as::<_, Note>(&query)
-                .bind(limit)
-                .bind(offset)
-                .fetch_all(&self.pool)
-                .await?
+        // Prepare search pattern outside the if block to avoid lifetime issues
+        let search_pattern = if !request.query.is_empty() {
+            Some(format!("%{}%", request.query))
         } else {
-            sqlx::query_as::<_, Note>(&query)
-                .bind(&request.query)
-                .bind(limit)
-                .bind(offset)
-                .fetch_all(&self.pool)
-                .await?
+            None
         };
+
+        // Execute query with proper parameter binding
+        let mut query_builder = sqlx::query_as::<_, Note>(&query);
+
+        // Bind search parameters if query is not empty
+        if let Some(ref pattern) = search_pattern {
+            query_builder = query_builder.bind(pattern).bind(pattern);
+        }
+
+        // Bind date parameters if present
+        if let Some(date_from) = request.date_from {
+            query_builder = query_builder.bind(date_from.to_rfc3339());
+        }
+
+        if let Some(date_to) = request.date_to {
+            query_builder = query_builder.bind(date_to.to_rfc3339());
+        }
+
+        // Bind limit and offset
+        query_builder = query_builder.bind(limit).bind(offset);
+
+        let notes = query_builder.fetch_all(&self.pool).await?;
         
         // Get total count
         let total_row = sqlx::query("SELECT COUNT(*) as count FROM notes WHERE is_archived = ?")
@@ -1286,6 +1312,7 @@ impl Database {
     }
 
     // Task management operations
+    #[allow(dead_code)]
     pub async fn create_task(&self, request: CreateTaskRequest) -> Result<Task> {
         let task = Task {
             id: uuid::Uuid::new_v4().to_string(),
