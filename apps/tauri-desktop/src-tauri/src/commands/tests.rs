@@ -1,11 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::database::Database;
     use crate::state::AppState;
     use crate::models::*;
     use crate::error::Result;
-    use crate::commands::{init_app, get_app_info, create_page, get_page, update_page, delete_page, create_block, get_block, update_block, delete_block, get_blocks_by_page, search_blocks, import_markdown_file, export_page_to_markdown, create_backup};
+    use crate::commands::{init_app, get_app_info};
     use tempfile::tempdir;
     use tokio;
     use std::sync::Arc;

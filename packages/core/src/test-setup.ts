@@ -3,6 +3,7 @@
  */
 
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 
 // 模拟浏览器API
 Object.defineProperty(window, 'indexedDB', {

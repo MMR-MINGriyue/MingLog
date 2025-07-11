@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod integration_tests {
-    use super::*;
     use crate::models::*;
     use crate::database::Database;
     use tempfile::tempdir;

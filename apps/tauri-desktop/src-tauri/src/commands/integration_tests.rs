@@ -1,12 +1,10 @@
 #[cfg(test)]
 mod integration_tests {
-    use super::*;
     use crate::models::*;
     use crate::state::AppState;
     use crate::database::Database;
     use tokio::sync::Mutex;
     use crate::sync::WebDAVSyncManager;
-    use crate::error::{AppError, Result};
     use crate::commands::{init_app, get_app_info};
     use tempfile::tempdir;
     use tokio;
@@ -191,7 +189,6 @@ mod integration_tests {
     #[tokio::test]
     async fn test_get_pages_command() {
         let state = create_test_app_state().await;
-        let db = state.db.lock().await;
 
         // Create multiple test pages
         for i in 0..3 {
@@ -204,14 +201,20 @@ mod integration_tests {
                 tags: None,
                 properties: None,
             };
-            db.create_page(request).await.unwrap();
+            // Use separate scope for each database operation to avoid lock contention
+            {
+                let db = state.db.lock().await;
+                db.create_page(request).await.unwrap();
+            }
         }
 
         // Test get_pages
         // Get all pages by querying the database directly
-        let db = state.db.lock().await;
-        let pages = db.get_pages_by_graph("default").await.unwrap();
-        assert!(pages.len() >= 3, "Should have at least 3 pages");
+        {
+            let db = state.db.lock().await;
+            let pages = db.get_pages_by_graph("default").await.unwrap();
+            assert!(pages.len() >= 3, "Should have at least 3 pages");
+        }
     }
 
     #[tokio::test]

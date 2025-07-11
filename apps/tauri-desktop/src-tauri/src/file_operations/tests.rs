@@ -1,9 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::models::*;
     use crate::database::Database;
-    use crate::error::{AppError, Result};
+    use crate::error::Result;
     use tempfile::{tempdir, NamedTempFile};
     use std::fs;
     use std::io::Write;
@@ -85,8 +84,8 @@ Content goes here.
 
     #[tokio::test]
     async fn test_import_multiple_markdown_files() {
-        let (db, _temp_dir, graph_id) = create_test_database().await.unwrap();
-        
+        let (_db, _temp_dir, _graph_id) = create_test_database().await.unwrap();
+
         // Create multiple temporary files
         let temp_dir = tempdir().unwrap();
         let file_paths = vec![
@@ -100,7 +99,7 @@ Content goes here.
             fs::write(path, content).unwrap();
         }
         
-        let path_strings: Vec<String> = file_paths.iter()
+        let _path_strings: Vec<String> = file_paths.iter()
             .map(|p| p.to_str().unwrap().to_string())
             .collect();
         
@@ -344,7 +343,7 @@ This is the main content.
         
         // TODO: implement parse_frontmatter function
         // let (frontmatter, content) = parse_frontmatter(content_with_frontmatter);
-        let frontmatter: Option<std::collections::HashMap<String, String>> = None;
+        let _frontmatter: Option<std::collections::HashMap<String, String>> = None;
         let content = content_with_frontmatter;
         // TODO: update assertions when parse_frontmatter is implemented
         // assert!(frontmatter.is_some());
@@ -360,7 +359,7 @@ No frontmatter here.
         
         // TODO: implement parse_frontmatter function
         // let (frontmatter2, content2) = parse_frontmatter(content_without_frontmatter);
-        let frontmatter2: Option<std::collections::HashMap<String, String>> = None;
+        let _frontmatter2: Option<std::collections::HashMap<String, String>> = None;
         let content2 = content_without_frontmatter;
         // TODO: update assertion when parse_frontmatter is implemented
         // assert!(frontmatter2.is_none());
@@ -369,11 +368,11 @@ No frontmatter here.
 
     #[tokio::test]
     async fn test_error_handling() {
-        let (db, _temp_dir, graph_id) = create_test_database().await.unwrap();
-        
+        let (db, _temp_dir, _graph_id) = create_test_database().await.unwrap();
+
         // Test export of non-existent page
         let temp_dir = tempdir().unwrap();
-        let export_path = temp_dir.path().join("nonexistent.md");
+        let _export_path = temp_dir.path().join("nonexistent.md");
         let result = crate::file_operations::FileOperations::export_page_to_markdown(&db, "non-existent-id", temp_dir.path()).await;
         assert!(result.is_err(), "Export of non-existent page should fail");
 

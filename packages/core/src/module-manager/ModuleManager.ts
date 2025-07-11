@@ -989,10 +989,52 @@ export class ModuleManager {
   }
 
   /**
+   * 按依赖关系排序模块
+   */
+  private sortModulesByDependencies(moduleIds: string[]): string[] {
+    const visited = new Set<string>()
+    const visiting = new Set<string>()
+    const result: string[] = []
+
+    const visit = (moduleId: string) => {
+      if (visited.has(moduleId)) return
+      if (visiting.has(moduleId)) {
+        // 检测到循环依赖，跳过
+        return
+      }
+
+      visiting.add(moduleId)
+
+      const registration = this.modules.get(moduleId)
+      if (registration?.config.dependencies) {
+        for (const depId of registration.config.dependencies) {
+          if (moduleIds.includes(depId)) {
+            visit(depId)
+          }
+        }
+      }
+
+      visiting.delete(moduleId)
+      visited.add(moduleId)
+      result.push(moduleId)
+    }
+
+    for (const moduleId of moduleIds) {
+      visit(moduleId)
+    }
+
+    return result
+  }
+
+  /**
    * 停用所有模块
    */
   async deactivateAllModules(): Promise<void> {
-    const activeModules = Array.from(this.activeModules.keys())
+    const activeModules = Array.from(this.modules.keys())
+      .filter(moduleId => {
+        const registration = this.modules.get(moduleId)
+        return registration?.status === ModuleStatus.ACTIVE
+      })
 
     // 按依赖关系逆序停用模块
     const sortedModules = this.sortModulesByDependencies(activeModules).reverse()

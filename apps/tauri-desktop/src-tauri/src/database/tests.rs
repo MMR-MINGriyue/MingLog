@@ -1,9 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::models::*;
     use crate::database::Database;
-    use crate::error::{AppError, Result};
+    use crate::error::Result;
     use tempfile::tempdir;
     use tokio;
     use serde_json;

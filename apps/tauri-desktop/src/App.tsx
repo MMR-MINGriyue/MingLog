@@ -76,6 +76,19 @@ function App() {
               showSearch={showSearch}
               setShowSearch={setShowSearch}
             />
+
+            {/* Onboarding Tour - moved inside NotificationProvider */}
+            <OnboardingTour
+              isOpen={showOnboarding}
+              onClose={() => setShowOnboarding(false)}
+              onComplete={() => setShowOnboarding(false)}
+            />
+
+            {/* Global Search - moved inside NotificationProvider */}
+            <SearchComponent
+              isOpen={showSearch}
+              onClose={() => setShowSearch(false)}
+            />
           </BrowserRouter>
         </NotificationProvider>
       </ThemeProvider>
@@ -91,30 +104,15 @@ export const AppContent: React.FC<{
   setShowSearch: (show: boolean) => void
 }> = ({ showOnboarding, setShowOnboarding, showSearch, setShowSearch }) => {
   return (
-    <>
-      <CoreProvider>
-        <CoreWrapper>
-          <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors">
-            <Layout>
-              <ModularRouter />
-            </Layout>
-          </div>
-        </CoreWrapper>
-      </CoreProvider>
-
-      {/* Onboarding Tour */}
-      <OnboardingTour
-        isOpen={showOnboarding}
-        onClose={() => setShowOnboarding(false)}
-        onComplete={() => setShowOnboarding(false)}
-      />
-
-      {/* Global Search */}
-      <SearchComponent
-        isOpen={showSearch}
-        onClose={() => setShowSearch(false)}
-      />
-    </>
+    <CoreProvider>
+      <CoreWrapper>
+        <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors">
+          <Layout>
+            <ModularRouter />
+          </Layout>
+        </div>
+      </CoreWrapper>
+    </CoreProvider>
   )
 }
 

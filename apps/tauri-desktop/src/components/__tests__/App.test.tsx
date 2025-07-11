@@ -84,16 +84,23 @@ const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 import { NotificationProvider } from '../../components/NotificationSystem'
 import { ThemeProvider } from '../../hooks/useTheme'
 
-// Test wrapper with all providers for AppContent testing (without Router)
+// Test wrapper with all providers for AppContent testing (with Router for Layout component)
 const AppContentTestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <I18nextProvider i18n={i18n}>
-      <ThemeProvider>
-        <NotificationProvider>
-          {children}
-        </NotificationProvider>
-      </ThemeProvider>
-    </I18nextProvider>
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
+      <I18nextProvider i18n={i18n}>
+        <ThemeProvider>
+          <NotificationProvider>
+            {children}
+          </NotificationProvider>
+        </ThemeProvider>
+      </I18nextProvider>
+    </BrowserRouter>
   )
 }
 
@@ -108,11 +115,9 @@ const renderAppContent = (props: Partial<React.ComponentProps<typeof AppContent>
   }
 
   return render(
-    <BrowserRouter>
-      <AppContentTestWrapper>
-        <AppContent {...defaultProps} />
-      </AppContentTestWrapper>
-    </BrowserRouter>
+    <AppContentTestWrapper>
+      <AppContent {...defaultProps} />
+    </AppContentTestWrapper>
   )
 }
 
@@ -136,11 +141,11 @@ describe('App', () => {
 
   it('shows loading screen initially', () => {
     render(
-      <TestWrapper>
+      <I18nextProvider i18n={i18n}>
         <App />
-      </TestWrapper>
+      </I18nextProvider>
     )
-    
+
     // Should show some loading indicator or main content
     expect(document.body).toBeInTheDocument()
   })
@@ -148,9 +153,9 @@ describe('App', () => {
   it('handles keyboard shortcuts', async () => {
     await act(async () => {
       render(
-        <TestWrapper>
+        <I18nextProvider i18n={i18n}>
           <App />
-        </TestWrapper>
+        </I18nextProvider>
       )
     })
 
@@ -181,9 +186,9 @@ describe('App', () => {
   it('handles theme switching', async () => {
     await act(async () => {
       render(
-        <TestWrapper>
+        <I18nextProvider i18n={i18n}>
           <App />
-        </TestWrapper>
+        </I18nextProvider>
       )
     })
 
@@ -201,9 +206,9 @@ describe('App', () => {
   it('navigates between routes', async () => {
     await act(async () => {
       render(
-        <TestWrapper>
+        <I18nextProvider i18n={i18n}>
           <App />
-        </TestWrapper>
+        </I18nextProvider>
       )
     })
 
@@ -217,9 +222,9 @@ describe('App', () => {
 
     await act(async () => {
       render(
-        <TestWrapper>
+        <I18nextProvider i18n={i18n}>
           <App />
-        </TestWrapper>
+        </I18nextProvider>
       )
     })
 
@@ -237,9 +242,9 @@ describe('App', () => {
   it('initializes with correct providers', async () => {
     await act(async () => {
       render(
-        <TestWrapper>
+        <I18nextProvider i18n={i18n}>
           <App />
-        </TestWrapper>
+        </I18nextProvider>
       )
     })
 
@@ -253,9 +258,9 @@ describe('App', () => {
 
     await act(async () => {
       render(
-        <TestWrapper>
+        <I18nextProvider i18n={i18n}>
           <App />
-        </TestWrapper>
+        </I18nextProvider>
       )
     })
 
@@ -271,9 +276,9 @@ describe('App', () => {
   it('handles search component toggle', async () => {
     await act(async () => {
       render(
-        <TestWrapper>
+        <I18nextProvider i18n={i18n}>
           <App />
-        </TestWrapper>
+        </I18nextProvider>
       )
     })
 
