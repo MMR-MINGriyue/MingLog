@@ -102,14 +102,19 @@ export interface UpdateTaskRequest {
 export interface TaskFilter {
   status?: TaskStatus[]
   priority?: TaskPriority[]
+  priorities?: TaskPriority[]  // 支持多个优先级
   projectId?: string
   tags?: string[]
   contexts?: string[]
   dueDateFrom?: Date
   dueDateTo?: Date
+  dueAfter?: Date      // 新增：截止日期之后
+  dueBefore?: Date     // 新增：截止日期之前
   hasLinkedNotes?: boolean
   hasLinkedFiles?: boolean
   search?: string
+  parentTaskId?: string // 新增：父任务ID过滤
+  hasRecurrence?: boolean // 新增：是否有重复设置
 }
 
 // 任务排序选项

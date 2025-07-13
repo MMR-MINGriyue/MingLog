@@ -5,6 +5,7 @@
 
 import { MingLogCore, DatabaseConnection } from '@minglog/core'
 import { NotesModuleFactory } from '@minglog/notes'
+import { MindMapModule } from '@minglog/mindmap'
 
 // Tauri数据库连接适配器
 class TauriDatabaseConnection implements DatabaseConnection {
@@ -127,6 +128,34 @@ export class AppCore {
 
       // 激活笔记模块
       await this.mingLogCore.activateModule('notes')
+
+      // 注册思维导图模块
+      const mindMapModuleFactory = {
+        create: async (config: any) => {
+          const module = new MindMapModule(config)
+          return module
+        }
+      }
+
+      await this.mingLogCore.registerModule('mindmap', mindMapModuleFactory, {
+        id: 'mindmap',
+        name: '思维导图',
+        version: '1.0.0',
+        description: '提供思维导图的创建、编辑、布局和可视化功能',
+        enabled: true,
+        dependencies: [],
+        settings: {
+          defaultLayout: 'tree',
+          enableAnimation: true,
+          maxNodes: 1000,
+          autoSave: true
+        },
+        author: 'MingLog Team',
+        category: '核心功能'
+      })
+
+      // 激活思维导图模块
+      await this.mingLogCore.activateModule('mindmap')
 
       console.log('All modules registered and activated')
 

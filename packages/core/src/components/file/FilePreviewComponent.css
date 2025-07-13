@@ -1,0 +1,373 @@
+/**
+ * 文件预览组件样式
+ * 提供完整的文件预览界面样式，支持多种文件类型和预览模式
+ */
+
+.file-preview-component {
+  @apply relative;
+}
+
+/* 内联模式 */
+.file-preview-component:not(.modal):not(.fullscreen) {
+  @apply bg-white rounded-lg shadow-md overflow-hidden;
+}
+
+/* 模态框模式 */
+.file-preview-component.modal {
+  @apply fixed inset-0 z-50 flex items-center justify-center;
+  @apply bg-black bg-opacity-50;
+  backdrop-filter: blur(4px);
+}
+
+.file-preview-component.modal .file-preview-content {
+  @apply max-w-4xl max-h-screen bg-white rounded-lg overflow-hidden;
+  @apply shadow-2xl;
+  max-width: min(90vw, 1024px);
+  max-height: min(90vh, 768px);
+}
+
+/* 全屏模式 */
+.file-preview-component.fullscreen {
+  @apply fixed inset-0 z-50 bg-black;
+}
+
+.file-preview-component.fullscreen .file-preview-content {
+  @apply w-full h-full flex flex-col;
+}
+
+/* 预览内容区域 */
+.file-preview-content {
+  @apply flex flex-col;
+}
+
+/* 图片预览 */
+.image-preview {
+  @apply relative flex items-center justify-center;
+  min-height: 200px;
+}
+
+.image-preview img {
+  @apply max-w-full max-h-full object-contain;
+  transition: transform 0.3s ease;
+}
+
+.image-preview:hover img {
+  @apply cursor-zoom-in;
+}
+
+.image-preview.zoomed img {
+  @apply cursor-zoom-out;
+  transform: scale(1.5);
+}
+
+/* 视频预览 */
+.video-preview {
+  @apply relative;
+}
+
+.video-preview video {
+  @apply w-full h-auto;
+}
+
+.video-controls {
+  @apply absolute bottom-0 left-0 right-0;
+  @apply bg-gradient-to-t from-black to-transparent p-4;
+  @apply opacity-0 transition-opacity duration-300;
+}
+
+.video-preview:hover .video-controls {
+  @apply opacity-100;
+}
+
+.video-controls button {
+  @apply p-2 text-white hover:bg-white hover:bg-opacity-20 rounded;
+  @apply transition-colors duration-200;
+}
+
+.video-progress {
+  @apply flex-1 h-1 bg-white bg-opacity-30 rounded cursor-pointer;
+}
+
+.video-progress-fill {
+  @apply h-full bg-white rounded transition-all duration-100;
+}
+
+.video-volume-slider {
+  @apply w-16 h-1 bg-white bg-opacity-30 rounded cursor-pointer;
+}
+
+/* 音频预览 */
+.audio-preview {
+  @apply bg-gray-100 rounded-lg p-6;
+}
+
+.audio-visualizer {
+  @apply w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center;
+  @apply text-blue-600 mb-6;
+}
+
+.audio-controls {
+  @apply space-y-4;
+}
+
+.audio-play-button {
+  @apply p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700;
+  @apply transition-colors duration-200;
+}
+
+.audio-progress {
+  @apply flex-1 h-2 bg-gray-300 rounded cursor-pointer;
+}
+
+.audio-progress-fill {
+  @apply h-full bg-blue-600 rounded transition-all duration-100;
+}
+
+.audio-volume-slider {
+  @apply w-24 h-1 bg-gray-300 rounded cursor-pointer;
+}
+
+/* PDF预览 */
+.pdf-preview {
+  @apply bg-white border rounded-lg;
+}
+
+.pdf-preview iframe {
+  @apply w-full border-0;
+}
+
+/* 文本预览 */
+.text-preview {
+  @apply bg-white border rounded-lg;
+}
+
+.text-content {
+  @apply whitespace-pre-wrap text-sm text-gray-800 font-mono;
+  @apply overflow-auto p-4;
+  line-height: 1.5;
+}
+
+/* 文件信息区域 */
+.file-info {
+  @apply bg-gray-50 border-t p-4;
+}
+
+.file-info-grid {
+  @apply grid grid-cols-2 gap-4 text-sm;
+}
+
+.file-info-label {
+  @apply font-medium text-gray-700;
+}
+
+.file-info-value {
+  @apply text-gray-900;
+}
+
+.file-tags {
+  @apply flex flex-wrap gap-1 mt-1;
+}
+
+.file-tag {
+  @apply px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full;
+}
+
+/* 加载状态 */
+.loading-state {
+  @apply flex flex-col items-center justify-center p-8 text-gray-500;
+}
+
+.loading-spinner {
+  @apply w-8 h-8 animate-spin;
+}
+
+/* 错误状态 */
+.error-state {
+  @apply flex flex-col items-center justify-center p-8 text-red-500;
+}
+
+.error-icon {
+  @apply w-8 h-8 mb-2;
+}
+
+/* 不支持的文件类型 */
+.unsupported-state {
+  @apply flex flex-col items-center justify-center p-8 text-gray-500;
+}
+
+.unsupported-icon {
+  @apply w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center mb-4;
+}
+
+/* 控制按钮 */
+.control-button {
+  @apply p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded;
+  @apply transition-colors duration-200;
+}
+
+.control-button.primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700;
+}
+
+.control-button.secondary {
+  @apply bg-gray-600 text-white hover:bg-gray-700;
+}
+
+.control-button.danger {
+  @apply bg-red-600 text-white hover:bg-red-700;
+}
+
+/* 工具栏 */
+.toolbar {
+  @apply flex items-center gap-2 p-2 bg-gray-50 border-b;
+}
+
+.toolbar-title {
+  @apply flex-1 font-medium text-gray-900;
+}
+
+.toolbar-actions {
+  @apply flex gap-2;
+}
+
+/* 响应式设计 */
+@media (max-width: 640px) {
+  .file-preview-component.modal .file-preview-content {
+    @apply max-w-full max-h-full rounded-none;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .file-info-grid {
+    @apply grid-cols-1 gap-2;
+  }
+
+  .video-controls {
+    @apply p-2;
+  }
+
+  .video-controls .flex {
+    @apply flex-col gap-2;
+  }
+
+  .audio-preview {
+    @apply p-4;
+  }
+
+  .toolbar {
+    @apply flex-col gap-2 items-start;
+  }
+
+  .toolbar-actions {
+    @apply w-full justify-end;
+  }
+}
+
+/* 深色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .file-preview-component {
+    @apply bg-gray-800 text-white;
+  }
+
+  .file-info {
+    @apply bg-gray-700 border-gray-600;
+  }
+
+  .file-info-label {
+    @apply text-gray-300;
+  }
+
+  .file-info-value {
+    @apply text-white;
+  }
+
+  .text-content {
+    @apply text-gray-200 bg-gray-800;
+  }
+
+  .audio-preview {
+    @apply bg-gray-700;
+  }
+
+  .toolbar {
+    @apply bg-gray-700 border-gray-600;
+  }
+
+  .control-button {
+    @apply text-gray-300 hover:text-white hover:bg-gray-600;
+  }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  .file-preview-component {
+    @apply border-2 border-black;
+  }
+
+  .control-button {
+    @apply border border-gray-400;
+  }
+
+  .video-progress,
+  .audio-progress {
+    @apply border border-gray-400;
+  }
+}
+
+/* 减少动画模式 */
+@media (prefers-reduced-motion: reduce) {
+  .image-preview img,
+  .video-controls,
+  .control-button,
+  .video-progress-fill,
+  .audio-progress-fill {
+    @apply transition-none;
+  }
+
+  .loading-spinner {
+    @apply animate-none;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  .file-preview-component {
+    @apply shadow-none border;
+  }
+
+  .video-controls,
+  .audio-controls,
+  .toolbar-actions {
+    @apply hidden;
+  }
+
+  .file-preview-component.modal,
+  .file-preview-component.fullscreen {
+    @apply relative inset-auto bg-white;
+  }
+}
+
+/* 焦点样式 */
+.control-button:focus,
+.video-progress:focus,
+.audio-progress:focus,
+input[type="range"]:focus {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+}
+
+/* 自定义滚动条 */
+.text-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.text-content::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+.text-content::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 rounded;
+}
+
+.text-content::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500;
+}

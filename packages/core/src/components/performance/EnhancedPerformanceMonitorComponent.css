@@ -1,0 +1,525 @@
+/**
+ * 增强性能监控组件样式
+ * 提供现代化的性能监控界面样式
+ */
+
+.enhanced-performance-monitor {
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50;
+}
+
+.enhanced-performance-monitor-panel {
+  @apply bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden;
+}
+
+/* 头部样式 */
+.enhanced-performance-monitor-header {
+  @apply flex items-center justify-between p-6 border-b border-gray-200;
+}
+
+.enhanced-performance-monitor-title {
+  @apply flex items-center gap-3;
+}
+
+.enhanced-performance-monitor-title h2 {
+  @apply text-xl font-semibold text-gray-900;
+}
+
+.enhanced-performance-monitor-title p {
+  @apply text-sm text-gray-600;
+}
+
+.enhanced-performance-monitor-actions {
+  @apply flex items-center gap-2;
+}
+
+.enhanced-performance-monitor-button {
+  @apply px-3 py-1 text-sm rounded-md transition-colors;
+}
+
+.enhanced-performance-monitor-button.monitoring {
+  @apply bg-red-100 text-red-700 hover:bg-red-200;
+}
+
+.enhanced-performance-monitor-button.stopped {
+  @apply bg-green-100 text-green-700 hover:bg-green-200;
+}
+
+.enhanced-performance-monitor-icon-button {
+  @apply p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100 transition-colors;
+}
+
+/* 状态概览样式 */
+.enhanced-performance-monitor-overview {
+  @apply p-6 border-b border-gray-200;
+}
+
+.enhanced-performance-monitor-stats {
+  @apply grid grid-cols-2 md:grid-cols-4 gap-4;
+}
+
+.enhanced-performance-monitor-stat {
+  @apply text-center;
+}
+
+.enhanced-performance-monitor-stat-value {
+  @apply text-2xl font-bold;
+}
+
+.enhanced-performance-monitor-stat-label {
+  @apply text-xs text-gray-600 mt-1;
+}
+
+.enhanced-performance-monitor-status {
+  @apply inline-flex px-3 py-1 rounded-full text-sm font-medium;
+}
+
+.enhanced-performance-monitor-status.excellent {
+  @apply text-green-600 bg-green-100;
+}
+
+.enhanced-performance-monitor-status.good {
+  @apply text-blue-600 bg-blue-100;
+}
+
+.enhanced-performance-monitor-status.warning {
+  @apply text-yellow-600 bg-yellow-100;
+}
+
+.enhanced-performance-monitor-status.critical {
+  @apply text-red-600 bg-red-100;
+}
+
+/* 标签页导航样式 */
+.enhanced-performance-monitor-nav {
+  @apply border-b border-gray-200;
+}
+
+.enhanced-performance-monitor-nav-list {
+  @apply flex space-x-8 px-6;
+}
+
+.enhanced-performance-monitor-nav-item {
+  @apply flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors;
+}
+
+.enhanced-performance-monitor-nav-item.active {
+  @apply border-blue-500 text-blue-600;
+}
+
+.enhanced-performance-monitor-nav-item.inactive {
+  @apply border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300;
+}
+
+/* 内容区域样式 */
+.enhanced-performance-monitor-content {
+  @apply p-6 overflow-y-auto max-h-96;
+}
+
+.enhanced-performance-monitor-section {
+  @apply space-y-6;
+}
+
+.enhanced-performance-monitor-section-title {
+  @apply text-lg font-medium text-gray-900 mb-4;
+}
+
+/* 指标卡片样式 */
+.enhanced-performance-monitor-metric-grid {
+  @apply grid grid-cols-2 md:grid-cols-4 gap-4;
+}
+
+.enhanced-performance-monitor-metric-card {
+  @apply bg-gray-50 rounded-lg p-4;
+}
+
+.enhanced-performance-monitor-metric-header {
+  @apply flex items-center justify-between mb-2;
+}
+
+.enhanced-performance-monitor-metric-label {
+  @apply text-sm font-medium text-gray-700;
+}
+
+.enhanced-performance-monitor-metric-status {
+  @apply px-2 py-1 text-xs rounded-full;
+}
+
+.enhanced-performance-monitor-metric-value {
+  @apply text-2xl font-bold text-gray-900;
+}
+
+.enhanced-performance-monitor-metric-target {
+  @apply text-xs text-gray-500;
+}
+
+/* 基准详情样式 */
+.enhanced-performance-monitor-benchmark {
+  @apply bg-gray-50 rounded-lg p-4;
+}
+
+.enhanced-performance-monitor-benchmark-header {
+  @apply flex items-center justify-between mb-3;
+}
+
+.enhanced-performance-monitor-benchmark-title {
+  @apply font-medium text-gray-900;
+}
+
+.enhanced-performance-monitor-benchmark-badges {
+  @apply flex items-center gap-2;
+}
+
+.enhanced-performance-monitor-benchmark-stats {
+  @apply grid grid-cols-3 gap-4 text-sm;
+}
+
+.enhanced-performance-monitor-benchmark-stat {
+  @apply flex flex-col;
+}
+
+.enhanced-performance-monitor-benchmark-stat-label {
+  @apply text-gray-600;
+}
+
+.enhanced-performance-monitor-benchmark-stat-value {
+  @apply ml-2 font-medium;
+}
+
+/* 进度条样式 */
+.enhanced-performance-monitor-progress {
+  @apply mt-3;
+}
+
+.enhanced-performance-monitor-progress-labels {
+  @apply flex justify-between text-xs text-gray-600 mb-1;
+}
+
+.enhanced-performance-monitor-progress-bar {
+  @apply w-full bg-gray-200 rounded-full h-2;
+}
+
+.enhanced-performance-monitor-progress-fill {
+  @apply h-2 rounded-full transition-all duration-300;
+}
+
+.enhanced-performance-monitor-progress-fill.success {
+  @apply bg-green-500;
+}
+
+.enhanced-performance-monitor-progress-fill.error {
+  @apply bg-red-500;
+}
+
+/* 告警样式 */
+.enhanced-performance-monitor-alert {
+  @apply border border-gray-200 rounded-lg p-4;
+}
+
+.enhanced-performance-monitor-alert-header {
+  @apply flex items-start justify-between mb-3;
+}
+
+.enhanced-performance-monitor-alert-content {
+  @apply flex items-start gap-3;
+}
+
+.enhanced-performance-monitor-alert-icon {
+  @apply w-5 h-5 mt-0.5;
+}
+
+.enhanced-performance-monitor-alert-icon.info {
+  @apply text-blue-600;
+}
+
+.enhanced-performance-monitor-alert-icon.warning {
+  @apply text-yellow-600;
+}
+
+.enhanced-performance-monitor-alert-icon.error {
+  @apply text-red-600;
+}
+
+.enhanced-performance-monitor-alert-icon.critical {
+  @apply text-red-800;
+}
+
+.enhanced-performance-monitor-alert-details {
+  @apply flex-1;
+}
+
+.enhanced-performance-monitor-alert-title {
+  @apply font-medium text-gray-900;
+}
+
+.enhanced-performance-monitor-alert-meta {
+  @apply text-sm text-gray-600;
+}
+
+.enhanced-performance-monitor-alert-time {
+  @apply text-xs text-gray-500;
+}
+
+.enhanced-performance-monitor-alert-badge {
+  @apply px-2 py-1 text-xs rounded-full;
+}
+
+.enhanced-performance-monitor-alert-badge.info {
+  @apply text-blue-600 bg-blue-100;
+}
+
+.enhanced-performance-monitor-alert-badge.warning {
+  @apply text-yellow-600 bg-yellow-100;
+}
+
+.enhanced-performance-monitor-alert-badge.error {
+  @apply text-red-600 bg-red-100;
+}
+
+.enhanced-performance-monitor-alert-badge.critical {
+  @apply text-red-800 bg-red-200;
+}
+
+/* 建议样式 */
+.enhanced-performance-monitor-suggestions {
+  @apply mt-3 p-3 bg-blue-50 rounded-md;
+}
+
+.enhanced-performance-monitor-suggestions-title {
+  @apply text-sm font-medium text-blue-900 mb-2;
+}
+
+.enhanced-performance-monitor-suggestions-list {
+  @apply text-sm text-blue-800 space-y-1;
+}
+
+.enhanced-performance-monitor-suggestions-item {
+  @apply flex items-start gap-2;
+}
+
+.enhanced-performance-monitor-suggestions-bullet {
+  @apply text-blue-600;
+}
+
+/* 优化建议样式 */
+.enhanced-performance-monitor-suggestion {
+  @apply border border-gray-200 rounded-lg p-4;
+}
+
+.enhanced-performance-monitor-suggestion-header {
+  @apply flex items-start justify-between mb-3;
+}
+
+.enhanced-performance-monitor-suggestion-content {
+  @apply flex items-start gap-3;
+}
+
+.enhanced-performance-monitor-suggestion-icon {
+  @apply w-5 h-5 mt-0.5 text-yellow-600;
+}
+
+.enhanced-performance-monitor-suggestion-details {
+  @apply flex-1;
+}
+
+.enhanced-performance-monitor-suggestion-title {
+  @apply font-medium text-gray-900;
+}
+
+.enhanced-performance-monitor-suggestion-description {
+  @apply text-sm text-gray-600 mt-1;
+}
+
+.enhanced-performance-monitor-suggestion-badges {
+  @apply flex flex-col gap-1;
+}
+
+.enhanced-performance-monitor-suggestion-badge {
+  @apply px-2 py-1 text-xs rounded-full;
+}
+
+.enhanced-performance-monitor-suggestion-badge.priority-low {
+  @apply text-gray-600 bg-gray-100;
+}
+
+.enhanced-performance-monitor-suggestion-badge.priority-medium {
+  @apply text-blue-600 bg-blue-100;
+}
+
+.enhanced-performance-monitor-suggestion-badge.priority-high {
+  @apply text-yellow-600 bg-yellow-100;
+}
+
+.enhanced-performance-monitor-suggestion-badge.priority-critical {
+  @apply text-red-600 bg-red-100;
+}
+
+.enhanced-performance-monitor-suggestion-badge.category {
+  @apply bg-gray-100 text-gray-600;
+}
+
+/* 建议详情样式 */
+.enhanced-performance-monitor-suggestion-stats {
+  @apply grid grid-cols-2 gap-4 text-sm mb-3;
+}
+
+.enhanced-performance-monitor-suggestion-stat {
+  @apply flex flex-col;
+}
+
+.enhanced-performance-monitor-suggestion-stat-label {
+  @apply text-gray-600;
+}
+
+.enhanced-performance-monitor-suggestion-stat-value {
+  @apply ml-2;
+}
+
+.enhanced-performance-monitor-suggestion-stat-value.improvement {
+  @apply text-green-600;
+}
+
+.enhanced-performance-monitor-suggestion-stat-value.difficulty-easy {
+  @apply text-green-600;
+}
+
+.enhanced-performance-monitor-suggestion-stat-value.difficulty-medium {
+  @apply text-yellow-600;
+}
+
+.enhanced-performance-monitor-suggestion-stat-value.difficulty-hard {
+  @apply text-red-600;
+}
+
+/* 相关指标样式 */
+.enhanced-performance-monitor-related-metrics {
+  @apply mt-3 p-3 bg-gray-50 rounded-md;
+}
+
+.enhanced-performance-monitor-related-metrics-title {
+  @apply text-sm font-medium text-gray-900 mb-2;
+}
+
+.enhanced-performance-monitor-related-metrics-list {
+  @apply flex flex-wrap gap-2;
+}
+
+.enhanced-performance-monitor-related-metric {
+  @apply px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded;
+}
+
+/* 空状态样式 */
+.enhanced-performance-monitor-empty {
+  @apply text-center py-8 text-gray-500;
+}
+
+/* 趋势指示器样式 */
+.enhanced-performance-monitor-trend {
+  @apply px-2 py-1 text-xs rounded-full;
+}
+
+.enhanced-performance-monitor-trend.improving {
+  @apply text-green-600 bg-green-100;
+}
+
+.enhanced-performance-monitor-trend.degrading {
+  @apply text-red-600 bg-red-100;
+}
+
+.enhanced-performance-monitor-trend.stable {
+  @apply text-gray-600 bg-gray-100;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .enhanced-performance-monitor-panel {
+    @apply max-w-full mx-2;
+  }
+
+  .enhanced-performance-monitor-stats {
+    @apply grid-cols-2;
+  }
+
+  .enhanced-performance-monitor-metric-grid {
+    @apply grid-cols-1;
+  }
+
+  .enhanced-performance-monitor-nav-list {
+    @apply space-x-4 px-4;
+  }
+
+  .enhanced-performance-monitor-nav-item {
+    @apply text-xs;
+  }
+
+  .enhanced-performance-monitor-content {
+    @apply p-4;
+  }
+}
+
+/* 深色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .enhanced-performance-monitor-panel {
+    @apply bg-gray-800 text-white;
+  }
+
+  .enhanced-performance-monitor-header {
+    @apply border-gray-700;
+  }
+
+  .enhanced-performance-monitor-overview {
+    @apply border-gray-700;
+  }
+
+  .enhanced-performance-monitor-nav {
+    @apply border-gray-700;
+  }
+
+  .enhanced-performance-monitor-metric-card,
+  .enhanced-performance-monitor-benchmark,
+  .enhanced-performance-monitor-alert,
+  .enhanced-performance-monitor-suggestion {
+    @apply bg-gray-700 border-gray-600;
+  }
+}
+
+/* 动画效果 */
+.enhanced-performance-monitor-panel {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.enhanced-performance-monitor-progress-fill {
+  transition: width 0.5s ease-in-out;
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  .enhanced-performance-monitor-status,
+  .enhanced-performance-monitor-alert-badge,
+  .enhanced-performance-monitor-suggestion-badge {
+    @apply border-2 border-current;
+  }
+}
+
+/* 减少动画模式 */
+@media (prefers-reduced-motion: reduce) {
+  .enhanced-performance-monitor-panel {
+    animation: none;
+  }
+
+  .enhanced-performance-monitor-progress-fill,
+  .enhanced-performance-monitor-button,
+  .enhanced-performance-monitor-nav-item {
+    transition: none;
+  }
+}

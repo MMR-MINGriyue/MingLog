@@ -260,7 +260,7 @@ export const applyLayout = (
         linkDistance: layoutConfig.linkDistance,
         linkStrength: layoutConfig.linkStrength,
         chargeStrength: layoutConfig.forceStrength,
-        centerStrength: layoutConfig.centerStrength,
+        centerForce: layoutConfig.centerStrength,
         collisionRadius: 12
       })
       

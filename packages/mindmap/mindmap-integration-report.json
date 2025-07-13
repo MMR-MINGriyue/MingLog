@@ -1,0 +1,118 @@
+{
+  "timestamp": "2025-07-13T07:16:47.638Z",
+  "summary": {
+    "total": 25,
+    "passed": 24,
+    "failed": 1,
+    "passRate": 96
+  },
+  "details": [
+    {
+      "description": "组件文件存在: src/components/MindMapCanvas.tsx",
+      "status": "PASS"
+    },
+    {
+      "description": "组件文件存在: src/components/MindMapEditor.tsx",
+      "status": "PASS"
+    },
+    {
+      "description": "组件文件存在: src/components/MindMapView.tsx",
+      "status": "PASS"
+    },
+    {
+      "description": "组件文件存在: src/MindMapModule.ts",
+      "status": "PASS"
+    },
+    {
+      "description": "组件文件存在: src/algorithms/LayoutManager.ts",
+      "status": "PASS"
+    },
+    {
+      "description": "组件文件存在: src/algorithms/TreeLayout.ts",
+      "status": "PASS"
+    },
+    {
+      "description": "组件文件存在: src/algorithms/RadialLayout.ts",
+      "status": "PASS"
+    },
+    {
+      "description": "组件文件存在: src/algorithms/ForceLayout.ts",
+      "status": "PASS"
+    },
+    {
+      "description": "MindMapCanvas组件实现完整",
+      "status": "PASS"
+    },
+    {
+      "description": "MindMapEditor组件实现完整",
+      "status": "PASS"
+    },
+    {
+      "description": "LayoutManager算法支持完整",
+      "status": "PASS"
+    },
+    {
+      "description": "性能监控机制实现",
+      "status": "PASS"
+    },
+    {
+      "description": "测试文件存在: src/__tests__/MindMapModule.test.ts",
+      "status": "PASS"
+    },
+    {
+      "description": "测试文件存在: src/__tests__/mindmap.test.ts",
+      "status": "PASS"
+    },
+    {
+      "description": "测试文件存在: src/__tests__/performance.benchmark.test.ts",
+      "status": "PASS"
+    },
+    {
+      "description": "测试文件存在: src/components/__tests__/MindMapEditor.test.tsx",
+      "status": "PASS"
+    },
+    {
+      "description": "性能基准测试实现完整",
+      "status": "PASS"
+    },
+    {
+      "description": "组件测试覆盖完整",
+      "status": "PASS"
+    },
+    {
+      "description": "性能目标设置合理",
+      "status": "PASS"
+    },
+    {
+      "description": "大型数据集测试覆盖",
+      "status": "PASS"
+    },
+    {
+      "description": "缓存性能优化实现",
+      "status": "PASS"
+    },
+    {
+      "description": "TypeScript类型定义完整",
+      "status": "PASS"
+    },
+    {
+      "description": "模块导出接口正确",
+      "status": "PASS"
+    },
+    {
+      "description": "事件系统集成支持",
+      "status": "PASS"
+    },
+    {
+      "description": "数据库集成支持",
+      "status": "FAIL",
+      "reason": "Test returned false"
+    }
+  ],
+  "performanceTargets": {
+    "renderTime": "100ms",
+    "layoutCalculation": "100ms",
+    "largeDataset": "200ms",
+    "memoryLimit": "50MB"
+  }
+}

@@ -7,6 +7,7 @@ import {
   Task,
   TaskStatus,
   TaskPriority,
+  TaskRecurrence,
   CreateTaskRequest,
   UpdateTaskRequest,
   TaskFilter,
@@ -224,9 +225,66 @@ export class TasksService implements ITasksService {
         query += ` AND priority IN (${filter.priority.map(() => '?').join(',')})`
         params.push(...filter.priority)
       }
+      if (filter.priorities && filter.priorities.length > 0) {
+        query += ` AND priority IN (${filter.priorities.map(() => '?').join(',')})`
+        params.push(...filter.priorities)
+      }
       if (filter.projectId) {
         query += ' AND project_id = ?'
         params.push(filter.projectId)
+      }
+      if (filter.parentTaskId) {
+        query += ' AND parent_task_id = ?'
+        params.push(filter.parentTaskId)
+      }
+      if (filter.tags && filter.tags.length > 0) {
+        // 使用JSON查询来匹配标签
+        const tagConditions = filter.tags.map(() => 'JSON_EXTRACT(tags, "$") LIKE ?').join(' OR ')
+        query += ` AND (${tagConditions})`
+        params.push(...filter.tags.map(tag => `%"${tag}"%`))
+      }
+      if (filter.contexts && filter.contexts.length > 0) {
+        // 使用JSON查询来匹配上下文
+        const contextConditions = filter.contexts.map(() => 'JSON_EXTRACT(contexts, "$") LIKE ?').join(' OR ')
+        query += ` AND (${contextConditions})`
+        params.push(...filter.contexts.map(context => `%"${context}"%`))
+      }
+      if (filter.dueAfter) {
+        query += ' AND due_date > ?'
+        params.push(filter.dueAfter.toISOString())
+      }
+      if (filter.dueBefore) {
+        query += ' AND due_date < ?'
+        params.push(filter.dueBefore.toISOString())
+      }
+      if (filter.dueDateFrom) {
+        query += ' AND due_date >= ?'
+        params.push(filter.dueDateFrom.toISOString())
+      }
+      if (filter.dueDateTo) {
+        query += ' AND due_date <= ?'
+        params.push(filter.dueDateTo.toISOString())
+      }
+      if (filter.hasLinkedNotes !== undefined) {
+        if (filter.hasLinkedNotes) {
+          query += ' AND JSON_ARRAY_LENGTH(linked_notes) > 0'
+        } else {
+          query += ' AND JSON_ARRAY_LENGTH(linked_notes) = 0'
+        }
+      }
+      if (filter.hasLinkedFiles !== undefined) {
+        if (filter.hasLinkedFiles) {
+          query += ' AND JSON_ARRAY_LENGTH(linked_files) > 0'
+        } else {
+          query += ' AND JSON_ARRAY_LENGTH(linked_files) = 0'
+        }
+      }
+      if (filter.hasRecurrence !== undefined) {
+        if (filter.hasRecurrence) {
+          query += ' AND recurrence IS NOT NULL'
+        } else {
+          query += ' AND recurrence IS NULL'
+        }
       }
       if (filter.search) {
         query += ' AND (title LIKE ? OR description LIKE ?)'
@@ -257,22 +315,224 @@ export class TasksService implements ITasksService {
 
   // 任务状态管理
   async markTaskCompleted(id: string): Promise<Task> {
-    return this.updateTask(id, {
+    const task = await this.updateTask(id, {
       status: TaskStatus.DONE,
       completedAt: new Date()
     })
+
+    // 发送任务完成事件
+    if (this.coreAPI?.events) {
+      this.coreAPI.events.emit('task:completed', { task })
+    }
+
+    // 如果是重复任务，创建下一个实例
+    if (task.recurrence) {
+      await this.createRecurringTaskInstance(task)
+    }
+
+    return task
   }
 
   async markTaskInProgress(id: string): Promise<Task> {
-    return this.updateTask(id, {
+    const task = await this.updateTask(id, {
       status: TaskStatus.IN_PROGRESS
     })
+
+    // 发送任务开始事件
+    if (this.coreAPI?.events) {
+      this.coreAPI.events.emit('task:started', { task })
+    }
+
+    return task
   }
 
   async markTaskCancelled(id: string): Promise<Task> {
-    return this.updateTask(id, {
+    const task = await this.updateTask(id, {
       status: TaskStatus.CANCELLED
     })
+
+    // 发送任务取消事件
+    if (this.coreAPI?.events) {
+      this.coreAPI.events.emit('task:cancelled', { task })
+    }
+
+    return task
+  }
+
+  // 优先级管理
+  async updateTaskPriority(id: string, priority: TaskPriority): Promise<Task> {
+    return this.updateTask(id, { priority })
+  }
+
+  async getTasksByPriorityRange(minPriority: TaskPriority, maxPriority?: TaskPriority): Promise<Task[]> {
+    const priorityOrder = [TaskPriority.LOW, TaskPriority.MEDIUM, TaskPriority.HIGH, TaskPriority.URGENT]
+    const minIndex = priorityOrder.indexOf(minPriority)
+    const maxIndex = maxPriority ? priorityOrder.indexOf(maxPriority) : priorityOrder.length - 1
+
+    const validPriorities = priorityOrder.slice(minIndex, maxIndex + 1)
+    return this.getTasks({ priorities: validPriorities })
+  }
+
+  // 截止日期管理
+  async getOverdueTasks(): Promise<Task[]> {
+    const now = new Date()
+    return this.getTasks({
+      dueBefore: now,
+      status: [TaskStatus.TODO, TaskStatus.IN_PROGRESS]
+    })
+  }
+
+  async getTasksDueToday(): Promise<Task[]> {
+    const today = new Date()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    return this.getTasks({
+      dueAfter: today,
+      dueBefore: tomorrow,
+      status: [TaskStatus.TODO, TaskStatus.IN_PROGRESS]
+    })
+  }
+
+  async getTasksDueThisWeek(): Promise<Task[]> {
+    const today = new Date()
+    const nextWeek = new Date(today)
+    nextWeek.setDate(nextWeek.getDate() + 7)
+
+    return this.getTasks({
+      dueAfter: today,
+      dueBefore: nextWeek,
+      status: [TaskStatus.TODO, TaskStatus.IN_PROGRESS]
+    })
+  }
+
+  // 标签管理
+  async addTagToTask(taskId: string, tag: string): Promise<Task> {
+    const task = await this.getTask(taskId)
+    if (!task) {
+      throw new Error(`Task ${taskId} not found`)
+    }
+
+    if (!task.tags.includes(tag)) {
+      task.tags.push(tag)
+      return this.updateTask(taskId, { tags: task.tags })
+    }
+
+    return task
+  }
+
+  async removeTagFromTask(taskId: string, tag: string): Promise<Task> {
+    const task = await this.getTask(taskId)
+    if (!task) {
+      throw new Error(`Task ${taskId} not found`)
+    }
+
+    const updatedTags = task.tags.filter(t => t !== tag)
+    return this.updateTask(taskId, { tags: updatedTags })
+  }
+
+  async getAllTags(): Promise<string[]> {
+    const query = `
+      SELECT DISTINCT json_each.value as tag
+      FROM tasks, json_each(tasks.tags)
+      WHERE json_each.value IS NOT NULL
+      ORDER BY tag
+    `
+
+    if (this.coreAPI?.database) {
+      const results = await this.coreAPI.database.query(query)
+      return results.map((row: any) => row.tag)
+    }
+
+    return []
+  }
+
+  async getTasksByTag(tag: string): Promise<Task[]> {
+    return this.getTasks({ tags: [tag] })
+  }
+
+  async getTagUsageStats(): Promise<Array<{ tag: string; count: number }>> {
+    const query = `
+      SELECT json_each.value as tag, COUNT(*) as count
+      FROM tasks, json_each(tasks.tags)
+      WHERE json_each.value IS NOT NULL
+      GROUP BY json_each.value
+      ORDER BY count DESC, tag
+    `
+
+    if (this.coreAPI?.database) {
+      const results = await this.coreAPI.database.query(query)
+      return results.map((row: any) => ({ tag: row.tag, count: row.count }))
+    }
+
+    return []
+  }
+
+  // 重复任务管理
+  async createRecurringTaskInstance(originalTask: Task): Promise<Task | null> {
+    if (!originalTask.recurrence) {
+      return null
+    }
+
+    const nextDueDate = this.calculateNextDueDate(originalTask.dueDate, originalTask.recurrence)
+    if (!nextDueDate) {
+      return null
+    }
+
+    // 创建新的任务实例
+    const newTask = await this.createTask({
+      title: originalTask.title,
+      description: originalTask.description,
+      priority: originalTask.priority,
+      dueDate: nextDueDate,
+      estimatedTime: originalTask.estimatedTime,
+      projectId: originalTask.projectId,
+      tags: [...originalTask.tags],
+      contexts: [...originalTask.contexts],
+      recurrence: originalTask.recurrence
+    })
+
+    // 发送重复任务创建事件
+    if (this.coreAPI?.events) {
+      this.coreAPI.events.emit('task:recurring-created', {
+        originalTask,
+        newTask
+      })
+    }
+
+    return newTask
+  }
+
+  private calculateNextDueDate(currentDueDate: Date | undefined, recurrence: TaskRecurrence): Date | null {
+    if (!currentDueDate) {
+      return null
+    }
+
+    const nextDate = new Date(currentDueDate)
+
+    switch (recurrence.type) {
+      case 'daily':
+        nextDate.setDate(nextDate.getDate() + (recurrence.interval || 1))
+        break
+      case 'weekly':
+        nextDate.setDate(nextDate.getDate() + 7 * (recurrence.interval || 1))
+        break
+      case 'monthly':
+        nextDate.setMonth(nextDate.getMonth() + (recurrence.interval || 1))
+        break
+      case 'yearly':
+        nextDate.setFullYear(nextDate.getFullYear() + (recurrence.interval || 1))
+        break
+      default:
+        return null
+    }
+
+    // 检查结束日期
+    if (recurrence.endDate && nextDate > recurrence.endDate) {
+      return null
+    }
+
+    return nextDate
   }
 
   // 工具方法
@@ -493,59 +753,6 @@ export class TasksService implements ITasksService {
       completed,
       completionRate
     }
-  }
-
-  async getOverdueTasks(): Promise<Task[]> {
-    if (!this.coreAPI?.database) {
-      return []
-    }
-
-    const now = new Date()
-    const results = await this.coreAPI.database.query(
-      `SELECT * FROM tasks
-       WHERE due_date < ? AND status NOT IN ('done', 'cancelled')
-       ORDER BY due_date ASC`,
-      [now.toISOString()]
-    )
-
-    return results.map((row: any) => this.mapRowToTask(row))
-  }
-
-  async getTasksDueToday(): Promise<Task[]> {
-    if (!this.coreAPI?.database) {
-      return []
-    }
-
-    const today = new Date()
-    const results = await this.coreAPI.database.query(
-      `SELECT * FROM tasks
-       WHERE DATE(due_date) = DATE(?) AND status NOT IN ('done', 'cancelled')
-       ORDER BY priority DESC, due_date ASC`,
-      [today.toISOString()]
-    )
-
-    return results.map((row: any) => this.mapRowToTask(row))
-  }
-
-  async getTasksDueThisWeek(): Promise<Task[]> {
-    if (!this.coreAPI?.database) {
-      return []
-    }
-
-    const today = new Date()
-    const weekStart = new Date(today)
-    weekStart.setDate(today.getDate() - today.getDay())
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekStart.getDate() + 6)
-
-    const results = await this.coreAPI.database.query(
-      `SELECT * FROM tasks
-       WHERE due_date BETWEEN ? AND ? AND status NOT IN ('done', 'cancelled')
-       ORDER BY due_date ASC, priority DESC`,
-      [weekStart.toISOString(), weekEnd.toISOString()]
-    )
-
-    return results.map((row: any) => this.mapRowToTask(row))
   }
 
   // 时间跟踪相关方法

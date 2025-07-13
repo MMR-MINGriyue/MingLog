@@ -287,16 +287,87 @@ mod integration_tests {
             tags: None,
             properties: None,
         };
-        
+
         let page = db.create_page(page_request).await.unwrap();
-        
+
         // Verify page exists
         let retrieved = db.get_page(&page.id).await;
         assert!(retrieved.is_ok(), "Page should exist after creation");
-        
+
         // Delete and verify
         db.delete_page(&page.id).await.unwrap();
         let retrieved_after_delete = db.get_page(&page.id).await;
         assert!(retrieved_after_delete.is_err(), "Page should not exist after deletion");
+    }
+
+    #[tokio::test]
+    async fn test_foreign_key_constraints() {
+        let (db, _temp_dir, _graph_id) = create_test_database().await.unwrap();
+
+        // Test 1: Try to create a task with non-existent project_id
+        let task_request = CreateTaskRequest {
+            title: "Test Task".to_string(),
+            description: Some("Test task description".to_string()),
+            priority: Some("high".to_string()),
+            due_date: None,
+            estimated_time: None,
+            project_id: Some("non-existent-project".to_string()), // This should fail
+            parent_task_id: None,
+            linked_notes: None,
+            linked_files: None,
+            tags: None,
+            contexts: None,
+        };
+
+        let result = db.create_task(task_request).await;
+        assert!(result.is_err(), "Creating task with non-existent project_id should fail");
+
+        // Test 2: Create project first, then task - should succeed
+        let project_request = CreateProjectRequest {
+            name: "Test Project".to_string(),
+            description: Some("Test project description".to_string()),
+            color: None,
+            start_date: None,
+            due_date: None,
+            linked_notes: None,
+            linked_files: None,
+        };
+
+        let project = db.create_project(project_request).await.unwrap();
+
+        let task_request_valid = CreateTaskRequest {
+            title: "Valid Test Task".to_string(),
+            description: Some("Valid test task description".to_string()),
+            priority: Some("medium".to_string()),
+            due_date: None,
+            estimated_time: None,
+            project_id: Some(project.id.clone()),
+            parent_task_id: None,
+            linked_notes: None,
+            linked_files: None,
+            tags: None,
+            contexts: None,
+        };
+
+        let task = db.create_task(task_request_valid).await;
+        assert!(task.is_ok(), "Creating task with valid project_id should succeed");
+
+        // Test 3: Try to create a task with non-existent parent_task_id
+        let task_request_invalid_parent = CreateTaskRequest {
+            title: "Task with Invalid Parent".to_string(),
+            description: None,
+            priority: None,
+            due_date: None,
+            estimated_time: None,
+            project_id: Some(project.id),
+            parent_task_id: Some("non-existent-parent".to_string()),
+            linked_notes: None,
+            linked_files: None,
+            tags: None,
+            contexts: None,
+        };
+
+        let result = db.create_task(task_request_invalid_parent).await;
+        assert!(result.is_err(), "Creating task with non-existent parent_task_id should fail");
     }
 }

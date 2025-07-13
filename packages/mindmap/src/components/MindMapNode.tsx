@@ -10,7 +10,14 @@ interface MindMapNodeProps {
   onClick?: (node: MindMapNodeType, event: React.MouseEvent) => void
   onDoubleClick?: (node: MindMapNodeType, event: React.MouseEvent) => void
   onEdit?: (node: MindMapNodeType, newText: string) => void
+  onAddChild?: () => void
+  onDelete?: () => void
+  onDragStart?: (event: React.MouseEvent) => void
+  onDrag?: (position: { x: number; y: number }) => void
+  onDragEnd?: () => void
   enableEdit?: boolean
+  enableDrag?: boolean
+  isSelected?: boolean
 }
 
 export const MindMapNode: React.FC<MindMapNodeProps> = ({
@@ -18,10 +25,19 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
   onClick,
   onDoubleClick,
   onEdit,
-  enableEdit = false
+  onAddChild,
+  onDelete,
+  onDragStart,
+  onDrag,
+  onDragEnd,
+  enableEdit = false,
+  enableDrag = false,
+  isSelected = false
 }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editText, setEditText] = useState(node.text)
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const {
@@ -42,6 +58,13 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
     padding = 8
   } = style
 
+  // 选择状态的样式
+  const selectedStyle = isSelected ? {
+    borderColor: '#3b82f6',
+    borderWidth: 3,
+    backgroundColor: '#eff6ff'
+  } : {}
+
   // 计算节点尺寸
   const textWidth = Math.max(80, text.length * (fontSize * 0.6) + padding * 2)
   const textHeight = fontSize + padding * 2
@@ -53,6 +76,39 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
       setEditText(text)
     }
     onDoubleClick?.(node, event)
+  }
+
+  // 处理拖拽开始
+  const handleMouseDown = (event: React.MouseEvent) => {
+    if (!enableDrag) return
+
+    setDragStart({ x: event.clientX, y: event.clientY })
+    setIsDragging(true)
+    onDragStart?.(event)
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!dragStart) return
+
+      const deltaX = e.clientX - dragStart.x
+      const deltaY = e.clientY - dragStart.y
+
+      onDrag?.({
+        x: x + deltaX,
+        y: y + deltaY
+      })
+    }
+
+    const handleMouseUp = () => {
+      setIsDragging(false)
+      setDragStart(null)
+      onDragEnd?.()
+
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
   }
 
   // 处理编辑完成
@@ -85,7 +141,11 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
     <g
       className="mindmap-node"
       transform={`translate(${x}, ${y})`}
-      style={{ cursor: 'pointer' }}
+      style={{
+        cursor: enableDrag ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
+        opacity: isDragging ? 0.7 : 1
+      }}
+      onMouseDown={handleMouseDown}
     >
       {/* 节点背景 */}
       <rect
@@ -93,19 +153,86 @@ export const MindMapNode: React.FC<MindMapNodeProps> = ({
         y={-textHeight / 2}
         width={textWidth}
         height={textHeight}
-        fill={backgroundColor}
-        stroke={borderColor}
-        strokeWidth={borderWidth}
+        fill={selectedStyle.backgroundColor || backgroundColor}
+        stroke={selectedStyle.borderColor || borderColor}
+        strokeWidth={selectedStyle.borderWidth || borderWidth}
         rx={borderRadius}
         ry={borderRadius}
         onClick={(e) => onClick?.(node, e)}
         onDoubleClick={handleDoubleClick}
-        className="node-background"
+        className={`node-background ${isSelected ? 'selected' : ''}`}
         style={{
-          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+          filter: isSelected
+            ? 'drop-shadow(0 4px 8px rgba(59, 130, 246, 0.3))'
+            : 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
           transition: 'all 0.2s ease'
         }}
       />
+
+      {/* 操作按钮（仅在选中时显示） */}
+      {isSelected && (
+        <g className="node-actions">
+          {/* 添加子节点按钮 */}
+          <circle
+            cx={textWidth / 2 + 15}
+            cy={0}
+            r={8}
+            fill="#10b981"
+            stroke="#ffffff"
+            strokeWidth={2}
+            onClick={(e) => {
+              e.stopPropagation()
+              onAddChild?.()
+            }}
+            style={{ cursor: 'pointer' }}
+          >
+            <title>添加子节点</title>
+          </circle>
+          <text
+            x={textWidth / 2 + 15}
+            y={0}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={10}
+            fill="white"
+            style={{ pointerEvents: 'none' }}
+          >
+            +
+          </text>
+
+          {/* 删除节点按钮（非根节点） */}
+          {node.level > 0 && (
+            <>
+              <circle
+                cx={textWidth / 2 + 15}
+                cy={20}
+                r={8}
+                fill="#ef4444"
+                stroke="#ffffff"
+                strokeWidth={2}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete?.()
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <title>删除节点</title>
+              </circle>
+              <text
+                x={textWidth / 2 + 15}
+                y={20}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={10}
+                fill="white"
+                style={{ pointerEvents: 'none' }}
+              >
+                ×
+              </text>
+            </>
+          )}
+        </g>
+      )}
 
       {/* 节点文本 */}
       {isEditing ? (

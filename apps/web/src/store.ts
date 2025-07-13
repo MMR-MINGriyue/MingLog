@@ -33,7 +33,7 @@ export const useZustandStore = create<PagesState>((set) => ({
       updatedAt: new Date()
     }
   ],
-  currentPage: (state) => state.pages[0] || null,
+  currentPage: null,
   setCurrentPage: (pageId) => set((state) => ({
     currentPage: state.pages.find(page => page.id === pageId) || null
   })),
@@ -60,5 +60,8 @@ export const useZustandStore = create<PagesState>((set) => ({
 
 // 初始化默认页面
 setTimeout(() => {
-  useZustandStore.getState().setCurrentPage('1');
+  const state = useZustandStore.getState();
+  if (state.pages.length > 0 && !state.currentPage) {
+    state.setCurrentPage('1');
+  }
 }, 0);

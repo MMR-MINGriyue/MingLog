@@ -235,7 +235,7 @@ export function isEmpty(obj: any): boolean {
  */
 export function merge<T extends Record<string, any>>(target: T, ...sources: Partial<T>[]): T {
   const result = { ...target }
-  
+
   for (const source of sources) {
     for (const key in source) {
       if (source.hasOwnProperty(key)) {
@@ -246,6 +246,16 @@ export function merge<T extends Record<string, any>>(target: T, ...sources: Part
       }
     }
   }
-  
+
   return result
+}
+
+/**
+ * 合并CSS类名
+ */
+export function cn(...inputs: (string | undefined | null | boolean)[]): string {
+  return inputs
+    .filter(Boolean)
+    .join(' ')
+    .trim()
 }

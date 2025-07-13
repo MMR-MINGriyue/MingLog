@@ -145,52 +145,75 @@ export class GTDService implements IGTDService {
         // 立即执行 - 标记为进行中
         await this.tasksService.updateTask(taskId, {
           status: TaskStatus.IN_PROGRESS,
-          contexts: decision.context ? [decision.context] : task.contexts
+          contexts: decision.context ? [decision.context] : task.contexts,
+          priority: decision.priority || task.priority
         })
         break
 
       case 'defer':
-        // 延期 - 设置到期日期并标记为待办
+        // 推迟 - 设置截止日期并移到待办
         await this.tasksService.updateTask(taskId, {
           status: TaskStatus.TODO,
           dueDate: decision.dueDate,
-          contexts: decision.context ? [decision.context] : task.contexts
+          contexts: decision.context ? [decision.context] : task.contexts,
+          priority: decision.priority || task.priority
         })
         break
 
       case 'delegate':
-        // 委派 - 标记为等待状态
+        // 委派 - 移到等待状态
         await this.tasksService.updateTask(taskId, {
           status: TaskStatus.WAITING,
-          description: `${task.description || ''}\n\n委派给: ${decision.delegateTo}`,
+          description: `${task.description || ''}\n\n委派给: ${decision.delegateTo || '未指定'}`,
           contexts: decision.context ? [decision.context] : task.contexts
         })
         break
 
       case 'delete':
-        // 删除 - 不可行动的项目
+        // 删除 - 不可执行的任务
         await this.tasksService.deleteTask(taskId)
+        break
+
+      case 'someday':
+        // 将来/也许 - 移到将来也许列表
+        await this.moveToSomeday(taskId)
         break
 
       case 'project':
         // 转为项目 - 创建项目并将任务作为第一个子任务
-        if (decision.projectName) {
+        if (this.projectsService) {
           const project = await this.projectsService.createProject({
-            name: decision.projectName,
+            name: task.title,
             description: task.description
           })
-          
+
           await this.tasksService.updateTask(taskId, {
             projectId: project.id,
             status: TaskStatus.TODO
           })
         }
         break
+
+      case 'reference':
+        // 参考资料 - 添加参考标签并归档
+        await this.tasksService.updateTask(taskId, {
+          status: TaskStatus.DONE,
+          tags: [...task.tags, '参考资料'],
+          completedAt: new Date()
+        })
+        break
+
+      default:
+        throw new Error(`Unknown GTD action: ${decision.action}`)
     }
 
-    // 发送处理完成事件
+    // 发送GTD决策事件
     if (this.coreAPI?.events) {
-      this.coreAPI.events.emit('gtd:item-processed', { taskId, decision })
+      this.coreAPI.events.emit('gtd:decision-made', {
+        taskId,
+        decision,
+        task
+      })
     }
   }
 
@@ -307,28 +330,127 @@ export class GTDService implements IGTDService {
   // 辅助方法
 
   private isActionable(task: Task): boolean {
-    // 判断任务是否可行动
-    const actionWords = ['做', '完成', '创建', '发送', '联系', '购买', '安装', '配置']
+    // 更智能的可执行性判断
+    const actionWords = [
+      '做', '完成', '创建', '发送', '联系', '购买', '安装', '配置',
+      '写', '读', '学', '买', '去', '打', '发', '看', '听', '说',
+      '修复', '更新', '删除', '添加', '测试', '部署', '设计'
+    ]
+    const nonActionableWords = ['想法', '思考', '考虑', '也许', '可能', '研究一下', '了解']
+
     const content = `${task.title} ${task.description || ''}`.toLowerCase()
-    return actionWords.some(word => content.includes(word))
+
+    // 检查非可执行关键词
+    if (nonActionableWords.some(word => content.includes(word))) {
+      return false
+    }
+
+    // 检查可执行关键词
+    if (actionWords.some(word => content.includes(word))) {
+      return true
+    }
+
+    // 检查是否是问句
+    if (task.title.includes('?') || task.title.includes('？')) {
+      return false
+    }
+
+    // 如果有明确的截止日期，通常是可执行的
+    if (task.dueDate) {
+      return true
+    }
+
+    // 默认认为是可执行的，除非明确标识为非可执行
+    return task.title.length > 0
   }
 
   private isProject(task: Task): boolean {
-    // 判断是否应该成为项目
-    const projectIndicators = ['计划', '项目', '系统', '流程', '整理', '组织']
+    // 更智能的项目判断
+    const projectIndicators = [
+      '计划', '项目', '系统', '流程', '整理', '组织', '开发', '设计',
+      '实现', '建立', '构建', '创建', '平台', '应用', '网站', '方案', '策略'
+    ]
+
     const content = `${task.title} ${task.description || ''}`.toLowerCase()
-    return projectIndicators.some(indicator => content.includes(indicator)) ||
-           Boolean(task.description && task.description.length > 200)
+
+    // 检查项目关键词
+    const hasProjectKeyword = projectIndicators.some(indicator => content.includes(indicator))
+
+    // 检查描述长度（复杂任务通常有详细描述）
+    const hasDetailedDescription = task.description && task.description.length > 200
+
+    // 检查预估时间（项目通常需要更长时间）
+    const isLongTerm = task.estimatedTime && task.estimatedTime > 120 // 超过2小时
+
+    // 检查是否包含多个步骤的描述
+    const hasMultipleSteps = task.description && (
+      task.description.includes('步骤') ||
+      task.description.includes('阶段') ||
+      task.description.includes('1.') ||
+      task.description.includes('首先') ||
+      task.description.includes('然后') ||
+      task.description.includes('最后')
+    )
+
+    return hasProjectKeyword || hasDetailedDescription || isLongTerm || hasMultipleSteps || false
   }
 
   private estimateTime(task: Task): number {
-    // 基于任务内容估算时间（分钟）
+    // 更智能的时间估算（分钟）
+    let estimatedTime = 30 // 基础时间30分钟
+
     const content = `${task.title} ${task.description || ''}`
-    
-    if (content.length < 50) return 15  // 简单任务
-    if (content.length < 150) return 30 // 中等任务
-    if (content.length < 300) return 60 // 复杂任务
-    return 120 // 大型任务
+
+    // 基于内容长度调整
+    if (content.length < 50) {
+      estimatedTime = 15  // 简单任务
+    } else if (content.length < 150) {
+      estimatedTime = 30  // 中等任务
+    } else if (content.length < 300) {
+      estimatedTime = 60  // 复杂任务
+    } else {
+      estimatedTime = 120 // 大型任务
+    }
+
+    // 基于优先级调整
+    switch (task.priority) {
+      case TaskPriority.URGENT:
+        estimatedTime *= 0.8 // 紧急任务通常更简单直接
+        break
+      case TaskPriority.HIGH:
+        estimatedTime *= 1.0
+        break
+      case TaskPriority.MEDIUM:
+        estimatedTime *= 1.2
+        break
+      case TaskPriority.LOW:
+        estimatedTime *= 1.5
+        break
+    }
+
+    // 基于上下文调整
+    if (task.contexts.includes('@电脑')) {
+      estimatedTime *= 1.3 // 电脑任务通常更复杂
+    }
+    if (task.contexts.includes('@电话')) {
+      estimatedTime *= 0.7 // 电话任务通常较快
+    }
+    if (task.contexts.includes('@外出')) {
+      estimatedTime *= 1.5 // 外出任务包含路程时间
+    }
+
+    // 基于任务类型关键词调整
+    const quickTasks = ['打电话', '发邮件', '发短信', '查看', '确认']
+    const slowTasks = ['写报告', '分析', '设计', '开发', '学习', '研究']
+
+    if (quickTasks.some(keyword => content.includes(keyword))) {
+      estimatedTime *= 0.5
+    }
+    if (slowTasks.some(keyword => content.includes(keyword))) {
+      estimatedTime *= 2.0
+    }
+
+    return Math.round(Math.min(estimatedTime, 480)) // 最多8小时
   }
 
   private suggestPriority(task: Task): TaskPriority {

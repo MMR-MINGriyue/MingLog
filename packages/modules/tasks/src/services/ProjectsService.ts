@@ -17,6 +17,7 @@ import {
   ProjectTemplate,
   CreateProjectTemplateRequest,
   ProjectReport,
+  ProjectTimelineEvent,
   Task
 } from '../types'
 
@@ -247,9 +248,12 @@ export class ProjectsService implements IProjectsService {
     }
 
     const result = await this.coreAPI.database.query(
-      `SELECT 
+      `SELECT
         COUNT(*) as total_tasks,
-        COUNT(CASE WHEN status = 'done' THEN 1 END) as completed_tasks
+        COUNT(CASE WHEN status = 'done' THEN 1 END) as completed_tasks,
+        COUNT(CASE WHEN status = 'in-progress' THEN 1 END) as in_progress_tasks,
+        COUNT(CASE WHEN status = 'todo' THEN 1 END) as todo_tasks,
+        COUNT(CASE WHEN due_date < datetime('now') AND status != 'done' THEN 1 END) as overdue_tasks
       FROM tasks WHERE project_id = ?`,
       [projectId]
     )
@@ -258,16 +262,34 @@ export class ProjectsService implements IProjectsService {
       return 0
     }
 
-    const progress = Math.round((result[0].completed_tasks / result[0].total_tasks) * 100)
-    
-    // 更新项目进度
+    const stats = result[0]
+    const progress = Math.round((stats.completed_tasks / stats.total_tasks) * 100)
+
+    // 更新项目进度和统计信息
     await this.coreAPI.database.execute(
-      'UPDATE projects SET progress = ?, total_tasks = ?, completed_tasks = ? WHERE id = ?',
-      [progress, result[0].total_tasks, result[0].completed_tasks, projectId]
+      'UPDATE projects SET progress = ?, total_tasks = ?, completed_tasks = ?, updated_at = ? WHERE id = ?',
+      [progress, stats.total_tasks, stats.completed_tasks, new Date().toISOString(), projectId]
     )
+
+    // 发送项目进度更新事件
+    if (this.coreAPI?.events) {
+      this.coreAPI.events.emit('project:progress-updated', {
+        projectId,
+        progress,
+        stats: {
+          totalTasks: stats.total_tasks,
+          completedTasks: stats.completed_tasks,
+          inProgressTasks: stats.in_progress_tasks,
+          todoTasks: stats.todo_tasks,
+          overdueTasks: stats.overdue_tasks
+        }
+      })
+    }
 
     return progress
   }
+
+
 
   // 工具方法
   private generateId(): string {
@@ -511,13 +533,25 @@ export class ProjectsService implements IProjectsService {
   }
 
   async createProjectTemplate(request: CreateProjectTemplateRequest): Promise<ProjectTemplate> {
+    // 为任务模板生成ID
+    const taskTemplates = (request.taskTemplates || []).map((taskTemplate, index) => ({
+      ...taskTemplate,
+      id: `task_template_${Date.now()}_${index}`
+    }))
+
+    // 为里程碑模板生成ID
+    const milestoneTemplates = (request.milestoneTemplates || []).map((milestoneTemplate, index) => ({
+      ...milestoneTemplate,
+      id: `milestone_template_${Date.now()}_${index}`
+    }))
+
     const template: ProjectTemplate = {
       id: this.generateId().replace('project_', 'template_'),
       name: request.name,
       description: request.description,
       defaultColor: request.defaultColor,
-      taskTemplates: request.taskTemplates || [],
-      milestoneTemplates: request.milestoneTemplates || [],
+      taskTemplates,
+      milestoneTemplates,
       createdAt: new Date(),
       updatedAt: new Date()
     }

@@ -1,0 +1,50 @@
+{
+  "name": "@minglog/storage",
+  "version": "1.0.0",
+  "description": "MingLog数据存储与管理模块",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "test:ui": "vitest --ui",
+    "clean": "rimraf dist"
+  },
+  "keywords": [
+    "minglog",
+    "storage",
+    "database",
+    "data-management",
+    "persistence"
+  ],
+  "author": "MingLog Team",
+  "license": "MIT",
+  "dependencies": {
+    "@minglog/core": "workspace:*",
+    "@minglog/editor": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "rimraf": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@minglog/core": "workspace:*"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MMR-MINGriyue/MingLog.git",
+    "directory": "packages/modules/storage"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

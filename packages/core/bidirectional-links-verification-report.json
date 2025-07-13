@@ -1,0 +1,75 @@
+{
+  "timestamp": "2025-07-13T07:10:15.792Z",
+  "summary": {
+    "total": 16,
+    "passed": 16,
+    "failed": 0,
+    "passRate": 100
+  },
+  "details": [
+    {
+      "description": "文件存在: src/integration/bidirectional-links-integration.ts",
+      "status": "PASS"
+    },
+    {
+      "description": "文件存在: src/test/bidirectional-links-integration.test.ts",
+      "status": "PASS"
+    },
+    {
+      "description": "文件存在: src/components/links/BacklinksPanel.tsx",
+      "status": "PASS"
+    },
+    {
+      "description": "文件存在: src/components/graph/LinkGraphComponent.tsx",
+      "status": "PASS"
+    },
+    {
+      "description": "文件存在: src/services/CrossModuleLinkService.ts",
+      "status": "PASS"
+    },
+    {
+      "description": "文件存在: src/links/LinkManagerService.ts",
+      "status": "PASS"
+    },
+    {
+      "description": "BidirectionalLinksIntegration类定义正确",
+      "status": "PASS"
+    },
+    {
+      "description": "集成类包含必要的方法",
+      "status": "PASS"
+    },
+    {
+      "description": "页面链接正则表达式正确",
+      "status": "PASS"
+    },
+    {
+      "description": "块引用正则表达式正确",
+      "status": "PASS"
+    },
+    {
+      "description": "混合链接解析正确",
+      "status": "PASS"
+    },
+    {
+      "description": "双向链接表SQL语句正确",
+      "status": "PASS"
+    },
+    {
+      "description": "数据库索引定义正确",
+      "status": "PASS"
+    },
+    {
+      "description": "BacklinksPanel组件存在",
+      "status": "PASS"
+    },
+    {
+      "description": "LinkGraphComponent组件存在",
+      "status": "PASS"
+    },
+    {
+      "description": "组件包含必要的Props接口",
+      "status": "PASS"
+    }
+  ]
+}

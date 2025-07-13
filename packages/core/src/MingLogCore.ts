@@ -8,6 +8,7 @@ import { ModuleManager } from './module-manager/ModuleManager.js'
 import { DatabaseManager } from './database/DatabaseManager.js'
 import type { DatabaseConnection } from './database/DatabaseManager.js'
 import { SettingsManager } from './settings/SettingsManager.js'
+import { ModuleIntegrationFix } from './fixes/module-integration-fix.js'
 import type { CoreAPI, ModuleConfig, ModuleFactory } from './types/index.js'
 
 export interface MingLogCoreOptions {
@@ -22,6 +23,7 @@ export class MingLogCore {
   private databaseManager: DatabaseManager
   private settingsManager: SettingsManager
   private coreAPI: CoreAPI
+  private integrationFix: ModuleIntegrationFix
   private initialized: boolean = false
 
   constructor(options: MingLogCoreOptions) {
@@ -42,6 +44,15 @@ export class MingLogCore {
 
     // 初始化模块管理器
     this.moduleManager = new ModuleManager(this.eventBus, this.coreAPI)
+
+    // 初始化集成修复（在模块管理器之后）
+    this.integrationFix = new ModuleIntegrationFix(this.eventBus, this.moduleManager, {
+      enableMemoryLeakDetection: true,
+      enableEventValidation: true,
+      enableErrorRecovery: true,
+      maxEventQueueSize: 1000,
+      eventTimeoutMs: 5000
+    })
   }
 
   /**
@@ -140,6 +151,11 @@ export class MingLogCore {
       } catch (error) {
         console.error(`Error deactivating module ${module.id}:`, error)
       }
+    }
+
+    // 清理集成修复
+    if (this.integrationFix) {
+      this.integrationFix.cleanup()
     }
 
     // 销毁事件总线
@@ -278,6 +294,16 @@ export class MingLogCore {
    */
   isInitialized(): boolean {
     return this.initialized
+  }
+
+  /**
+   * 获取集成状态
+   */
+  getIntegrationStatus() {
+    if (!this.initialized || !this.integrationFix) {
+      return null
+    }
+    return this.integrationFix.getIntegrationStatus()
   }
 
   /**

@@ -12,7 +12,7 @@ interface MindMapToolbarProps {
   onZoomIn: () => void
   onZoomOut: () => void
   onFitToView: () => void
-  onExport?: () => void
+  onExport?: (config: any) => void
 }
 
 export const MindMapToolbar: React.FC<MindMapToolbarProps> = ({

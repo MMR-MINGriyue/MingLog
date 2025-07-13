@@ -1,0 +1,515 @@
+/**
+ * 增强版图形可视化样式
+ * 提供现代化、直观的图形分析界面
+ */
+
+.enhanced-graph-visualization {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 遮罩层 */
+.graph-visualization-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+/* 主面板 */
+.graph-visualization-panel {
+  position: relative;
+  width: 95vw;
+  height: 90vh;
+  max-width: 1400px;
+  max-height: 900px;
+  background: var(--bg-primary, #ffffff);
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dark .graph-visualization-panel {
+  background: var(--bg-primary-dark, #1f2937);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* 标题栏 */
+.visualization-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-secondary, #f9fafb);
+}
+
+.dark .visualization-header {
+  background: var(--bg-secondary-dark, #374151);
+  border-bottom-color: var(--border-color-dark, #4b5563);
+}
+
+.visualization-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dark .visualization-title {
+  color: var(--text-primary-dark, #f9fafb);
+}
+
+.close-button {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-size: 18px;
+}
+
+.close-button:hover {
+  background: var(--bg-tertiary, #f3f4f6);
+  color: var(--text-primary, #111827);
+}
+
+/* 工具栏 */
+.visualization-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-secondary, #f9fafb);
+  flex-wrap: wrap;
+}
+
+.dark .visualization-toolbar {
+  background: var(--bg-secondary-dark, #374151);
+  border-bottom-color: var(--border-color-dark, #4b5563);
+}
+
+.search-section,
+.layout-section,
+.clustering-section,
+.analysis-section,
+.display-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.search-input,
+.layout-select,
+.clustering-button,
+.analysis-button {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 6px;
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary, #374151);
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+  min-width: 150px;
+}
+
+.search-input:focus,
+.layout-select:focus,
+.clustering-button:focus,
+.analysis-button:focus {
+  outline: none;
+  border-color: var(--primary-color, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.clustering-button,
+.analysis-button {
+  background: var(--primary-color, #3b82f6);
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.clustering-button:hover,
+.analysis-button:hover {
+  background: var(--primary-color-hover, #2563eb);
+}
+
+.analysis-button {
+  background: var(--success-color, #10b981);
+}
+
+.analysis-button:hover {
+  background: var(--success-color-hover, #059669);
+}
+
+.dark .search-input,
+.dark .layout-select,
+.dark .clustering-button,
+.dark .analysis-button {
+  background: var(--bg-primary-dark, #1f2937);
+  border-color: var(--border-color-dark, #4b5563);
+  color: var(--text-primary-dark, #f9fafb);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-primary, #374151);
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin: 0;
+}
+
+/* 主要内容区域 */
+.visualization-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* 图形画布容器 */
+.graph-canvas-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.graph-canvas-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-tertiary, #f8fafc);
+  border: 2px dashed var(--border-color, #d1d5db);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.dark .graph-canvas-placeholder {
+  background: var(--bg-tertiary-dark, #4b5563);
+  border-color: var(--border-color-dark, #6b7280);
+}
+
+.canvas-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: var(--bg-primary, #ffffff);
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  min-width: 200px;
+}
+
+.dark .info-item {
+  background: var(--bg-primary-dark, #1f2937);
+  border-color: var(--border-color-dark, #4b5563);
+}
+
+.info-label {
+  font-size: 14px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+}
+
+.dark .info-value {
+  color: var(--text-primary-dark, #f9fafb);
+}
+
+/* 侧边栏 */
+.visualization-sidebar {
+  width: 300px;
+  background: var(--bg-secondary, #f9fafb);
+  border-left: 1px solid var(--border-color, #e5e7eb);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.dark .visualization-sidebar {
+  background: var(--bg-secondary-dark, #374151);
+  border-left-color: var(--border-color-dark, #4b5563);
+}
+
+/* 面板样式 */
+.stats-panel,
+.clustering-panel {
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.dark .stats-panel,
+.dark .clustering-panel {
+  border-bottom-color: var(--border-color-dark, #4b5563);
+}
+
+.panel-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dark .panel-title {
+  color: var(--text-primary-dark, #f9fafb);
+}
+
+/* 统计网格 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg-primary, #ffffff);
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.dark .stat-item {
+  background: var(--bg-primary-dark, #1f2937);
+  border-color: var(--border-color-dark, #4b5563);
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.stat-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  font-family: monospace;
+}
+
+.dark .stat-value {
+  color: var(--text-primary-dark, #f9fafb);
+}
+
+/* 聚类统计 */
+.clustering-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.clustering-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-primary, #ffffff);
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.dark .clustering-metric {
+  background: var(--bg-primary-dark, #1f2937);
+  border-color: var(--border-color-dark, #4b5563);
+}
+
+.metric-label {
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.metric-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  font-family: monospace;
+}
+
+.dark .metric-value {
+  color: var(--text-primary-dark, #f9fafb);
+}
+
+/* 聚类列表 */
+.cluster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cluster-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-primary, #ffffff);
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  transition: all 0.2s ease;
+}
+
+.cluster-item:hover {
+  background: var(--bg-hover, #f8fafc);
+  border-color: var(--primary-color, #3b82f6);
+}
+
+.dark .cluster-item {
+  background: var(--bg-primary-dark, #1f2937);
+  border-color: var(--border-color-dark, #4b5563);
+}
+
+.cluster-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cluster-info {
+  flex: 1;
+}
+
+.cluster-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary, #111827);
+  margin-bottom: 2px;
+}
+
+.dark .cluster-label {
+  color: var(--text-primary-dark, #f9fafb);
+}
+
+.cluster-size {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .graph-visualization-panel {
+    width: 98vw;
+    height: 95vh;
+  }
+  
+  .visualization-sidebar {
+    width: 250px;
+  }
+  
+  .visualization-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .search-section,
+  .layout-section,
+  .clustering-section,
+  .display-section {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 768px) {
+  .visualization-content {
+    flex-direction: column;
+  }
+  
+  .visualization-sidebar {
+    width: 100%;
+    height: 200px;
+    border-left: none;
+    border-top: 1px solid var(--border-color, #e5e7eb);
+  }
+  
+  .dark .visualization-sidebar {
+    border-top-color: var(--border-color-dark, #4b5563);
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .clustering-stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .clustering-metric {
+    flex: 1;
+    min-width: 120px;
+  }
+}
+
+/* 滚动条样式 */
+.visualization-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.visualization-sidebar::-webkit-scrollbar-track {
+  background: var(--bg-tertiary, #f3f4f6);
+  border-radius: 3px;
+}
+
+.visualization-sidebar::-webkit-scrollbar-thumb {
+  background: var(--border-color, #d1d5db);
+  border-radius: 3px;
+}
+
+.visualization-sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary, #6b7280);
+}

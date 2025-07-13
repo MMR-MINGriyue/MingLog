@@ -1,0 +1,505 @@
+/**
+ * 聚类可视化样式
+ * 提供现代化、直观的图形聚类分析界面
+ */
+
+.cluster-visualization {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* 可视化容器 */
+.visualization-container {
+  display: flex;
+  position: relative;
+}
+
+.cluster-svg {
+  flex: 1;
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+}
+
+/* 聚类边界 */
+.cluster-bound {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.cluster-bound:hover {
+  stroke-width: 3;
+  fill-opacity: 0.2;
+}
+
+.cluster-bound.selected {
+  stroke-width: 4;
+  fill-opacity: 0.25;
+  filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.3));
+}
+
+/* 图形节点 */
+.graph-node {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.graph-node:hover {
+  stroke-width: 3;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.3));
+}
+
+/* 图形连接 */
+.graph-link {
+  transition: stroke-opacity 0.2s ease;
+}
+
+.graph-link:hover {
+  stroke-opacity: 1;
+}
+
+/* 控制面板 */
+.cluster-control-panel {
+  width: 300px;
+  background: #f8f9fa;
+  border-left: 1px solid #e5e7eb;
+  padding: 20px;
+  overflow-y: auto;
+  max-height: 600px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.analyze-button {
+  padding: 8px 16px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.analyze-button:hover:not(:disabled) {
+  background: #5a67d8;
+  transform: translateY(-1px);
+}
+
+.analyze-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 算法选择 */
+.algorithm-selection {
+  margin-bottom: 20px;
+}
+
+.control-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.algorithm-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.algorithm-select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.algorithm-description {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* 参数控制 */
+.parameter-controls {
+  margin-bottom: 20px;
+}
+
+.control-group {
+  margin-bottom: 16px;
+}
+
+.control-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e7eb;
+  outline: none;
+  cursor: pointer;
+  margin: 8px 0;
+}
+
+.control-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #667eea;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.control-value {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+  float: right;
+}
+
+/* 显示控制 */
+.display-controls {
+  margin-bottom: 20px;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  transform: scale(1.2);
+}
+
+/* 错误信息 */
+.error-message {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  border: 1px solid #fca5a5;
+}
+
+/* 统计信息 */
+.cluster-statistics {
+  padding: 20px;
+  background: #f8f9fa;
+  border-top: 1px solid #e5e7eb;
+}
+
+.cluster-statistics h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-item {
+  background: white;
+  padding: 12px;
+  border-radius: 6px;
+  text-align: center;
+  border: 1px solid #e5e7eb;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* 选中聚类信息 */
+.selected-cluster-info {
+  background: white;
+  padding: 16px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.selected-cluster-info h5 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.cluster-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detail-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.detail-value {
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .visualization-container {
+    flex-direction: column;
+  }
+  
+  .cluster-control-panel {
+    width: 100%;
+    max-height: 300px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .cluster-svg {
+    height: 400px;
+  }
+}
+
+/* 深色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .cluster-visualization {
+    background: #1f2937;
+    color: #f9fafb;
+  }
+  
+  .cluster-svg {
+    background: #374151;
+    border-color: #4b5563;
+  }
+  
+  .cluster-control-panel,
+  .cluster-statistics {
+    background: #374151;
+    border-color: #4b5563;
+  }
+  
+  .algorithm-select {
+    background: #4b5563;
+    border-color: #6b7280;
+    color: #f9fafb;
+  }
+  
+  .control-slider {
+    background: #4b5563;
+  }
+  
+  .control-slider::-webkit-slider-thumb {
+    background: #60a5fa;
+  }
+  
+  .stat-item,
+  .selected-cluster-info {
+    background: #4b5563;
+    border-color: #6b7280;
+  }
+  
+  .error-message {
+    background: #7f1d1d;
+    color: #fca5a5;
+    border-color: #991b1b;
+  }
+}
+
+/* 动画效果 */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.analyze-button:disabled {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cluster-statistics,
+.selected-cluster-info {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* 聚类颜色主题 */
+.cluster-bound[stroke="#FF6B6B"] {
+  stroke: #FF6B6B;
+  fill: #FF6B6B;
+}
+
+.cluster-bound[stroke="#4ECDC4"] {
+  stroke: #4ECDC4;
+  fill: #4ECDC4;
+}
+
+.cluster-bound[stroke="#45B7D1"] {
+  stroke: #45B7D1;
+  fill: #45B7D1;
+}
+
+.cluster-bound[stroke="#96CEB4"] {
+  stroke: #96CEB4;
+  fill: #96CEB4;
+}
+
+.cluster-bound[stroke="#FFEAA7"] {
+  stroke: #FFEAA7;
+  fill: #FFEAA7;
+}
+
+.cluster-bound[stroke="#DDA0DD"] {
+  stroke: #DDA0DD;
+  fill: #DDA0DD;
+}
+
+.cluster-bound[stroke="#98D8C8"] {
+  stroke: #98D8C8;
+  fill: #98D8C8;
+}
+
+/* 工具提示 */
+.graph-node title,
+.cluster-bound title {
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* 加载状态 */
+.analyze-button:disabled::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  .cluster-bound {
+    stroke-width: 3;
+  }
+  
+  .graph-node {
+    stroke-width: 3;
+  }
+  
+  .algorithm-select,
+  .control-slider {
+    border-width: 3px;
+  }
+}
+
+/* 减少动画模式 */
+@media (prefers-reduced-motion: reduce) {
+  .cluster-bound,
+  .graph-node,
+  .graph-link,
+  .analyze-button {
+    transition: none;
+  }
+  
+  .cluster-statistics,
+  .selected-cluster-info {
+    animation: none;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  .cluster-control-panel {
+    display: none;
+  }
+  
+  .cluster-visualization {
+    box-shadow: none;
+  }
+  
+  .cluster-svg {
+    border: 1px solid #000;
+  }
+}

@@ -53,6 +53,7 @@ impl Database {
                     .pragma("cache_size", "10000")  // 10MB cache
                     .pragma("temp_store", "memory")  // Use memory for temp tables
                     .pragma("mmap_size", "268435456")  // 256MB memory map
+                    .pragma("foreign_keys", "ON")  // Enable foreign key constraints
             )
             .await?;
         
@@ -85,6 +86,7 @@ impl Database {
                     .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
                     .synchronous(sqlx::sqlite::SqliteSynchronous::Normal)
                     .busy_timeout(std::time::Duration::from_secs(30))
+                    .pragma("foreign_keys", "ON")  // Enable foreign key constraints
             )
             .await?;
 

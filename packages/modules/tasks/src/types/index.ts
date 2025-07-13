@@ -8,6 +8,9 @@ export * from './task'
 // 项目相关类型
 export * from './project'
 
+// GTD工作流相关类型
+export * from './gtd'
+
 // 模块相关类型 (临时定义，直到核心模块可用)
 export interface IModule {
   readonly metadata: any
@@ -29,6 +32,17 @@ export interface IModuleConfig {
   enabled: boolean
   settings: Record<string, any>
   preferences: Record<string, any>
+}
+
+// 模块状态枚举 (临时定义，直到核心模块可用)
+export enum ModuleStatus {
+  UNLOADED = 'unloaded',
+  LOADING = 'loading',
+  LOADED = 'loaded',
+  ACTIVATING = 'activating',
+  ACTIVE = 'active',
+  DEACTIVATING = 'deactivating',
+  ERROR = 'error'
 }
 
 export interface IModuleMetadata {
@@ -68,39 +82,7 @@ export interface IModuleEvent {
   timestamp: number
 }
 
-// GTD工作流相关类型
-export interface GTDWorkflow {
-  collect: (input: string) => Promise<void>
-  process: (taskId: string) => Promise<GTDProcessResult>
-  organize: (taskId: string, decision: GTDDecision) => Promise<void>
-  review: () => Promise<GTDReviewResult>
-  engage: () => Promise<any[]> // 临时使用any[]，直到Task类型可用
-}
 
-export interface GTDProcessResult {
-  isActionable: boolean
-  isProject: boolean
-  estimatedTime?: number
-  suggestedContext?: string
-  suggestedPriority?: string // 临时使用string，直到TaskPriority可用
-}
-
-export interface GTDDecision {
-  action: 'do' | 'defer' | 'delegate' | 'delete' | 'project'
-  context?: string
-  dueDate?: Date
-  delegateTo?: string
-  projectName?: string
-}
-
-export interface GTDReviewResult {
-  inboxCount: number
-  overdueCount: number
-  todayCount: number
-  weekCount: number
-  somedayCount: number
-  recommendations: string[]
-}
 
 // 看板相关类型
 export interface KanbanBoard {
@@ -223,8 +205,7 @@ export type {
   TimeEntry,
   CreateTimeEntryRequest,
   UpdateTimeEntryRequest,
-  GTDContext,
-  CreateGTDContextRequest,
+
   TaskTemplate,
   CreateTaskTemplateRequest
 } from './task'
@@ -247,3 +228,11 @@ export type {
   ProjectReport,
   ProjectTimelineEvent
 } from './project'
+
+export type {
+  GTDDecision,
+  GTDProcessResult,
+  GTDReviewResult,
+  GTDContext,
+  CreateGTDContextRequest
+} from './gtd'

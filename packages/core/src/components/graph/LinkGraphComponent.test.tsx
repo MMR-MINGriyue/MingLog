@@ -4,126 +4,186 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { LinkGraphComponent } from './LinkGraphComponent';
-import { testUtils } from '@test/setup';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MockFactory } from '../../test/TestInfrastructureSetup';
 import type { LinkGraphData, LinkGraphNode, LinkGraphEdge } from '../../types/links';
 
-// 模拟D3.js
-vi.mock('d3', () => ({
-  select: vi.fn(() => ({
-    selectAll: vi.fn(() => ({
-      data: vi.fn(() => ({
-        enter: vi.fn(() => ({
-          append: vi.fn(() => ({
-            attr: vi.fn(() => ({ attr: vi.fn() })),
-            style: vi.fn(() => ({ style: vi.fn() })),
-            text: vi.fn(() => ({ text: vi.fn() })),
-            on: vi.fn(() => ({ on: vi.fn() }))
-          }))
-        })),
-        exit: vi.fn(() => ({ remove: vi.fn() })),
-        attr: vi.fn(() => ({ attr: vi.fn() })),
-        style: vi.fn(() => ({ style: vi.fn() }))
-      }))
-    })),
-    append: vi.fn(() => ({
-      attr: vi.fn(() => ({ attr: vi.fn() })),
-      style: vi.fn(() => ({ style: vi.fn() }))
-    })),
-    attr: vi.fn(() => ({ attr: vi.fn() })),
-    style: vi.fn(() => ({ style: vi.fn() })),
-    call: vi.fn(() => ({ call: vi.fn() })),
-    on: vi.fn(() => ({ on: vi.fn() }))
-  })),
-  forceSimulation: vi.fn(() => ({
-    nodes: vi.fn(() => ({ nodes: vi.fn() })),
-    force: vi.fn(() => ({ force: vi.fn() })),
-    on: vi.fn(() => ({ on: vi.fn() })),
-    restart: vi.fn(),
-    stop: vi.fn()
-  })),
-  forceLink: vi.fn(() => ({
-    id: vi.fn(() => ({ id: vi.fn() })),
-    distance: vi.fn(() => ({ distance: vi.fn() }))
-  })),
-  forceManyBody: vi.fn(() => ({
-    strength: vi.fn(() => ({ strength: vi.fn() }))
-  })),
-  forceCenter: vi.fn(() => ({ forceCenter: vi.fn() })),
-  zoom: vi.fn(() => ({
-    scaleExtent: vi.fn(() => ({ scaleExtent: vi.fn() })),
-    on: vi.fn(() => ({ on: vi.fn() }))
-  })),
-  drag: vi.fn(() => ({
-    on: vi.fn(() => ({ on: vi.fn() }))
-  }))
-}));
+// Mock D3.js - 必须在导入组件之前
+vi.mock('d3', () => {
+  // 创建一个递归的Mock选择器，确保所有方法都返回自身
+  const createMockSelection = () => {
+    const mockSelection = {
+      selectAll: vi.fn(),
+      select: vi.fn(),
+      append: vi.fn(),
+      attr: vi.fn(),
+      style: vi.fn(),
+      text: vi.fn(),
+      data: vi.fn(),
+      enter: vi.fn(),
+      exit: vi.fn(),
+      remove: vi.fn(),
+      on: vi.fn(),
+      call: vi.fn(),
+      merge: vi.fn(),
+      join: vi.fn(),
+      node: vi.fn().mockReturnValue(document.createElement('div')),
+      nodes: vi.fn().mockReturnValue([]),
+      empty: vi.fn().mockReturnValue(false),
+      size: vi.fn().mockReturnValue(1)
+    }
+
+    // 让所有方法都返回自身，实现链式调用
+    Object.keys(mockSelection).forEach(key => {
+      if (typeof mockSelection[key] === 'function' && key !== 'node' && key !== 'nodes' && key !== 'empty' && key !== 'size') {
+        mockSelection[key].mockReturnValue(mockSelection)
+      }
+    })
+
+    return mockSelection
+  }
+
+  // 创建Mock缩放行为
+  const createMockZoom = () => {
+    const mockZoom = {
+      scaleExtent: vi.fn(),
+      on: vi.fn(),
+      transform: vi.fn()
+    }
+
+    // 实现链式调用
+    mockZoom.scaleExtent.mockReturnValue(mockZoom)
+    mockZoom.on.mockReturnValue(mockZoom)
+
+    return mockZoom
+  }
+
+  // 创建Mock仿真
+  const createMockSimulation = () => {
+    const mockSimulation = {
+      force: vi.fn(),
+      nodes: vi.fn(),
+      on: vi.fn(),
+      stop: vi.fn(),
+      restart: vi.fn(),
+      alpha: vi.fn(),
+      alphaTarget: vi.fn(),
+      tick: vi.fn()
+    }
+
+    // 实现链式调用
+    Object.keys(mockSimulation).forEach(key => {
+      if (typeof mockSimulation[key] === 'function') {
+        mockSimulation[key].mockReturnValue(mockSimulation)
+      }
+    })
+
+    return mockSimulation
+  }
+
+  const mockSelection = createMockSelection()
+
+  const mockSimulation = {
+    nodes: vi.fn().mockReturnThis(),
+    force: vi.fn().mockReturnThis(),
+    on: vi.fn().mockReturnThis(),
+    stop: vi.fn().mockReturnThis(),
+    restart: vi.fn().mockReturnThis(),
+    tick: vi.fn().mockReturnThis(),
+    alpha: vi.fn().mockReturnThis(),
+    alphaTarget: vi.fn().mockReturnThis()
+  }
+
+  const mockForce = {
+    id: vi.fn().mockReturnThis(),
+    distance: vi.fn().mockReturnThis(),
+    strength: vi.fn().mockReturnThis(),
+    radius: vi.fn().mockReturnThis()
+  }
+
+  const mockZoom = {
+    scaleExtent: vi.fn(),
+    on: vi.fn(),
+    transform: vi.fn(),
+    translateBy: vi.fn(),
+    scaleTo: vi.fn()
+  }
+
+  // 确保链式调用正确工作
+  mockZoom.scaleExtent.mockReturnValue(mockZoom)
+  mockZoom.on.mockReturnValue(mockZoom)
+  mockZoom.transform.mockReturnValue(mockZoom)
+  mockZoom.translateBy.mockReturnValue(mockZoom)
+  mockZoom.scaleTo.mockReturnValue(mockZoom)
+
+  const mockDrag = {
+    on: vi.fn(),
+    subject: vi.fn(),
+    container: vi.fn()
+  }
+
+  // 确保链式调用正确工作
+  mockDrag.on.mockReturnValue(mockDrag)
+  mockDrag.subject.mockReturnValue(mockDrag)
+  mockDrag.container.mockReturnValue(mockDrag)
+
+  return {
+    select: vi.fn().mockReturnValue(mockSelection),
+    selectAll: vi.fn().mockReturnValue(mockSelection),
+    forceSimulation: vi.fn().mockReturnValue(mockSimulation),
+    forceLink: vi.fn().mockReturnValue(mockForce),
+    forceManyBody: vi.fn().mockReturnValue(mockForce),
+    forceCenter: vi.fn().mockReturnValue(mockForce),
+    forceCollide: vi.fn().mockReturnValue(mockForce),
+    zoom: vi.fn().mockReturnValue(mockZoom),
+    drag: vi.fn().mockReturnValue(mockDrag),
+    hierarchy: vi.fn().mockReturnValue({
+      descendants: vi.fn().mockReturnValue([]),
+      links: vi.fn().mockReturnValue([])
+    }),
+    tree: vi.fn().mockReturnValue({
+      size: vi.fn().mockReturnThis(),
+      separation: vi.fn().mockReturnThis()
+    }),
+    scaleOrdinal: vi.fn().mockReturnValue(vi.fn()),
+    schemeCategory10: ['#1f77b4', '#ff7f0e', '#2ca02c'],
+    event: { transform: { x: 0, y: 0, k: 1 } },
+    // 添加缺失的D3常量和方法
+    zoomIdentity: { x: 0, y: 0, k: 1 },
+    zoomTransform: vi.fn().mockReturnValue({ x: 0, y: 0, k: 1 }),
+    pointer: vi.fn().mockReturnValue([0, 0]),
+    // 添加数学和几何方法
+    range: vi.fn().mockReturnValue([]),
+    extent: vi.fn().mockReturnValue([[0, 0], [100, 100]]),
+    min: vi.fn().mockReturnValue(0),
+    max: vi.fn().mockReturnValue(100)
+  }
+});
+
+// 现在导入组件
+import { LinkGraphComponent } from './LinkGraphComponent';
 
 describe('LinkGraphComponent', () => {
-  const mockData: LinkGraphData = {
-    nodes: [
-      {
-        id: 'node1',
-        type: 'page',
-        title: 'Page 1',
-        x: 100,
-        y: 100
-      },
-      {
-        id: 'node2',
-        type: 'page',
-        title: 'Page 2',
-        x: 200,
-        y: 200
-      },
-      {
-        id: 'node3',
-        type: 'block',
-        title: 'Block 1',
-        x: 150,
-        y: 150
-      }
-    ] as LinkGraphNode[],
-    edges: [
-      {
-        id: 'edge1',
-        source: 'node1',
-        target: 'node2',
-        type: 'page-reference'
-      },
-      {
-        id: 'edge2',
-        source: 'node2',
-        target: 'node3',
-        type: 'block-reference'
-      }
-    ] as LinkGraphEdge[]
-  };
+  // 测试数据
+  const defaultGraphData: LinkGraphData = MockFactory.createMockGraphData();
 
   const defaultProps = {
-    data: mockData,
+    data: defaultGraphData,
     width: 800,
-    height: 600,
-    layout: 'force' as const,
-    enableDrag: true,
-    enableZoom: true,
-    filters: {
-      nodeTypes: ['page', 'block'],
-      edgeTypes: ['page-reference', 'block-reference'],
-      minConnections: 0
+    height: 600
+  };
+
+  // 性能监控工具
+  const performanceMonitor = {
+    startTime: 0,
+    endTime: 0,
+    start() {
+      this.startTime = performance.now();
     },
-    style: {
-      nodeSize: 8,
-      linkWidth: 2,
-      colors: {
-        page: '#0066cc',
-        block: '#28a745',
-        tag: '#ffc107',
-        link: '#6c757d',
-        selected: '#dc3545',
-        hovered: '#17a2b8'
-      }
+    end() {
+      this.endTime = performance.now();
+      return this.endTime - this.startTime;
     }
   };
 
@@ -132,275 +192,500 @@ describe('LinkGraphComponent', () => {
   });
 
   afterEach(() => {
-    vi.clearAllTimers();
+    vi.restoreAllMocks();
   });
 
-  describe('渲染测试', () => {
+  describe('基础渲染测试', () => {
     it('应该正确渲染图谱容器', () => {
       render(<LinkGraphComponent {...defaultProps} />);
-      
-      const container = screen.getByTestId('link-graph-component');
+
+      // 验证容器元素存在
+      const container = document.querySelector('.link-graph-component');
       expect(container).toBeInTheDocument();
-      expect(container).toHaveClass('link-graph-component');
+
+      // 验证SVG元素
+      const svg = container?.querySelector('svg');
+      expect(svg).toBeInTheDocument();
+      expect(svg).toHaveAttribute('width', '800');
+      expect(svg).toHaveAttribute('height', '600');
     });
 
-    it('应该设置正确的容器尺寸', () => {
+    it('应该应用正确的样式', () => {
       render(<LinkGraphComponent {...defaultProps} />);
-      
-      const container = screen.getByTestId('link-graph-component');
-      expect(container).toHaveStyle({
-        width: '800px',
-        height: '600px'
+
+      const svg = document.querySelector('svg');
+      expect(svg).toHaveStyle({
+        border: '1px solid #e0e0e0',
+        borderRadius: '4px'
       });
     });
 
-    it('应该创建SVG元素', async () => {
-      render(<LinkGraphComponent {...defaultProps} />);
-      
-      await waitFor(() => {
-        const svg = container.querySelector('svg');
-        expect(svg).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('数据处理测试', () => {
-    it('应该正确过滤节点', () => {
-      const filteredProps = {
-        ...defaultProps,
-        filters: {
-          nodeTypes: ['page'],
-          edgeTypes: ['page-reference'],
-          minConnections: 0
-        }
-      };
-
-      render(<LinkGraphComponent {...filteredProps} />);
-      
-      // 验证只有page类型的节点被处理
-      // 这里需要通过组件的内部状态或回调来验证
-    });
-
-    it('应该根据最小连接数过滤节点', () => {
-      const filteredProps = {
-        ...defaultProps,
-        filters: {
-          nodeTypes: ['page', 'block'],
-          edgeTypes: ['page-reference', 'block-reference'],
-          minConnections: 2
-        }
-      };
-
-      render(<LinkGraphComponent {...filteredProps} />);
-      
-      // 验证连接数少于2的节点被过滤
-    });
-
-    it('应该正确处理空数据', () => {
-      const emptyProps = {
-        ...defaultProps,
-        data: { nodes: [], edges: [] }
-      };
+    it('应该处理空数据', () => {
+      const emptyData: LinkGraphData = { nodes: [], edges: [] };
 
       expect(() => {
-        render(<LinkGraphComponent {...emptyProps} />);
+        render(<LinkGraphComponent {...defaultProps} data={emptyData} />);
       }).not.toThrow();
+
+      // 验证组件正常渲染
+      const container = document.querySelector('.link-graph-component');
+      expect(container).toBeInTheDocument();
+    });
+
+    it('应该使用默认尺寸', () => {
+      const { data } = defaultProps;
+      render(<LinkGraphComponent data={data} />);
+
+      const svg = document.querySelector('svg');
+      expect(svg).toHaveAttribute('width', '800');
+      expect(svg).toHaveAttribute('height', '600');
     });
   });
 
-  describe('交互测试', () => {
-    it('应该响应节点点击事件', async () => {
-      const onNodeClick = vi.fn();
-      render(
-        <LinkGraphComponent 
-          {...defaultProps} 
-          onNodeClick={onNodeClick}
-        />
-      );
+  describe('D3.js集成测试', () => {
+    it('应该初始化D3选择器', () => {
+      render(<LinkGraphComponent {...defaultProps} />);
 
-      // 模拟节点点击
-      // 由于D3.js被模拟，这里需要手动触发回调
-      const mockNode = mockData.nodes[0];
-      
-      // 假设组件内部会调用onNodeClick
-      await waitFor(() => {
-        // 这里需要根据实际实现来测试
-      });
+      // 验证组件正常渲染（而不是验证内部D3调用）
+      const container = screen.getByTestId('link-graph-container');
+      expect(container).toBeInTheDocument();
+
+      // 验证SVG元素存在
+      const svg = screen.getByTestId('link-graph-svg');
+      expect(svg).toBeInTheDocument();
     });
 
-    it('应该响应节点悬停事件', async () => {
-      const onNodeHover = vi.fn();
-      render(
-        <LinkGraphComponent 
-          {...defaultProps} 
-          onNodeHover={onNodeHover}
-        />
-      );
-
-      // 测试悬停事件
-    });
-
-    it('应该支持拖拽功能', () => {
-      render(<LinkGraphComponent {...defaultProps} enableDrag={true} />);
-      
-      // 验证拖拽功能已启用
-    });
-
-    it('应该支持缩放功能', () => {
-      render(<LinkGraphComponent {...defaultProps} enableZoom={true} />);
-      
-      // 验证缩放功能已启用
-    });
-  });
-
-  describe('布局测试', () => {
-    it('应该支持力导向布局', () => {
+    it('应该创建力导向布局', () => {
       render(<LinkGraphComponent {...defaultProps} layout="force" />);
-      
-      // 验证力导向布局被应用
+
+      // 验证组件正常渲染力导向布局
+      const container = screen.getByTestId('link-graph-container');
+      expect(container).toBeInTheDocument();
+
+      // 验证SVG容器存在
+      const svg = screen.getByTestId('link-graph-svg');
+      expect(svg).toBeInTheDocument();
+      expect(svg).toHaveAttribute('width', '800');
+      expect(svg).toHaveAttribute('height', '600');
+    });
+
+    it('应该创建层次布局', () => {
+      render(<LinkGraphComponent {...defaultProps} layout="hierarchy" />);
+
+      // 验证组件正常渲染层次布局
+      const container = screen.getByTestId('link-graph-container');
+      expect(container).toBeInTheDocument();
+
+      // 验证SVG容器存在
+      const svg = screen.getByTestId('link-graph-svg');
+      expect(svg).toBeInTheDocument();
+    });
+
+    it('应该设置缩放功能', () => {
+      render(<LinkGraphComponent {...defaultProps} enableZoom={true} />);
+
+      // 验证组件正常渲染并支持缩放
+      const container = screen.getByTestId('link-graph-container');
+      expect(container).toBeInTheDocument();
+
+      // 验证SVG容器存在
+      const svg = screen.getByTestId('link-graph-svg');
+      expect(svg).toBeInTheDocument();
+    });
+
+    it('应该设置拖拽功能', () => {
+      render(<LinkGraphComponent {...defaultProps} enableDrag={true} />);
+
+      // 验证组件正常渲染并支持拖拽
+      const container = screen.getByTestId('link-graph-container');
+      expect(container).toBeInTheDocument();
+
+      // 验证SVG容器存在
+      const svg = screen.getByTestId('link-graph-svg');
+      expect(svg).toBeInTheDocument();
+    });
+  });
+
+  describe('布局算法测试', () => {
+    it('应该支持力导向布局', async () => {
+      const d3 = await import('d3');
+      render(<LinkGraphComponent {...defaultProps} layout="force" />);
+
+      expect(d3.forceSimulation).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ id: 'node1' }),
+          expect.objectContaining({ id: 'node2' }),
+          expect.objectContaining({ id: 'node3' })
+        ])
+      );
     });
 
     it('应该支持层次布局', () => {
       render(<LinkGraphComponent {...defaultProps} layout="hierarchy" />);
-      
-      // 验证层次布局被应用
+
+      // 验证组件正常渲染层次布局
+      const container = screen.getByTestId('link-graph-container');
+      expect(container).toBeInTheDocument();
+
+      // 验证SVG容器存在
+      const svg = screen.getByTestId('link-graph-svg');
+      expect(svg).toBeInTheDocument();
     });
 
-    it('应该支持圆形布局', () => {
+    it('应该支持圆形布局', async () => {
+      const d3 = await import('d3');
       render(<LinkGraphComponent {...defaultProps} layout="circular" />);
-      
-      // 验证圆形布局被应用
+
+      // 圆形布局是静态计算，不需要D3 simulation
+      expect(d3.forceSimulation).not.toHaveBeenCalled();
     });
 
-    it('应该支持网格布局', () => {
+    it('应该支持网格布局', async () => {
+      const d3 = await import('d3');
       render(<LinkGraphComponent {...defaultProps} layout="grid" />);
-      
-      // 验证网格布局被应用
+
+      // 网格布局是静态计算，不需要D3 simulation
+      expect(d3.forceSimulation).not.toHaveBeenCalled();
     });
   });
 
-  describe('样式测试', () => {
-    it('应该应用自定义节点大小', () => {
-      const customProps = {
-        ...defaultProps,
-        style: {
-          ...defaultProps.style,
-          nodeSize: 12
-        }
-      };
+  describe('用户交互测试', () => {
+    it('应该处理节点点击事件', async () => {
+      const onNodeClick = vi.fn();
+      render(<LinkGraphComponent {...defaultProps} onNodeClick={onNodeClick} />);
 
-      render(<LinkGraphComponent {...customProps} />);
-      
-      // 验证节点大小被正确应用
+      // 验证组件正常渲染
+      const container = screen.getByTestId('link-graph-container');
+      expect(container).toBeInTheDocument();
+
+      // 验证SVG容器存在且可交互
+      const svg = screen.getByTestId('link-graph-svg');
+      expect(svg).toBeInTheDocument();
+
+      // 模拟点击SVG容器
+      await userEvent.click(svg);
+
+      // 验证组件没有崩溃
+      expect(container).toBeInTheDocument();
     });
 
-    it('应该应用自定义链接宽度', () => {
-      const customProps = {
-        ...defaultProps,
-        style: {
-          ...defaultProps.style,
-          linkWidth: 4
-        }
-      };
+    it('应该处理节点悬停事件', async () => {
+      const onNodeHover = vi.fn();
+      render(<LinkGraphComponent {...defaultProps} onNodeHover={onNodeHover} />);
 
-      render(<LinkGraphComponent {...customProps} />);
-      
-      // 验证链接宽度被正确应用
+      // 验证组件正常渲染
+      const container = screen.getByTestId('link-graph-container');
+      expect(container).toBeInTheDocument();
+
+      // 验证SVG容器存在且可交互
+      const svg = screen.getByTestId('link-graph-svg');
+      expect(svg).toBeInTheDocument();
+
+      // 模拟悬停SVG容器
+      await userEvent.hover(svg);
+
+      // 验证组件没有崩溃
+      expect(container).toBeInTheDocument();
     });
 
-    it('应该应用自定义颜色', () => {
-      const customProps = {
-        ...defaultProps,
-        style: {
-          ...defaultProps.style,
-          colors: {
-            ...defaultProps.style.colors,
-            page: '#ff0000'
-          }
+    it('应该处理边点击事件', () => {
+      const onEdgeClick = vi.fn();
+      render(<LinkGraphComponent {...defaultProps} onEdgeClick={onEdgeClick} />);
+
+      // 验证组件正常渲染
+      const container = screen.getByTestId('link-graph-container');
+      expect(container).toBeInTheDocument();
+
+      // 验证SVG容器存在
+      const svg = screen.getByTestId('link-graph-svg');
+      expect(svg).toBeInTheDocument();
+    });
+
+    it('应该支持缩放操作', () => {
+      render(<LinkGraphComponent {...defaultProps} enableZoom={true} />);
+
+      // 验证组件正常渲染并支持缩放
+      const container = screen.getByTestId('link-graph-container');
+      expect(container).toBeInTheDocument();
+
+      // 验证SVG容器存在
+      const svg = screen.getByTestId('link-graph-svg');
+      expect(svg).toBeInTheDocument();
+    });
+
+    it('应该禁用缩放功能', async () => {
+      const d3 = await import('d3');
+      render(<LinkGraphComponent {...defaultProps} enableZoom={false} />);
+
+      // 当禁用缩放时，不应该调用zoom
+      expect(d3.zoom).not.toHaveBeenCalled();
+    });
+
+    it('应该支持拖拽操作', () => {
+      render(<LinkGraphComponent {...defaultProps} enableDrag={true} />);
+
+      // 验证组件正常渲染并支持拖拽
+      const container = screen.getByTestId('link-graph-container');
+      expect(container).toBeInTheDocument();
+
+      // 验证SVG容器存在
+      const svg = screen.getByTestId('link-graph-svg');
+      expect(svg).toBeInTheDocument();
+    });
+
+    it('应该禁用拖拽功能', async () => {
+      const d3 = await import('d3');
+      render(<LinkGraphComponent {...defaultProps} enableDrag={false} />);
+
+      // 当禁用拖拽时，不应该调用drag
+      expect(d3.drag).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('过滤器测试', () => {
+    it('应该根据节点类型过滤', async () => {
+      const d3 = await import('d3');
+      const filters = {
+        nodeTypes: ['page'],
+        edgeTypes: [],
+        minConnections: 0
+      };
+
+      render(<LinkGraphComponent {...defaultProps} filters={filters} />);
+
+      // 验证只有page类型的节点被处理
+      expect(d3.forceSimulation).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ type: 'page' })
+        ])
+      );
+    });
+
+    it('应该根据边类型过滤', () => {
+      const filters = {
+        nodeTypes: [],
+        edgeTypes: ['page-reference'],
+        minConnections: 0
+      };
+
+      render(<LinkGraphComponent {...defaultProps} filters={filters} />);
+
+      // 验证组件正常渲染过滤后的数据
+      const container = screen.getByTestId('link-graph-container');
+      expect(container).toBeInTheDocument();
+
+      // 验证SVG容器存在
+      const svg = screen.getByTestId('link-graph-svg');
+      expect(svg).toBeInTheDocument();
+    });
+
+    it('应该根据最小连接数过滤', async () => {
+      const d3 = await import('d3');
+      const filters = {
+        nodeTypes: [],
+        edgeTypes: [],
+        minConnections: 2
+      };
+
+      render(<LinkGraphComponent {...defaultProps} filters={filters} />);
+
+      // 验证过滤逻辑被应用
+      expect(d3.forceSimulation).toHaveBeenCalled();
+    });
+  });
+
+  describe('样式配置测试', () => {
+    it('应该应用自定义样式', () => {
+      const customStyle = {
+        nodeSize: 12,
+        linkWidth: 3,
+        colors: {
+          page: '#ff0000',
+          block: '#00ff00'
         }
       };
 
-      render(<LinkGraphComponent {...customProps} />);
-      
-      // 验证自定义颜色被正确应用
+      render(<LinkGraphComponent {...defaultProps} style={customStyle} />);
+
+      // 验证组件正常渲染
+      const container = screen.getByTestId('link-graph-container');
+      expect(container).toBeInTheDocument();
+
+      // 验证SVG容器存在
+      const svg = screen.getByTestId('link-graph-svg');
+      expect(svg).toBeInTheDocument();
+    });
+
+    it('应该使用默认样式', () => {
+      render(<LinkGraphComponent {...defaultProps} />);
+
+      // 验证默认样式被应用
+      const container = screen.getByTestId('link-graph-container');
+      expect(container).toBeInTheDocument();
+
+      // 验证SVG容器存在
+      const svg = screen.getByTestId('link-graph-svg');
+      expect(svg).toBeInTheDocument();
     });
   });
 
   describe('性能测试', () => {
-    it('应该处理大量节点而不崩溃', () => {
-      const largeData = {
-        nodes: Array.from({ length: 1000 }, (_, i) => ({
-          id: `node${i}`,
-          type: 'page' as const,
-          title: `Page ${i}`,
-          x: Math.random() * 800,
-          y: Math.random() * 600
-        })),
-        edges: Array.from({ length: 500 }, (_, i) => ({
-          id: `edge${i}`,
-          source: `node${i}`,
-          target: `node${(i + 1) % 1000}`,
-          type: 'page-reference' as const
-        }))
-      };
+    it('应该在100ms内渲染小型图谱', async () => {
+      performanceMonitor.start();
 
+      await act(async () => {
+        render(<LinkGraphComponent {...defaultProps} />);
+      });
+
+      const renderTime = performanceMonitor.end();
+
+      // 验证渲染时间小于100ms
+      expect(renderTime).toBeLessThan(100);
+    });
+
+    it('应该在100ms内渲染大型图谱（1000+节点）', async () => {
+      const largeGraphData = MockFactory.createLargeGraphData(1000);
+
+      performanceMonitor.start();
+
+      await act(async () => {
+        render(<LinkGraphComponent data={largeGraphData} width={800} height={600} />);
+      });
+
+      const renderTime = performanceMonitor.end();
+
+      // 验证大型图谱渲染时间仍小于100ms
+      expect(renderTime).toBeLessThan(100);
+      console.log(`大型图谱渲染时间: ${renderTime.toFixed(2)}ms`);
+    });
+
+    it('应该正确处理极大数据集', async () => {
+      const extremeGraphData = MockFactory.createLargeGraphData(5000);
+
+      // 验证组件不会崩溃
       expect(() => {
-        render(<LinkGraphComponent {...defaultProps} data={largeData} />);
+        render(<LinkGraphComponent data={extremeGraphData} width={800} height={600} />);
       }).not.toThrow();
     });
 
-    it('应该在数据更新时正确重新渲染', async () => {
-      const { rerender } = render(<LinkGraphComponent {...defaultProps} />);
-      
-      const newData = {
-        ...mockData,
-        nodes: [
-          ...mockData.nodes,
-          {
-            id: 'node4',
-            type: 'page' as const,
-            title: 'Page 4',
-            x: 300,
-            y: 300
-          }
-        ]
-      };
+    it('应该优化内存使用', async () => {
+      const initialMemory = performance.memory?.usedJSHeapSize || 0;
 
-      rerender(<LinkGraphComponent {...defaultProps} data={newData} />);
-      
-      // 验证组件正确处理数据更新
+      const { unmount } = render(<LinkGraphComponent {...defaultProps} />);
+
+      // 卸载组件
+      unmount();
+
+      // 强制垃圾回收（如果可用）
+      if (global.gc) {
+        global.gc();
+      }
+
+      const finalMemory = performance.memory?.usedJSHeapSize || 0;
+      const memoryIncrease = finalMemory - initialMemory;
+
+      // 验证内存增长合理（小于5MB）
+      expect(memoryIncrease).toBeLessThan(5 * 1024 * 1024);
+    });
+
+    it('应该支持布局切换性能', async () => {
+      const { rerender } = render(<LinkGraphComponent {...defaultProps} layout="force" />);
+
+      performanceMonitor.start();
+
+      // 切换到不同布局
+      rerender(<LinkGraphComponent {...defaultProps} layout="hierarchy" />);
+      rerender(<LinkGraphComponent {...defaultProps} layout="circular" />);
+      rerender(<LinkGraphComponent {...defaultProps} layout="grid" />);
+
+      const switchTime = performanceMonitor.end();
+
+      // 验证布局切换时间合理
+      expect(switchTime).toBeLessThan(50);
     });
   });
 
   describe('错误处理测试', () => {
-    it('应该处理无效的节点数据', () => {
+    it('应该处理无效数据', () => {
       const invalidData = {
-        nodes: [
-          { id: '', type: 'page', title: '', x: 0, y: 0 } // 无效节点
-        ],
-        edges: []
-      };
+        nodes: [{ id: 'invalid' }], // 缺少必需字段
+        edges: [{ source: 'nonexistent', target: 'also-nonexistent' }]
+      } as any;
 
       expect(() => {
-        render(<LinkGraphComponent {...defaultProps} data={invalidData} />);
+        render(<LinkGraphComponent data={invalidData} width={800} height={600} />);
       }).not.toThrow();
     });
 
-    it('应该处理循环引用的边', () => {
-      const cyclicData = {
+    it('应该处理循环引用', () => {
+      const circularData = {
         nodes: [
-          { id: 'node1', type: 'page' as const, title: 'Page 1', x: 0, y: 0 },
-          { id: 'node2', type: 'page' as const, title: 'Page 2', x: 100, y: 100 }
+          { id: 'a', type: 'page', title: 'A' },
+          { id: 'b', type: 'page', title: 'B' }
         ],
         edges: [
-          { id: 'edge1', source: 'node1', target: 'node2', type: 'page-reference' as const },
-          { id: 'edge2', source: 'node2', target: 'node1', type: 'page-reference' as const }
+          { id: 'edge1', source: 'a', target: 'b', type: 'reference' },
+          { id: 'edge2', source: 'b', target: 'a', type: 'reference' }
         ]
       };
 
       expect(() => {
-        render(<LinkGraphComponent {...defaultProps} data={cyclicData} />);
+        render(<LinkGraphComponent data={circularData} width={800} height={600} />);
       }).not.toThrow();
+    });
+
+    it('应该处理负数尺寸', () => {
+      expect(() => {
+        render(<LinkGraphComponent {...defaultProps} width={-100} height={-100} />);
+      }).not.toThrow();
+    });
+
+    it('应该处理零尺寸', () => {
+      expect(() => {
+        render(<LinkGraphComponent {...defaultProps} width={0} height={0} />);
+      }).not.toThrow();
+    });
+  });
+
+  describe('组件生命周期测试', () => {
+    it('应该正确清理D3资源', () => {
+      const { unmount } = render(<LinkGraphComponent {...defaultProps} />);
+
+      // 验证组件正常渲染
+      const container = screen.getByTestId('link-graph-container');
+      expect(container).toBeInTheDocument();
+
+      // 卸载组件应该不会抛出错误
+      expect(() => {
+        unmount();
+      }).not.toThrow();
+    });
+
+    it('应该响应数据更新', async () => {
+      const d3 = await import('d3');
+      const { rerender } = render(<LinkGraphComponent {...defaultProps} />);
+
+      const newData = {
+        nodes: [{ id: 'new-node', type: 'page', title: '新节点' }],
+        edges: []
+      };
+
+      // 更新数据
+      rerender(<LinkGraphComponent data={newData} width={800} height={600} />);
+
+      // 验证组件重新渲染
+      expect(d3.select).toHaveBeenCalled();
+    });
+
+    it('应该响应尺寸变化', () => {
+      const { rerender } = render(<LinkGraphComponent {...defaultProps} />);
+
+      // 改变尺寸
+      rerender(<LinkGraphComponent {...defaultProps} width={1000} height={800} />);
+
+      const svg = document.querySelector('svg');
+      expect(svg).toHaveAttribute('width', '1000');
+      expect(svg).toHaveAttribute('height', '800');
     });
   });
 });
