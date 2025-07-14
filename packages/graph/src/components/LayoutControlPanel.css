@@ -1,0 +1,549 @@
+/**
+ * 布局控制面板样式
+ * 提供现代化、直观的布局算法控制界面
+ */
+
+.layout-control-panel {
+  width: 320px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+/* 面板标题 */
+.panel-header {
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.panel-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.panel-stats {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+/* 布局选项 */
+.layout-options {
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.options-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.options-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.suggestion {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #f59e0b;
+  background: #fef3c7;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.suggestion-icon {
+  font-size: 12px;
+}
+
+.options-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.layout-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.layout-option:hover {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.layout-option.selected {
+  border-color: #667eea;
+  background: #f0f4ff;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.layout-option.suggested {
+  border-color: #f59e0b;
+  background: #fef3c7;
+}
+
+.option-icon {
+  font-size: 24px;
+  min-width: 32px;
+  text-align: center;
+}
+
+.option-content {
+  flex: 1;
+}
+
+.option-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 2px;
+}
+
+.option-description {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.option-best-for {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.current-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #10b981;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+/* 配置面板 */
+.basic-config,
+.advanced-config {
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.config-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.config-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.toggle-button {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.toggle-button:hover {
+  background: #f3f4f6;
+}
+
+.config-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.config-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.config-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.config-label.config-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.config-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e7eb;
+  outline: none;
+  cursor: pointer;
+}
+
+.config-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #667eea;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.config-select {
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 12px;
+  background: white;
+  cursor: pointer;
+}
+
+.config-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.config-value {
+  font-size: 11px;
+  color: #6b7280;
+  text-align: right;
+  min-width: 40px;
+}
+
+/* 布局指标 */
+.layout-metrics {
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.metrics-header {
+  margin-bottom: 12px;
+}
+
+.metrics-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.metric-label {
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.metric-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* 操作按钮 */
+.panel-actions {
+  padding: 20px;
+  display: flex;
+  gap: 12px;
+}
+
+.action-button {
+  flex: 1;
+  padding: 10px 16px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.action-button.primary {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.action-button.primary:hover:not(:disabled) {
+  background: #5a67d8;
+  border-color: #5a67d8;
+  transform: translateY(-1px);
+}
+
+.action-button.primary:disabled {
+  background: #9ca3af;
+  border-color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.action-button.secondary {
+  background: white;
+  color: #6b7280;
+  border-color: #e5e7eb;
+}
+
+.action-button.secondary:hover {
+  background: #f8f9fa;
+  color: #374151;
+  border-color: #667eea;
+}
+
+/* 滚动区域 */
+.layout-control-panel {
+  overflow-y: auto;
+}
+
+.layout-control-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.layout-control-panel::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.layout-control-panel::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.layout-control-panel::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .layout-control-panel {
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+  }
+  
+  .options-grid {
+    gap: 6px;
+  }
+  
+  .layout-option {
+    padding: 10px;
+  }
+  
+  .option-icon {
+    font-size: 20px;
+    min-width: 28px;
+  }
+  
+  .metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .panel-actions {
+    flex-direction: column;
+  }
+}
+
+/* 深色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .layout-control-panel {
+    background: #1f2937;
+    color: #f9fafb;
+  }
+  
+  .layout-options,
+  .basic-config,
+  .advanced-config,
+  .layout-metrics {
+    border-bottom-color: #374151;
+  }
+  
+  .layout-option {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+  
+  .layout-option:hover {
+    border-color: #60a5fa;
+    background: #1e3a8a;
+  }
+  
+  .layout-option.selected {
+    border-color: #60a5fa;
+    background: #1e3a8a;
+  }
+  
+  .layout-option.suggested {
+    border-color: #f59e0b;
+    background: #451a03;
+  }
+  
+  .config-select {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+  
+  .config-slider {
+    background: #4b5563;
+  }
+  
+  .config-slider::-webkit-slider-thumb {
+    background: #60a5fa;
+  }
+  
+  .metric-item {
+    background: #374151;
+  }
+  
+  .action-button.secondary {
+    background: #374151;
+    color: #d1d5db;
+    border-color: #4b5563;
+  }
+  
+  .action-button.secondary:hover {
+    background: #4b5563;
+    color: #f9fafb;
+    border-color: #60a5fa;
+  }
+  
+  .toggle-button:hover {
+    background: #4b5563;
+  }
+}
+
+/* 动画效果 */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.config-content {
+  animation: slideIn 0.2s ease-out;
+}
+
+.layout-option {
+  animation: slideIn 0.1s ease-out;
+}
+
+.metric-item {
+  animation: slideIn 0.15s ease-out;
+}
+
+/* 加载状态 */
+.action-button:disabled {
+  position: relative;
+  overflow: hidden;
+}
+
+.action-button:disabled::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* 工具提示 */
+.layout-option[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #374151;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  z-index: 1000;
+  margin-bottom: 4px;
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  .layout-option {
+    border-width: 3px;
+  }
+  
+  .action-button {
+    border-width: 3px;
+  }
+  
+  .config-slider::-webkit-slider-thumb {
+    border: 2px solid #000;
+  }
+}

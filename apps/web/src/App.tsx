@@ -1,5 +1,5 @@
 import React from 'react';
-import { useEditor, EditorContent, EditorProvider } from '@tiptap/react';
+import { useEditor, EditorContent } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
 
 
@@ -50,9 +50,7 @@ const App: React.FC = () => {
         <div className="flex-1 p-4 overflow-y-auto">
           {editor && (
             <ErrorBoundary fallback={<div style={{ color: 'red', fontSize: '24px', padding: '20px' }}>编辑器加载失败，请刷新页面重试</div>}>
-              <EditorProvider editor={editor}>
-                <EditorContent className="min-h-full bg-white p-6 rounded shadow-sm" />
-              </EditorProvider>
+              <EditorContent editor={editor} className="min-h-full bg-white p-6 rounded shadow-sm" />
             </ErrorBoundary>
           )}
         </div>

@@ -164,7 +164,7 @@ export const setupDrag = (
     onDragEnd?: (node: GraphNode, event: MouseEvent) => void
   }
 ) => {
-  const drag = d3.drag()
+  const drag = d3.drag<Element, GraphNode>()
     .on('start', (event: any, d: GraphNode) => {
       if (!event.active) simulation.alphaTarget(0.3).restart()
       d.fx = d.x
@@ -319,3 +319,9 @@ export const findShortestPath = (
   
   return null
 }
+
+// 导出聚类功能
+export * from './clustering'
+
+// 导出分析功能
+export * from './analytics'

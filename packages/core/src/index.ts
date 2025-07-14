@@ -22,5 +22,10 @@ export type { SettingsValidationResult, SettingsSchema } from './settings/Settin
 // 导出核心类
 export { MingLogCore } from './MingLogCore.js'
 
+// 导出跨模块数据关联服务
+export { CrossModuleDataBridge } from './services/CrossModuleDataBridge'
+export { UnifiedSearchService } from './services/UnifiedSearchService'
+export { CrossModuleVisualization } from './components/CrossModuleVisualization'
+
 // 导出工具函数
 export * from './utils/index.js'

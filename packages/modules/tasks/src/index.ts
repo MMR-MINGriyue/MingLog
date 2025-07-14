@@ -88,6 +88,14 @@ export type {
   IImportExportService
 } from './services'
 
+// 重新导出组件
+export { GTDInbox } from './components/GTDInbox'
+export { ProjectManager } from './components/ProjectManager'
+export { TimeTracker } from './components/TimeTracker'
+
+// 重新导出Hooks
+export { useGTDService } from './hooks/useGTDService'
+
 // 模块元数据
 export const TASKS_MODULE_METADATA = {
   id: 'tasks',

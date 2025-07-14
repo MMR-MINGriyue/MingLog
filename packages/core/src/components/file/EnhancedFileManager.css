@@ -1,0 +1,499 @@
+/**
+ * 增强版文件管理组件样式
+ * 响应式设计和移动端适配
+ */
+
+.enhanced-file-manager {
+  --primary-color: #3b82f6;
+  --primary-hover: #2563eb;
+  --secondary-color: #6b7280;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --border-color: #e5e7eb;
+  --background-color: #ffffff;
+  --surface-color: #f9fafb;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --transition: all 0.2s ease-in-out;
+}
+
+/* 基础布局 */
+.enhanced-file-manager {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--background-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+/* 工具栏样式 */
+.enhanced-file-manager .toolbar {
+  background: linear-gradient(135deg, var(--background-color) 0%, var(--surface-color) 100%);
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.enhanced-file-manager .search-input {
+  transition: var(--transition);
+  border: 1px solid var(--border-color);
+  background-color: var(--background-color);
+}
+
+.enhanced-file-manager .search-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+/* 文件网格布局 */
+.enhanced-file-manager .file-grid {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+/* 响应式网格 */
+@media (min-width: 640px) {
+  .enhanced-file-manager .file-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .enhanced-file-manager .file-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .enhanced-file-manager .file-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .enhanced-file-manager .file-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* 文件卡片样式 */
+.enhanced-file-manager .file-card {
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  transition: var(--transition);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.enhanced-file-manager .file-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.enhanced-file-manager .file-card.selected {
+  border-color: var(--primary-color);
+  background-color: rgba(59, 130, 246, 0.05);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.enhanced-file-manager .file-card.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg);
+}
+
+/* 文件图标动画 */
+.enhanced-file-manager .file-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  transition: var(--transition);
+}
+
+.enhanced-file-manager .file-card:hover .file-icon {
+  transform: scale(1.1);
+}
+
+/* 文件名样式 */
+.enhanced-file-manager .file-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  margin-bottom: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.enhanced-file-manager .file-meta {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+/* 批量选择复选框 */
+.enhanced-file-manager .batch-checkbox {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 5;
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.enhanced-file-manager .file-card:hover .batch-checkbox,
+.enhanced-file-manager .file-card.selected .batch-checkbox {
+  opacity: 1;
+}
+
+/* 列表视图样式 */
+.enhanced-file-manager .file-list-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-bottom: 0.5rem;
+  background-color: var(--background-color);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.enhanced-file-manager .file-list-item:hover {
+  background-color: var(--surface-color);
+  border-color: var(--primary-color);
+}
+
+.enhanced-file-manager .file-list-item.selected {
+  background-color: rgba(59, 130, 246, 0.05);
+  border-color: var(--primary-color);
+}
+
+/* 表格视图样式 */
+.enhanced-file-manager .file-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--background-color);
+}
+
+.enhanced-file-manager .file-table th {
+  background-color: var(--surface-color);
+  padding: 0.75rem 1.5rem;
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.enhanced-file-manager .file-table td {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.enhanced-file-manager .file-table tr:hover {
+  background-color: var(--surface-color);
+}
+
+.enhanced-file-manager .file-table tr.selected {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* 文件夹树样式 */
+.enhanced-file-manager .folder-tree {
+  background-color: var(--surface-color);
+  border-right: 1px solid var(--border-color);
+  overflow-y: auto;
+}
+
+.enhanced-file-manager .folder-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.25rem;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.enhanced-file-manager .folder-item:hover {
+  background-color: var(--background-color);
+}
+
+.enhanced-file-manager .folder-item.active {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+/* 面包屑导航 */
+.enhanced-file-manager .breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.enhanced-file-manager .breadcrumb-item {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+.enhanced-file-manager .breadcrumb-item:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+.enhanced-file-manager .breadcrumb-separator {
+  color: var(--text-secondary);
+}
+
+/* 视图切换按钮 */
+.enhanced-file-manager .view-toggle {
+  display: flex;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.enhanced-file-manager .view-toggle-button {
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background-color: var(--background-color);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.enhanced-file-manager .view-toggle-button:hover {
+  background-color: var(--surface-color);
+}
+
+.enhanced-file-manager .view-toggle-button.active {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+/* 批量操作面板 */
+.enhanced-file-manager .batch-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1rem;
+}
+
+.enhanced-file-manager .batch-panel-content {
+  background-color: var(--background-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-width: 32rem;
+  width: 100%;
+  max-height: 80vh;
+  overflow: auto;
+}
+
+/* 加载状态 */
+.enhanced-file-manager .loading-spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 2px solid var(--border-color);
+  border-top: 2px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 空状态 */
+.enhanced-file-manager .empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-secondary);
+}
+
+.enhanced-file-manager .empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+/* 错误提示 */
+.enhanced-file-manager .error-banner {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  margin: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.enhanced-file-manager .error-banner-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #dc2626;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .enhanced-file-manager .toolbar {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .enhanced-file-manager .breadcrumb {
+    order: -1;
+    margin-bottom: 0.5rem;
+  }
+
+  .enhanced-file-manager .search-input {
+    width: 100%;
+  }
+
+  .enhanced-file-manager .view-toggle {
+    width: 100%;
+  }
+
+  .enhanced-file-manager .view-toggle-button {
+    flex: 1;
+    text-align: center;
+  }
+
+  .enhanced-file-manager .folder-tree {
+    display: none;
+  }
+
+  .enhanced-file-manager .file-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .enhanced-file-manager .file-card {
+    padding: 0.75rem;
+  }
+
+  .enhanced-file-manager .file-icon {
+    font-size: 2rem;
+  }
+
+  .enhanced-file-manager .file-name {
+    font-size: 0.8125rem;
+  }
+
+  .enhanced-file-manager .file-meta {
+    font-size: 0.6875rem;
+  }
+
+  .enhanced-file-manager .batch-panel {
+    padding: 0.5rem;
+  }
+
+  .enhanced-file-manager .batch-panel-content {
+    max-height: 90vh;
+  }
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+  .enhanced-file-manager .file-card:hover {
+    transform: none;
+  }
+
+  .enhanced-file-manager .batch-checkbox {
+    opacity: 1;
+  }
+
+  .enhanced-file-manager .file-card {
+    padding: 1rem;
+  }
+
+  .enhanced-file-manager .file-list-item {
+    padding: 1rem 0.75rem;
+  }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  .enhanced-file-manager {
+    --border-color: #000000;
+    --text-secondary: #000000;
+  }
+
+  .enhanced-file-manager .file-card {
+    border-width: 2px;
+  }
+
+  .enhanced-file-manager .file-card.selected {
+    border-width: 3px;
+  }
+}
+
+/* 减少动画模式 */
+@media (prefers-reduced-motion: reduce) {
+  .enhanced-file-manager * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .enhanced-file-manager {
+    --primary-color: #60a5fa;
+    --primary-hover: #3b82f6;
+    --border-color: #374151;
+    --background-color: #1f2937;
+    --surface-color: #111827;
+    --text-primary: #f9fafb;
+    --text-secondary: #9ca3af;
+  }
+
+  .enhanced-file-manager .error-banner {
+    background-color: #7f1d1d;
+    border-color: #dc2626;
+    color: #fecaca;
+  }
+}

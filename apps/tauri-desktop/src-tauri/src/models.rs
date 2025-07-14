@@ -502,6 +502,7 @@ impl Note {
             .unwrap_or_default()
     }
 
+    #[allow(dead_code)]
     pub fn set_tags(&mut self, tags: Vec<String>) {
         self.tags = if tags.is_empty() {
             None

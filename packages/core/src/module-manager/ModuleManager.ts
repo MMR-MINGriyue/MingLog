@@ -1030,14 +1030,13 @@ export class ModuleManager {
    * 停用所有模块
    */
   async deactivateAllModules(): Promise<void> {
-    const activeModules = Array.from(this.modules.keys())
-      .filter(moduleId => {
-        const registration = this.modules.get(moduleId)
-        return registration?.status === ModuleStatus.ACTIVE
-      })
+    // 获取所有激活模块的ID
+    const activeModuleIds = Array.from(this.modules.entries())
+      .filter(([_, reg]) => reg.status === ModuleStatus.ACTIVE)
+      .map(([id, _]) => id)
 
-    // 按依赖关系逆序停用模块
-    const sortedModules = this.sortModulesByDependencies(activeModules).reverse()
+    // 按依赖关系逆序停用模块（依赖者先停用）
+    const sortedModules = this.topologicalSort(activeModuleIds).reverse()
 
     for (const moduleId of sortedModules) {
       try {
@@ -1047,5 +1046,34 @@ export class ModuleManager {
         // 继续停用其他模块，不要因为一个模块失败而停止
       }
     }
+  }
+
+  /**
+   * 拓扑排序模块（按依赖关系排序）
+   */
+  private topologicalSort(moduleIds: string[]): string[] {
+    const visited = new Set<string>()
+    const result: string[] = []
+
+    const visit = (moduleId: string) => {
+      if (visited.has(moduleId)) return
+      visited.add(moduleId)
+
+      // 先访问依赖的模块
+      const dependencies = this.dependencyGraph.get(moduleId) || new Set()
+      for (const depId of dependencies) {
+        if (moduleIds.includes(depId)) {
+          visit(depId)
+        }
+      }
+
+      result.push(moduleId)
+    }
+
+    for (const moduleId of moduleIds) {
+      visit(moduleId)
+    }
+
+    return result
   }
 }

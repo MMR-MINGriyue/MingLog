@@ -75,7 +75,11 @@ const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     }}
   >
     <I18nextProvider i18n={i18n}>
-      {children}
+      <ThemeProvider>
+        <NotificationProvider>
+          {children}
+        </NotificationProvider>
+      </ThemeProvider>
     </I18nextProvider>
   </BrowserRouter>
 )

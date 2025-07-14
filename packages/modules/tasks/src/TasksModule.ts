@@ -487,7 +487,29 @@ export class TasksModule extends BaseModule {
     }
 
     try {
-      // 创建任务表
+      // 创建项目表（必须先创建，因为tasks表有外键引用）
+      await this.coreAPI.database.execute(`
+        CREATE TABLE IF NOT EXISTS projects (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT,
+          status TEXT NOT NULL DEFAULT 'active',
+          color TEXT,
+          start_date TEXT,
+          due_date TEXT,
+          completed_at TEXT,
+          linked_notes TEXT DEFAULT '[]',
+          linked_files TEXT DEFAULT '[]',
+          progress INTEGER DEFAULT 0,
+          total_tasks INTEGER DEFAULT 0,
+          completed_tasks INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          created_by TEXT
+        )
+      `)
+
+      // 创建任务表（在projects表之后创建，因为有外键引用）
       await this.coreAPI.database.execute(`
         CREATE TABLE IF NOT EXISTS tasks (
           id TEXT PRIMARY KEY,
@@ -514,28 +536,6 @@ export class TasksModule extends BaseModule {
         )
       `)
 
-      // 创建项目表
-      await this.coreAPI.database.execute(`
-        CREATE TABLE IF NOT EXISTS projects (
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          description TEXT,
-          status TEXT NOT NULL DEFAULT 'active',
-          color TEXT,
-          start_date TEXT,
-          due_date TEXT,
-          completed_at TEXT,
-          linked_notes TEXT DEFAULT '[]',
-          linked_files TEXT DEFAULT '[]',
-          progress INTEGER DEFAULT 0,
-          total_tasks INTEGER DEFAULT 0,
-          completed_tasks INTEGER DEFAULT 0,
-          created_at TEXT NOT NULL,
-          updated_at TEXT NOT NULL,
-          created_by TEXT
-        )
-      `)
-
       // 创建时间记录表
       await this.coreAPI.database.execute(`
         CREATE TABLE IF NOT EXISTS task_time_entries (
@@ -558,9 +558,42 @@ export class TasksModule extends BaseModule {
       await this.coreAPI.database.execute('CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status)')
 
       console.log('Tasks module database tables created successfully')
+
+      // 验证外键约束是否正确设置
+      await this.verifyForeignKeyConstraints()
     } catch (error) {
       console.error('Failed to create tasks module database tables:', error)
       throw error
+    }
+  }
+
+  /**
+   * 验证外键约束设置
+   */
+  private async verifyForeignKeyConstraints(): Promise<void> {
+    if (!this.coreAPI?.database) {
+      return
+    }
+
+    try {
+      // 检查外键约束是否启用
+      const result = await this.coreAPI.database.query('PRAGMA foreign_keys')
+      console.log('外键约束状态:', result)
+
+      // 验证表结构
+      const projectsSchema = await this.coreAPI.database.query('PRAGMA table_info(projects)')
+      const tasksSchema = await this.coreAPI.database.query('PRAGMA table_info(tasks)')
+
+      console.log('Projects表结构验证完成，字段数:', projectsSchema.length)
+      console.log('Tasks表结构验证完成，字段数:', tasksSchema.length)
+
+      // 验证外键约束
+      const foreignKeys = await this.coreAPI.database.query('PRAGMA foreign_key_list(tasks)')
+      console.log('Tasks表外键约束:', foreignKeys.length, '个')
+
+    } catch (error) {
+      console.warn('外键约束验证失败:', error)
+      // 不抛出错误，因为这只是验证步骤
     }
   }
 

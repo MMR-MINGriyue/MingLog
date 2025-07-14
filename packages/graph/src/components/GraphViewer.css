@@ -1,0 +1,441 @@
+/**
+ * 图谱查看器样式
+ * 提供现代化、直观的图谱可视化界面
+ */
+
+.graph-viewer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 搜索栏 */
+.graph-search {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.search-input {
+  flex: 1;
+  max-width: 300px;
+  padding: 8px 12px;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  transition: border-color 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #007AFF;
+}
+
+.search-input::placeholder {
+  color: #6c757d;
+}
+
+.search-stats {
+  font-size: 12px;
+  color: #6c757d;
+  margin-left: 16px;
+}
+
+/* 图谱画布 */
+.graph-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.graph-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.graph-info {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 8px 12px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 12px;
+  color: #495057;
+  display: flex;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 图谱节点样式 */
+.graph-node {
+  transition: all 0.2s ease;
+}
+
+.graph-node.selected .node-background {
+  filter: drop-shadow(0 0 6px rgba(0, 122, 255, 0.6));
+}
+
+.graph-node.hovered .node-background {
+  filter: drop-shadow(0 0 4px rgba(0, 122, 255, 0.4));
+}
+
+.node-background {
+  transition: all 0.2s ease;
+}
+
+.node-icon {
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+}
+
+.node-label {
+  transition: opacity 0.2s ease;
+}
+
+.node-size-indicator {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+/* 图谱连接线样式 */
+.graph-link {
+  transition: all 0.2s ease;
+}
+
+.graph-link.selected .link-path {
+  filter: drop-shadow(0 0 3px rgba(0, 122, 255, 0.6));
+}
+
+.graph-link.hovered .link-path {
+  filter: drop-shadow(0 0 2px rgba(0, 122, 255, 0.4));
+}
+
+.link-path {
+  transition: all 0.2s ease;
+}
+
+.link-arrow {
+  transition: all 0.2s ease;
+}
+
+.link-label {
+  transition: opacity 0.2s ease;
+}
+
+.link-interaction-area {
+  cursor: pointer;
+}
+
+/* 图例 */
+.graph-legend {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-width: 120px;
+}
+
+.legend-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #6c757d;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* 加载状态 */
+.graph-viewer.loading {
+  background: #f8f9fa;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e9ecef;
+  border-top: 4px solid #007AFF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 14px;
+  color: #6c757d;
+}
+
+/* 错误状态 */
+.graph-viewer.error {
+  background: #f8f9fa;
+}
+
+.error-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.error-text {
+  font-size: 16px;
+  color: #dc3545;
+  margin-bottom: 8px;
+}
+
+.retry-button {
+  padding: 8px 16px;
+  background: #007AFF;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.retry-button:hover {
+  background: #0056b3;
+}
+
+/* 空状态 */
+.graph-viewer.empty {
+  background: #f8f9fa;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  max-width: 300px;
+}
+
+.empty-icon {
+  font-size: 64px;
+  opacity: 0.3;
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.empty-description {
+  font-size: 14px;
+  color: #6c757d;
+  line-height: 1.5;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .graph-search {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+  
+  .search-input {
+    max-width: none;
+  }
+  
+  .search-stats {
+    margin-left: 0;
+    text-align: center;
+  }
+  
+  .graph-legend {
+    bottom: 60px;
+    right: 10px;
+    left: 10px;
+  }
+  
+  .legend-items {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .graph-info {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .graph-viewer {
+    border-radius: 0;
+  }
+  
+  .graph-search {
+    padding: 8px 12px;
+  }
+  
+  .search-input {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  
+  .graph-legend {
+    padding: 8px;
+    font-size: 10px;
+  }
+  
+  .legend-color {
+    width: 10px;
+    height: 10px;
+  }
+}
+
+/* 深色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .graph-viewer {
+    background: #1a1a1a;
+    color: #ffffff;
+  }
+  
+  .graph-search {
+    background: #2d2d2d;
+    border-bottom-color: #404040;
+  }
+  
+  .search-input {
+    background: #3d3d3d;
+    border-color: #555555;
+    color: #ffffff;
+  }
+  
+  .search-input::placeholder {
+    color: #999999;
+  }
+  
+  .search-input:focus {
+    border-color: #007AFF;
+  }
+  
+  .search-stats {
+    color: #999999;
+  }
+  
+  .graph-info {
+    background: rgba(45, 45, 45, 0.95);
+    color: #cccccc;
+  }
+  
+  .graph-legend {
+    background: rgba(45, 45, 45, 0.95);
+    color: #cccccc;
+  }
+  
+  .legend-title {
+    color: #ffffff;
+  }
+  
+  .legend-item {
+    color: #cccccc;
+  }
+  
+  .graph-viewer.loading,
+  .graph-viewer.error,
+  .graph-viewer.empty {
+    background: #2d2d2d;
+  }
+  
+  .loading-text,
+  .empty-description {
+    color: #999999;
+  }
+  
+  .empty-title {
+    color: #ffffff;
+  }
+  
+  .spinner {
+    border-color: #555555;
+    border-top-color: #007AFF;
+  }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  .graph-viewer {
+    border: 2px solid #000000;
+  }
+  
+  .search-input {
+    border-width: 3px;
+  }
+  
+  .graph-info,
+  .graph-legend {
+    border: 1px solid #000000;
+  }
+  
+  .node-background {
+    stroke-width: 3;
+  }
+  
+  .link-path {
+    stroke-width: 3;
+  }
+}

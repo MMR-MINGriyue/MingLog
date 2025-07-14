@@ -4,8 +4,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { MindMapView, createMindMap, themes, layoutConfigs } from '@minglog/mindmap'
+import { createMindMap, themes, layoutConfigs } from '@minglog/mindmap'
 import { useNotes } from '../hooks/useNotes'
+import { IntegratedMindMapCanvas } from '../components/mindmap/IntegratedMindMapCanvas'
+import { ErrorBoundary } from '../components/ui/ErrorBoundary'
 
 export const MindMapPage: React.FC = () => {
   const { graphId, pageId } = useParams<{ graphId: string; pageId: string }>()
@@ -196,22 +198,30 @@ export const MindMapPage: React.FC = () => {
 
       {/* 思维导图主体 */}
       <div className="flex-1 relative">
-        <MindMapView
-          data={mindMapData}
-          width={window.innerWidth}
-          height={window.innerHeight - 80} // 减去顶部工具栏高度
-          layout={layoutConfigs[selectedLayout as keyof typeof layoutConfigs]}
-          enableZoom={true}
-          enableDrag={true}
-          enableEdit={true}
-          showToolbar={true}
-          onNodeClick={handleNodeClick}
-          onNodeEdit={handleNodeEdit}
-          onExport={handleExport}
-          style={{
-            backgroundColor: themes[selectedTheme as keyof typeof themes]?.backgroundColor || '#fafafa'
-          }}
-        />
+        <ErrorBoundary>
+          <IntegratedMindMapCanvas
+            data={mindMapData}
+            width={window.innerWidth}
+            height={window.innerHeight - 80} // 减去顶部工具栏高度
+            layout={layoutConfigs[selectedLayout as keyof typeof layoutConfigs]}
+            enableZoom={true}
+            enableDrag={true}
+            enableEdit={true}
+            onNodeClick={handleNodeClick}
+            onNodeDoubleClick={(node) => {
+              console.log('节点双击:', node)
+              // 可以在这里添加双击编辑逻辑
+            }}
+            onNodeEdit={handleNodeEdit}
+            onBackgroundClick={() => {
+              console.log('背景点击')
+            }}
+            style={{
+              backgroundColor: themes[selectedTheme as keyof typeof themes]?.backgroundColor || '#fafafa'
+            }}
+            className="w-full h-full"
+          />
+        </ErrorBoundary>
       </div>
     </div>
   )

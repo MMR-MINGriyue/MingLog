@@ -74,18 +74,23 @@ export const AdvancedSearchComponent: React.FC<AdvancedSearchComponentProps> = (
       return;
     }
 
+    if (!searchEngine || typeof searchEngine.search !== 'function') {
+      setError('搜索引擎未初始化');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const searchResults = searchEngine.search(searchQuery, {
+      const searchResults = await Promise.resolve(searchEngine.search(searchQuery, {
         ...searchOptions,
         ...options,
         filters
-      });
+      }));
 
       setResults(searchResults);
-      
+
       if (onResults) {
         onResults(searchResults);
       }
@@ -94,7 +99,11 @@ export const AdvancedSearchComponent: React.FC<AdvancedSearchComponentProps> = (
       if (searchQuery && !searchHistory.includes(searchQuery)) {
         const newHistory = [searchQuery, ...searchHistory.slice(0, maxHistoryItems - 1)];
         setSearchHistory(newHistory);
-        localStorage.setItem('minglog-search-history', JSON.stringify(newHistory));
+        try {
+          localStorage.setItem('minglog-search-history', JSON.stringify(newHistory));
+        } catch (err) {
+          console.warn('Failed to save search history:', err);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : '搜索失败');
@@ -106,9 +115,9 @@ export const AdvancedSearchComponent: React.FC<AdvancedSearchComponentProps> = (
   // 处理搜索输入变化
   const handleQueryChange = useCallback((value: string) => {
     setQuery(value);
-    
+
     // 获取搜索建议
-    if (value.trim()) {
+    if (value.trim() && searchEngine && typeof searchEngine.getSuggestions === 'function') {
       const searchSuggestions = searchEngine.getSuggestions(value, 5);
       setSuggestions(searchSuggestions);
       setShowSuggestions(searchSuggestions.length > 0);
@@ -163,18 +172,21 @@ export const AdvancedSearchComponent: React.FC<AdvancedSearchComponentProps> = (
 
   // 加载搜索历史
   useEffect(() => {
-    const savedHistory = localStorage.getItem('minglog-search-history');
-    if (savedHistory) {
-      try {
+    try {
+      const savedHistory = localStorage.getItem('minglog-search-history');
+      if (savedHistory) {
         setSearchHistory(JSON.parse(savedHistory));
-      } catch (err) {
-        console.warn('Failed to load search history:', err);
       }
+    } catch (err) {
+      console.warn('Failed to load search history:', err);
     }
   }, []);
 
   // 搜索统计信息
   const searchStats = useMemo(() => {
+    if (!searchEngine || typeof searchEngine.getStats !== 'function') {
+      return { totalDocuments: 0, totalTerms: 0 };
+    }
     return searchEngine.getStats();
   }, [searchEngine]);
 

@@ -78,7 +78,7 @@ export function useModuleData<T extends IBaseEntity>(
   })
 
   // 防抖定时器
-  const debounceTimer = useRef<NodeJS.Timeout>()
+  const debounceTimer = useRef<number>()
   const mountedRef = useRef(true)
 
   // 清理函数
@@ -223,7 +223,7 @@ export function useModuleData<T extends IBaseEntity>(
       clearTimeout(debounceTimer.current)
     }
 
-    debounceTimer.current = setTimeout(async () => {
+    debounceTimer.current = window.setTimeout(async () => {
       safeSetState(prev => ({ ...prev, loading: true, error: null }))
 
       try {

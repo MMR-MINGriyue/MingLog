@@ -1,0 +1,452 @@
+/**
+ * 思维导图编辑器样式
+ * 提供现代化、响应式的思维导图编辑界面
+ */
+
+.mindmap-editor {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #fafafa;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 思维导图画布样式 */
+.mindmap-canvas {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.mindmap-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #fafafa;
+  cursor: grab;
+}
+
+.mindmap-svg:active {
+  cursor: grabbing;
+}
+
+/* 节点样式 */
+.mindmap-node {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mindmap-node:hover {
+  filter: brightness(1.1);
+  transform: scale(1.05);
+}
+
+.mindmap-node.selected {
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5));
+}
+
+.mindmap-node.dragging {
+  cursor: grabbing;
+  opacity: 0.8;
+}
+
+.node-background {
+  transition: all 0.2s ease;
+}
+
+.node-text {
+  pointer-events: none;
+  user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 连接线样式 */
+.mindmap-link {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.mindmap-link:hover {
+  stroke-width: 3;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.3));
+}
+
+/* 工具栏样式 */
+.mindmap-toolbar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-button {
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.toolbar-button:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #4A90E2;
+  transform: translateY(-1px);
+}
+
+.toolbar-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.toolbar-button.primary {
+  background: #4A90E2;
+  color: white;
+  border-color: #4A90E2;
+}
+
+.toolbar-button.primary:hover:not(:disabled) {
+  background: #357ABD;
+}
+
+.toolbar-button.delete {
+  color: #dc3545;
+  border-color: #dc3545;
+}
+
+.toolbar-button.delete:hover:not(:disabled) {
+  background: #dc3545;
+  color: white;
+}
+
+.toolbar-select {
+  padding: 6px 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.toolbar-label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.toolbar-info {
+  margin-left: auto;
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #666;
+}
+
+/* 下拉菜单样式 */
+.toolbar-dropdown {
+  position: relative;
+}
+
+.dropdown-toggle::after {
+  content: '▼';
+  margin-left: 4px;
+  font-size: 10px;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 20;
+  min-width: 120px;
+  display: none;
+}
+
+.toolbar-dropdown:hover .dropdown-menu {
+  display: block;
+}
+
+.dropdown-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-menu button:hover {
+  background: #f5f5f5;
+}
+
+/* 对话框样式 */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  min-width: 300px;
+  max-width: 500px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.dialog h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.dialog-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  transition: border-color 0.2s ease;
+}
+
+.dialog-input:focus {
+  outline: none;
+  border-color: #4A90E2;
+}
+
+.dialog-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.dialog-button {
+  padding: 8px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.dialog-button.primary {
+  background: #4A90E2;
+  color: white;
+  border-color: #4A90E2;
+}
+
+.dialog-button:hover {
+  background: #f5f5f5;
+}
+
+.dialog-button.primary:hover {
+  background: #357ABD;
+}
+
+/* 小地图样式 */
+.mindmap-minimap {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.minimap-svg {
+  display: block;
+  border-radius: 4px;
+}
+
+/* 状态指示器 */
+.unsaved-indicator {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #ff9800;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 15;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* 加载状态 */
+.mindmap-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 20;
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e0e0e0;
+  border-top: 2px solid #4A90E2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 性能信息 */
+.mindmap-performance {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  z-index: 15;
+  line-height: 1.4;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .mindmap-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .toolbar-group {
+    justify-content: space-between;
+  }
+  
+  .toolbar-info {
+    margin-left: 0;
+    justify-content: space-between;
+  }
+  
+  .mindmap-minimap {
+    bottom: 80px;
+    right: 8px;
+  }
+  
+  .unsaved-indicator {
+    top: 8px;
+    right: 8px;
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}
+
+/* 深色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .mindmap-editor {
+    background: #1a1a1a;
+  }
+  
+  .mindmap-svg {
+    background: #1a1a1a;
+  }
+  
+  .mindmap-toolbar {
+    background: rgba(45, 45, 45, 0.95);
+    color: #e0e0e0;
+  }
+  
+  .toolbar-button {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #404040;
+  }
+  
+  .toolbar-button:hover:not(:disabled) {
+    background: #3a3a3a;
+  }
+  
+  .toolbar-select {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #404040;
+  }
+  
+  .dialog {
+    background: #2d2d2d;
+    color: #e0e0e0;
+  }
+  
+  .dialog-input {
+    background: #1a1a1a;
+    color: #e0e0e0;
+    border-color: #404040;
+  }
+  
+  .dialog-button {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #404040;
+  }
+  
+  .mindmap-minimap {
+    background: rgba(45, 45, 45, 0.95);
+  }
+}

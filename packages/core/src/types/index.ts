@@ -156,6 +156,40 @@ export interface CoreAPI {
     getModuleSettings(moduleId: string): Promise<Record<string, any>>
     setModuleSettings(moduleId: string, settings: Record<string, any>): Promise<void>
   }
+
+  // 跨模块链接服务
+  crossModuleLinks?: {
+    createLink(
+      sourceModule: string,
+      sourceId: string,
+      targetModule: string,
+      targetId: string,
+      linkType: 'reference' | 'embed' | 'mention' | 'dependency',
+      metadata?: Record<string, any>
+    ): Promise<any>
+    getLinksForItem(module: string, itemId: string): Promise<any>
+    deleteLink(linkId: string): Promise<void>
+    deleteLinksForItem(module: string, itemId: string): Promise<void>
+    getLinkStats(): Promise<any>
+  }
+
+  // 跨模块数据同步
+  crossModuleSync?: {
+    syncLinkedData(link: any): Promise<void>
+    syncAllLinkedData(): Promise<void>
+    addSyncRule(rule: any): void
+    removeSyncRule(ruleId: string): void
+    getSyncRules(): any[]
+  }
+
+  // 跨模块引用解析
+  referenceParser?: {
+    parseReferences(text: string, sourceModule?: string, sourceId?: string): Promise<any[]>
+    renderReferencesToHTML(text: string, references: any[]): string
+    clearCache(): void
+    addCustomPattern(pattern: any): void
+    removePattern(name: string): void
+  }
 }
 
 // 工具栏项定义

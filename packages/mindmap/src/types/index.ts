@@ -42,15 +42,20 @@ export interface MindMapLink {
 export interface NodeStyle {
   width?: number
   height?: number
+  minWidth?: number
+  minHeight?: number
   backgroundColor?: string
   borderColor?: string
   borderWidth?: number
   borderRadius?: number
   fontSize?: number
   fontColor?: string
+  textColor?: string
   fontWeight?: 'normal' | 'bold'
   padding?: number
   margin?: number
+  radius?: number
+  shape?: 'rect' | 'circle' | 'ellipse'
 }
 
 // 链接样式
@@ -59,14 +64,23 @@ export interface LinkStyle {
   strokeColor?: string
   strokeDasharray?: string
   opacity?: number
+  color?: string
+  width?: number
 }
 
 // 布局算法类型
 export type LayoutType = 'tree' | 'radial' | 'force' | 'circular' | 'layered'
 
+// 布局算法接口
+export interface LayoutAlgorithm {
+  name: string
+  calculate(data: MindMapData, config: LayoutConfig): MindMapData | Promise<MindMapData>
+}
+
 // 布局配置
 export interface LayoutConfig {
   type: LayoutType
+  direction?: string
   nodeSpacing?: number
   levelSpacing?: number
   centerForce?: number
@@ -97,6 +111,8 @@ export interface ExportConfig {
   quality?: number
   backgroundColor?: string
   includeMetadata?: boolean
+  dpi?: number
+  compress?: boolean
 }
 
 // 思维导图组件属性
@@ -124,12 +140,13 @@ export interface MindMapProps {
   onNodeAdd?: (parentNode: MindMapNode) => void
   onNodeDelete?: (node: MindMapNode) => void
   onNodeMove?: (node: MindMapNode, newPosition: { x: number; y: number }) => void
-  
+  onNodeSelect?: (node: MindMapNode) => void
+
   onLinkClick?: (link: MindMapLink, event: MouseEvent) => void
   onBackgroundClick?: (event: MouseEvent) => void
-  
-  onZoom?: (scale: number) => void
+  onZoom?: (zoomLevel: number) => void
   onExport?: (config: ExportConfig) => void
+  onStyleEdit?: (node: MindMapNode) => void
   
   // 样式
   className?: string
@@ -145,7 +162,7 @@ export interface OutlineToMindMapConverter {
 // 布局算法接口
 export interface LayoutAlgorithm {
   name: string
-  calculate(data: MindMapData, config: LayoutConfig): MindMapData
+  calculate(data: MindMapData, config: LayoutConfig): MindMapData | Promise<MindMapData>
 }
 
 // 导出器接口
