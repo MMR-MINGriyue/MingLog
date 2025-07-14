@@ -11,12 +11,13 @@ interface Page {
 interface PagesState {
   pages: Page[];
   currentPage: Page | null;
+  getCurrentPage: () => Page | null;
   setCurrentPage: (pageId: string) => void;
   addPage: (title: string) => void;
   updatePageContent: (pageId: string, content: string) => void;
 }
 
-export const useZustandStore = create<PagesState>((set) => ({
+export const useZustandStore = create<PagesState>((set, get) => ({
   pages: [
     {
       id: '1',
@@ -34,6 +35,7 @@ export const useZustandStore = create<PagesState>((set) => ({
     }
   ],
   currentPage: null,
+  getCurrentPage: (): Page | null => get().currentPage,
   setCurrentPage: (pageId) => set((state) => ({
     currentPage: state.pages.find(page => page.id === pageId) || null
   })),

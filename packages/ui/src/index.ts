@@ -17,6 +17,10 @@ export * from './components/atoms/ThemeToggle'
 
 // 分子组件
 export * from './components/molecules/SearchBox'
+export * from './components/molecules/BiDirectionalLink'
+export * from './components/molecules/LinkRenderer'
+export * from './components/molecules/LinkAutoComplete'
+export * from './components/molecules/SmartTextInput'
 
 // 有机体组件
 export * from './components/organisms/PerformanceMonitor'

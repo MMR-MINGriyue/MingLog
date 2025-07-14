@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router-dom'
 import React from 'react'
 
 // Mock Tauri API
@@ -46,7 +46,7 @@ import { ModularNavigation } from '../components/ModularNavigation'
 
 // 测试组件包装器
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <BrowserRouter
+  <MemoryRouter
     future={{
       v7_startTransition: true,
       v7_relativeSplatPath: true,
@@ -57,7 +57,7 @@ const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
         {children}
       </CoreWrapper>
     </CoreProvider>
-  </BrowserRouter>
+  </MemoryRouter>
 )
 
 describe('模块化架构测试', () => {
@@ -67,7 +67,7 @@ describe('模块化架构测试', () => {
 
   it('应该能够渲染CoreProvider', async () => {
     render(
-      <BrowserRouter
+      <MemoryRouter
         future={{
           v7_startTransition: true,
           v7_relativeSplatPath: true,
@@ -76,7 +76,7 @@ describe('模块化架构测试', () => {
         <CoreProvider>
           <div data-testid="test-content">测试内容</div>
         </CoreProvider>
-      </BrowserRouter>
+      </MemoryRouter>
     )
 
     await waitFor(() => {

@@ -1,6 +1,19 @@
 /**
- * MingLog 思维导图包主入口
+ * MingLog 思维导图模块主入口
  */
+
+// 模块主类导出
+export { MindMapModule, createMindMapModule, MINDMAP_MODULE_DEFAULT_CONFIG } from './MindMapModule'
+
+// 服务层导出
+export {
+  MindMapService,
+  LayoutService,
+  ExportService,
+  type IMindMapService,
+  type ILayoutService,
+  type IExportService
+} from './services'
 
 // 类型导出
 export type {

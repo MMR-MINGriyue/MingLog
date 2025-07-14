@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router-dom'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '../../i18n'
 import Layout from '../Layout'
@@ -28,13 +28,13 @@ Object.defineProperty(window, 'matchMedia', {
 
 // Test wrapper
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <BrowserRouter>
+  <MemoryRouter>
     <I18nextProvider i18n={i18n}>
       <NotificationProvider>
         {children}
       </NotificationProvider>
     </I18nextProvider>
-  </BrowserRouter>
+  </MemoryRouter>
 )
 
 describe('Layout', () => {

@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router-dom'
 import MindMapPage from '../../pages/MindMapPage'
 import { createMindMap } from '@minglog/mindmap'
 
@@ -202,14 +202,14 @@ vi.mock('react-router-dom', async () => {
 
 // 测试组件包装器
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <BrowserRouter
+  <MemoryRouter
     future={{
       v7_startTransition: true,
       v7_relativeSplatPath: true,
     }}
   >
     {children}
-  </BrowserRouter>
+  </MemoryRouter>
 )
 
 describe('思维导图集成测试', () => {

@@ -7,7 +7,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "明志桌面版",
+    "productName": "MingLog Desktop",
     "version": "1.0.0"
   },
   "tauri": {
@@ -26,8 +26,8 @@
       "externalBin": [],
       "copyright": "Copyright © 2024 MingLog Team. All rights reserved.",
       "category": "Productivity",
-      "shortDescription": "现代化知识管理工具",
-      "longDescription": "明志桌面版是一个现代化、快速、安全的知识管理应用程序，使用 Tauri 和 React 构建。整理您的想法，创建连接，并通过高级搜索、图形可视化和文件操作构建您的个人知识库。",
+      "shortDescription": "Modern Knowledge Management Tool",
+      "longDescription": "MingLog Desktop is a modern, fast, and secure knowledge management application built with Tauri and React. Organize your thoughts, create connections, and build your personal knowledge base with advanced search, graph visualization, and file operations.",
       "deb": {
         "depends": ["libwebkit2gtk-4.0-37", "libgtk-3-0", "libayatana-appindicator3-1"]
       },
@@ -112,7 +112,7 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "明志桌面版",
+        "title": "MingLog Desktop",
         "width": 1200,
         "height": 800,
         "minWidth": 800,

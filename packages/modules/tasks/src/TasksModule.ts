@@ -210,10 +210,10 @@ export class TasksModule extends BaseModule {
     this.tasksService = new TasksService(coreAPI)
     this.projectsService = new ProjectsService(coreAPI)
     this.gtdService = new GTDService(this.tasksService, this.projectsService, coreAPI)
-    this.timeTrackingService = new TimeTrackingService()
-    this.kanbanService = new KanbanService()
-    this.notificationService = new NotificationService()
-    this.importExportService = new ImportExportService()
+    this.timeTrackingService = new TimeTrackingService(coreAPI)
+    this.kanbanService = new KanbanService(coreAPI)
+    this.notificationService = new NotificationService(coreAPI)
+    this.importExportService = new ImportExportService(coreAPI)
 
     // 创建数据库表
     await this.createDatabaseTables()
@@ -543,9 +543,57 @@ export class TasksModule extends BaseModule {
           task_id TEXT NOT NULL,
           start_time TEXT NOT NULL,
           end_time TEXT,
-          duration INTEGER,
+          duration INTEGER DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'active',
           description TEXT,
           created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+        )
+      `)
+
+      // 创建看板表
+      await this.coreAPI.database.execute(`
+        CREATE TABLE IF NOT EXISTS kanban_boards (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          project_id TEXT,
+          settings TEXT DEFAULT '{}',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+        )
+      `)
+
+      // 创建看板列表
+      await this.coreAPI.database.execute(`
+        CREATE TABLE IF NOT EXISTS kanban_columns (
+          id TEXT PRIMARY KEY,
+          board_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          status TEXT NOT NULL,
+          column_order INTEGER DEFAULT 0,
+          color TEXT DEFAULT '#f5f5f5',
+          task_limit INTEGER,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (board_id) REFERENCES kanban_boards(id) ON DELETE CASCADE
+        )
+      `)
+
+      // 创建通知表
+      await this.coreAPI.database.execute(`
+        CREATE TABLE IF NOT EXISTS task_notifications (
+          id TEXT PRIMARY KEY,
+          task_id TEXT,
+          type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          message TEXT,
+          scheduled_time TEXT NOT NULL,
+          is_read INTEGER DEFAULT 0,
+          is_sent INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
           FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
         )
       `)
