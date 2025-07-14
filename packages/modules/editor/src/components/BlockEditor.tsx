@@ -13,6 +13,11 @@ import { RichTextToolbar, type FormatType, type BlockFormatType } from './RichTe
 import { KeyboardShortcuts, createKeyboardShortcuts } from '../utils/KeyboardShortcuts';
 import { CodeEditor } from './CodeEditor';
 import { CodeHighlightService, type SupportedLanguage } from '../services/CodeHighlightService';
+import { CommandSystem } from '../commands/CommandSystem';
+import { BlockNavigation, NavigationDirection, BlockOperation } from '../utils/BlockNavigation';
+import { CommandPalette } from './CommandPalette';
+import { EnhancedBlockMenu } from './EnhancedBlockMenu';
+import type { EventBus } from '@minglog/core';
 
 /**
  * 编辑器模式枚举
@@ -69,6 +74,8 @@ export interface BlockEditorProps {
   enableCodeEditor?: boolean;
   /** 默认代码语言 */
   defaultCodeLanguage?: SupportedLanguage;
+  /** 事件总线实例 */
+  eventBus?: EventBus;
 }
 
 /**
@@ -135,7 +142,8 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   showRichTextToolbar = true,
   enableKeyboardShortcuts = true,
   enableCodeEditor = true,
-  defaultCodeLanguage = 'javascript'
+  defaultCodeLanguage = 'javascript',
+  eventBus
 }) => {
   // 编辑器状态
   const [state, setState] = useState<BlockEditorState>({
@@ -158,6 +166,19 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
 
   // 快捷键管理器引用
   const shortcutsRef = useRef<KeyboardShortcuts | null>(null);
+
+  // 命令系统引用
+  const commandSystemRef = useRef<CommandSystem | null>(null);
+
+  // 块导航系统引用
+  const blockNavigationRef = useRef<BlockNavigation | null>(null);
+
+  // 命令面板状态
+  const [commandPaletteVisible, setCommandPaletteVisible] = useState(false);
+
+  // 增强块菜单状态
+  const [enhancedBlockMenuVisible, setEnhancedBlockMenuVisible] = useState(false);
+  const [blockMenuPosition, setBlockMenuPosition] = useState<{ x: number; y: number } | null>(null);
 
   // 代码高亮服务引用
   const codeHighlightService = useMemo(() => new CodeHighlightService(), []);
@@ -356,6 +377,25 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   }, [enableMarkdown, markdownParser, state.value, onError]);
 
   /**
+   * 初始化命令系统和块导航
+   */
+  useEffect(() => {
+    if (!enableKeyboardShortcuts || !eventBus) return;
+
+    // 初始化命令系统
+    commandSystemRef.current = new CommandSystem(eventBus);
+
+    // 初始化块导航系统（需要Slate编辑器实例）
+    // blockNavigationRef.current = new BlockNavigation(editor);
+
+    return () => {
+      commandSystemRef.current = null;
+      blockNavigationRef.current?.destroy();
+      blockNavigationRef.current = null;
+    };
+  }, [enableKeyboardShortcuts, eventBus]);
+
+  /**
    * 初始化快捷键
    */
   useEffect(() => {
@@ -373,6 +413,63 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       onRedo: () => {
         // 这里将集成到Slate.js的重做逻辑
         console.log('重做操作');
+      },
+      onCommandPalette: () => {
+        setCommandPaletteVisible(true);
+      },
+      onSelectBlock: () => {
+        // 选择当前块
+        console.log('选择当前块');
+      },
+      onNavigateBlock: (direction) => {
+        if (blockNavigationRef.current) {
+          const navDirection = direction === 'up' ? NavigationDirection.UP :
+                              direction === 'down' ? NavigationDirection.DOWN :
+                              direction === 'first' ? NavigationDirection.FIRST :
+                              NavigationDirection.LAST;
+          blockNavigationRef.current.navigateToBlock(navDirection);
+        }
+      },
+      onIndent: () => {
+        if (blockNavigationRef.current) {
+          blockNavigationRef.current.executeBlockOperation(BlockOperation.INDENT);
+        }
+      },
+      onOutdent: () => {
+        if (blockNavigationRef.current) {
+          blockNavigationRef.current.executeBlockOperation(BlockOperation.OUTDENT);
+        }
+      },
+      onCopyBlock: () => {
+        if (blockNavigationRef.current) {
+          blockNavigationRef.current.executeBlockOperation(BlockOperation.COPY);
+        }
+      },
+      onCutBlock: () => {
+        if (blockNavigationRef.current) {
+          blockNavigationRef.current.executeBlockOperation(BlockOperation.CUT);
+        }
+      },
+      onPasteBlock: () => {
+        if (blockNavigationRef.current) {
+          blockNavigationRef.current.pasteBlocks();
+        }
+      },
+      onDeleteBlock: () => {
+        if (blockNavigationRef.current) {
+          blockNavigationRef.current.executeBlockOperation(BlockOperation.DELETE);
+        }
+      },
+      onDuplicateBlock: () => {
+        if (blockNavigationRef.current) {
+          blockNavigationRef.current.executeBlockOperation(BlockOperation.DUPLICATE);
+        }
+      },
+      onMoveBlock: (direction) => {
+        if (blockNavigationRef.current) {
+          const operation = direction === 'up' ? BlockOperation.MOVE_UP : BlockOperation.MOVE_DOWN;
+          blockNavigationRef.current.executeBlockOperation(operation);
+        }
       }
     });
 
@@ -385,13 +482,40 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
    * 处理键盘事件
    */
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
+    // 处理斜杠命令
+    if (event.key === '/' && !enhancedBlockMenuVisible) {
+      event.preventDefault();
+
+      // 获取当前光标位置
+      const rect = event.currentTarget.getBoundingClientRect();
+      setBlockMenuPosition({
+        x: rect.left + 20,
+        y: rect.top + 40
+      });
+      setEnhancedBlockMenuVisible(true);
+      return;
+    }
+
+    // 处理Escape键
+    if (event.key === 'Escape') {
+      if (enhancedBlockMenuVisible) {
+        setEnhancedBlockMenuVisible(false);
+        return;
+      }
+      if (commandPaletteVisible) {
+        setCommandPaletteVisible(false);
+        return;
+      }
+    }
+
+    // 处理快捷键
     if (enableKeyboardShortcuts && shortcutsRef.current) {
       const handled = shortcutsRef.current.handleKeyDown(event.nativeEvent);
       if (handled) {
         return;
       }
     }
-  }, [enableKeyboardShortcuts]);
+  }, [enableKeyboardShortcuts, enhancedBlockMenuVisible, commandPaletteVisible]);
 
   /**
    * 处理内容变更
@@ -418,6 +542,27 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       }));
     }
   }, [onChange, editorId]);
+
+  /**
+   * 处理命令选择
+   */
+  const handleCommandSelect = useCallback(async (commandId: string) => {
+    if (!commandSystemRef.current) return;
+
+    try {
+      const context = {
+        editor: null, // TODO: 传入Slate编辑器实例
+        selection: null,
+        query: '',
+        data: { editorId }
+      };
+
+      await commandSystemRef.current.executeCommand(commandId, context);
+    } catch (error) {
+      console.error('执行命令失败:', error);
+      onError?.(error instanceof Error ? error : new Error('命令执行失败'));
+    }
+  }, [editorId, onError]);
 
   /**
    * 保存内容
@@ -772,6 +917,31 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           块数: {state.value.length}
         </span>
       </div>
+
+      {/* 全局命令面板 */}
+      {commandSystemRef.current && (
+        <CommandPalette
+          visible={commandPaletteVisible}
+          onClose={() => setCommandPaletteVisible(false)}
+          commandSystem={commandSystemRef.current}
+          editorContext={{
+            editor: null, // TODO: 传入Slate编辑器实例
+            selection: null,
+            data: { editorId }
+          }}
+        />
+      )}
+
+      {/* 增强块菜单 */}
+      {commandSystemRef.current && enhancedBlockMenuVisible && blockMenuPosition && (
+        <EnhancedBlockMenu
+          position={blockMenuPosition}
+          onSelect={handleCommandSelect}
+          onClose={() => setEnhancedBlockMenuVisible(false)}
+          commandSystem={commandSystemRef.current}
+          allowedBlocks={supportedBlockTypes}
+        />
+      )}
     </div>
   );
 };

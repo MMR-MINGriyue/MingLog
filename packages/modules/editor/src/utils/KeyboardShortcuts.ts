@@ -45,6 +45,30 @@ export interface ShortcutHandlers {
   onFind?: () => void;
   /** 替换 */
   onReplace?: () => void;
+  /** 全局命令面板 */
+  onCommandPalette?: () => void;
+  /** 块选择 */
+  onSelectBlock?: () => void;
+  /** 块导航 */
+  onNavigateBlock?: (direction: 'up' | 'down' | 'first' | 'last') => void;
+  /** 块操作 */
+  onBlockOperation?: (operation: string, options?: any) => void;
+  /** 缩进 */
+  onIndent?: () => void;
+  /** 取消缩进 */
+  onOutdent?: () => void;
+  /** 复制块 */
+  onCopyBlock?: () => void;
+  /** 剪切块 */
+  onCutBlock?: () => void;
+  /** 粘贴块 */
+  onPasteBlock?: () => void;
+  /** 删除块 */
+  onDeleteBlock?: () => void;
+  /** 复制块 */
+  onDuplicateBlock?: () => void;
+  /** 移动块 */
+  onMoveBlock?: (direction: 'up' | 'down') => void;
 }
 
 /**
@@ -223,6 +247,149 @@ export class KeyboardShortcuts {
         ctrl: true,
         description: '替换',
         handler: handlers.onReplace
+      });
+    }
+
+    // 全局命令面板快捷键
+    if (handlers.onCommandPalette) {
+      this.register({
+        key: 'p',
+        ctrl: true,
+        description: '命令面板',
+        handler: handlers.onCommandPalette
+      });
+
+      this.register({
+        key: 'k',
+        ctrl: true,
+        shift: true,
+        description: '命令面板',
+        handler: handlers.onCommandPalette
+      });
+    }
+
+    // 块选择和导航快捷键
+    if (handlers.onSelectBlock) {
+      this.register({
+        key: 'Escape',
+        description: '选择当前块',
+        handler: handlers.onSelectBlock
+      });
+    }
+
+    if (handlers.onNavigateBlock) {
+      this.register({
+        key: 'ArrowUp',
+        alt: true,
+        description: '导航到上一个块',
+        handler: () => handlers.onNavigateBlock!('up')
+      });
+
+      this.register({
+        key: 'ArrowDown',
+        alt: true,
+        description: '导航到下一个块',
+        handler: () => handlers.onNavigateBlock!('down')
+      });
+
+      this.register({
+        key: 'Home',
+        ctrl: true,
+        description: '导航到第一个块',
+        handler: () => handlers.onNavigateBlock!('first')
+      });
+
+      this.register({
+        key: 'End',
+        ctrl: true,
+        description: '导航到最后一个块',
+        handler: () => handlers.onNavigateBlock!('last')
+      });
+    }
+
+    // 缩进操作快捷键
+    if (handlers.onIndent) {
+      this.register({
+        key: 'Tab',
+        description: '增加缩进',
+        handler: handlers.onIndent
+      });
+    }
+
+    if (handlers.onOutdent) {
+      this.register({
+        key: 'Tab',
+        shift: true,
+        description: '减少缩进',
+        handler: handlers.onOutdent
+      });
+    }
+
+    // 块操作快捷键
+    if (handlers.onCopyBlock) {
+      this.register({
+        key: 'd',
+        ctrl: true,
+        description: '复制块',
+        handler: handlers.onCopyBlock
+      });
+    }
+
+    if (handlers.onCutBlock) {
+      this.register({
+        key: 'x',
+        ctrl: true,
+        shift: true,
+        description: '剪切块',
+        handler: handlers.onCutBlock
+      });
+    }
+
+    if (handlers.onPasteBlock) {
+      this.register({
+        key: 'v',
+        ctrl: true,
+        shift: true,
+        description: '粘贴块',
+        handler: handlers.onPasteBlock
+      });
+    }
+
+    if (handlers.onDeleteBlock) {
+      this.register({
+        key: 'Delete',
+        ctrl: true,
+        shift: true,
+        description: '删除块',
+        handler: handlers.onDeleteBlock
+      });
+    }
+
+    if (handlers.onDuplicateBlock) {
+      this.register({
+        key: 'd',
+        ctrl: true,
+        shift: true,
+        description: '复制块',
+        handler: handlers.onDuplicateBlock
+      });
+    }
+
+    if (handlers.onMoveBlock) {
+      this.register({
+        key: 'ArrowUp',
+        ctrl: true,
+        shift: true,
+        description: '向上移动块',
+        handler: () => handlers.onMoveBlock!('up')
+      });
+
+      this.register({
+        key: 'ArrowDown',
+        ctrl: true,
+        shift: true,
+        description: '向下移动块',
+        handler: () => handlers.onMoveBlock!('down')
       });
     }
   }
