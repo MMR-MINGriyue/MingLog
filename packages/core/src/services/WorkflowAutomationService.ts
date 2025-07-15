@@ -45,6 +45,7 @@ export enum ConditionOperator {
 
 // 工作流状态
 export enum WorkflowStatus {
+  DRAFT = 'draft',
   ACTIVE = 'active',
   INACTIVE = 'inactive',
   PAUSED = 'paused',
@@ -332,8 +333,8 @@ export class WorkflowAutomationService extends EventEmitter {
         createdAt: new Date(),
         updatedAt: new Date(),
         createdBy: 'system', // 实际中应该是当前用户
-        tags: definition.metadata?.tags || [],
-        category: definition.metadata?.category || 'general'
+        tags: (definition as any).metadata?.tags || [],
+        category: (definition as any).metadata?.category || 'general'
       }
     }
 
@@ -408,6 +409,13 @@ export class WorkflowAutomationService extends EventEmitter {
   /**
    * 获取所有工作流
    */
+  getWorkflows(): WorkflowDefinition[] {
+    return Array.from(this.workflows.values())
+  }
+
+  /**
+   * 获取所有工作流
+   */
   getAllWorkflows(): WorkflowDefinition[] {
     return Array.from(this.workflows.values())
   }
@@ -451,6 +459,14 @@ export class WorkflowAutomationService extends EventEmitter {
    */
   getExecution(executionId: string): WorkflowExecution | null {
     return this.executions.get(executionId) || null
+  }
+
+  /**
+   * 获取执行记录列表
+   */
+  getExecutions(limit?: number): WorkflowExecution[] {
+    const executions = Array.from(this.executions.values())
+    return limit ? executions.slice(0, limit) : executions
   }
 
   /**
@@ -568,7 +584,7 @@ export class WorkflowAutomationService extends EventEmitter {
   /**
    * 启动工作流
    */
-  private async startWorkflow(workflowId: string): Promise<void> {
+  public async startWorkflow(workflowId: string): Promise<void> {
     const workflow = this.workflows.get(workflowId)
     if (!workflow) return
 
@@ -595,7 +611,7 @@ export class WorkflowAutomationService extends EventEmitter {
   /**
    * 停止工作流
    */
-  private async stopWorkflow(workflowId: string): Promise<void> {
+  public async stopWorkflow(workflowId: string): Promise<void> {
     // 清理相关的定时器
     const timersToRemove: string[] = []
     for (const [key, timer] of this.activeTimers) {

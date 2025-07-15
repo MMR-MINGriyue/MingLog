@@ -5,7 +5,7 @@ import { I18nextProvider } from 'react-i18next'
 import i18n from '../i18n'
 import SearchComponent from '../components/SearchComponent'
 import LanguageSwitcher from '../components/LanguageSwitcher'
-import Layout from '../components/Layout'
+import { Layout } from '../components/Layout'
 import { NotificationProvider } from '../components/NotificationSystem'
 
 // Mock Tauri API

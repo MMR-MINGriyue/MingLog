@@ -108,12 +108,12 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     const simulation = d3.forceSimulation<GraphNode>(data.nodes)
       .force('link', d3.forceLink<GraphNode, GraphLink>(data.links)
         .id(d => d.id)
-        .distance(finalConfig.linkDistance)
-        .strength(finalConfig.linkStrength)
+        .distance(finalConfig.linkDistance || 50)
+        .strength(finalConfig.linkStrength || 0.1)
       )
-      .force('charge', d3.forceManyBody().strength(finalConfig.chargeStrength))
-      .force('center', d3.forceCenter(width / 2, height / 2).strength(finalConfig.centerForce))
-      .force('collision', d3.forceCollide().radius(finalConfig.collisionRadius))
+      .force('charge', d3.forceManyBody().strength(finalConfig.chargeStrength || -300))
+      .force('center', d3.forceCenter(width / 2, height / 2).strength(finalConfig.centerForce || 0.1))
+      .force('collision', d3.forceCollide().radius(finalConfig.collisionRadius || 12))
 
     simulationRef.current = simulation
     return simulation
@@ -133,7 +133,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     svg.append('rect')
       .attr('width', width)
       .attr('height', height)
-      .attr('fill', finalConfig.backgroundColor)
+      .attr('fill', finalConfig.backgroundColor || '#ffffff')
       .on('click', () => {
         setGraphState(prev => ({ ...prev, selectedNodes: new Set() }))
         onBackgroundClick?.()

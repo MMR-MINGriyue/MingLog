@@ -4,6 +4,31 @@
  */
 
 import { DataAssociationService, EntityType, UnifiedSearchResult } from './DataAssociationService'
+
+// 重新导出UnifiedSearchResult以便其他模块使用
+export type { UnifiedSearchResult } from './DataAssociationService'
+
+// 搜索查询接口
+export interface SearchQuery {
+  query: string
+  options?: AdvancedSearchOptions
+}
+
+// 搜索响应接口
+export interface SearchResponse {
+  results: UnifiedSearchResult[]
+  total: number
+  searchTime: number
+  suggestions?: string[]
+  facets?: Record<string, any>
+  pagination?: {
+    page: number
+    pageSize: number
+    totalPages: number
+    hasNext: boolean
+    hasPrev: boolean
+  }
+}
 import { CrossModuleEventBus, EventType } from './CrossModuleEventBus'
 
 // 搜索提供者接口
@@ -30,13 +55,20 @@ export interface AdvancedSearchOptions extends SearchProviderOptions {
   entityTypes?: EntityType[]
   moduleIds?: string[]
   includeAssociations?: boolean
-  sortBy?: 'relevance' | 'date' | 'title'
+  sortBy?: 'relevance' | 'date' | 'title' | 'type'
   sortOrder?: 'asc' | 'desc'
   dateRange?: {
     from?: Date
     to?: Date
+    start?: Date  // 兼容性别名
+    end?: Date    // 兼容性别名
   }
   associationDepth?: number
+  minScore?: number
+  pagination?: {
+    page: number
+    pageSize: number
+  }
 }
 
 // 搜索结果聚合
@@ -63,6 +95,14 @@ export interface SearchIndexItem {
   lastUpdated: Date
 }
 
+// 搜索过滤器
+export interface SearchFilter {
+  field: string
+  operator: 'equals' | 'contains' | 'startsWith' | 'endsWith' | 'gt' | 'gte' | 'lt' | 'lte'
+  value: any
+  type?: 'string' | 'number' | 'date' | 'boolean'
+}
+
 /**
  * 统一搜索服务实现
  */
@@ -74,8 +114,8 @@ export class UnifiedSearchService {
   private maxHistorySize: number = 100
 
   constructor(
-    private dataAssociationService: DataAssociationService,
-    private eventBus: CrossModuleEventBus
+    protected dataAssociationService: DataAssociationService,
+    protected eventBus: CrossModuleEventBus
   ) {
     this.setupEventListeners()
   }
@@ -437,7 +477,7 @@ export class UnifiedSearchService {
     }
   }
 
-  private sortResults(
+  protected sortResults(
     results: UnifiedSearchResult[],
     options?: AdvancedSearchOptions
   ): UnifiedSearchResult[] {
@@ -465,7 +505,7 @@ export class UnifiedSearchService {
     })
   }
 
-  private paginateResults(
+  protected paginateResults(
     results: UnifiedSearchResult[],
     options?: AdvancedSearchOptions
   ): UnifiedSearchResult[] {
@@ -475,7 +515,7 @@ export class UnifiedSearchService {
     return results.slice(offset, offset + limit)
   }
 
-  private aggregateByType(results: UnifiedSearchResult[]): Record<EntityType, number> {
+  protected aggregateByType(results: UnifiedSearchResult[]): Record<EntityType, number> {
     const aggregation: Record<EntityType, number> = {} as any
     
     Object.values(EntityType).forEach(type => {
@@ -489,7 +529,7 @@ export class UnifiedSearchService {
     return aggregation
   }
 
-  private aggregateByModule(results: UnifiedSearchResult[]): Record<string, number> {
+  protected aggregateByModule(results: UnifiedSearchResult[]): Record<string, number> {
     const aggregation: Record<string, number> = {}
     
     results.forEach(result => {
@@ -514,7 +554,7 @@ export class UnifiedSearchService {
     return this.getSearchSuggestions(query, 5)
   }
 
-  private getRelatedQueries(query: string): string[] {
+  protected getRelatedQueries(query: string): string[] {
     // 简单的相关查询实现
     const keywords = this.extractKeywords(query)
     const related = new Set<string>()
@@ -594,6 +634,135 @@ export class UnifiedSearchService {
       suggestions: searchResults[0]?.suggestions,
       relatedQueries: searchResults[0]?.relatedQueries
     }
+  }
+
+  /**
+   * 语义搜索
+   */
+  async semanticSearch(query: string, options?: AdvancedSearchOptions): Promise<UnifiedSearchResult[]> {
+    // 语义搜索实现
+    const basicResults = await this.search(query, options)
+
+    // 对结果进行语义相关性重新排序
+    const semanticResults = basicResults.results.map(result => ({
+      ...result,
+      score: this.calculateSemanticScore(result, query)
+    }))
+
+    return semanticResults.sort((a, b) => b.score - a.score)
+  }
+
+  /**
+   * AI增强搜索
+   */
+  async aiEnhancedSearch(query: string, options?: AdvancedSearchOptions): Promise<UnifiedSearchResult[]> {
+    // AI增强搜索实现
+    const enhancedQuery = await this.enhanceQueryWithAI(query)
+    const basicResults = await this.search(enhancedQuery, options)
+    const aiResults = await this.reRankResultsWithAI(basicResults.results, query)
+
+    return aiResults
+  }
+
+  /**
+   * 计算语义相关性分数
+   */
+  private calculateSemanticScore(result: UnifiedSearchResult, query: string): number {
+    const titleSimilarity = this.calculateTextSimilarity(result.title, query)
+    const contentSimilarity = result.content ? this.calculateTextSimilarity(result.content, query) : 0
+
+    return (titleSimilarity * 0.7 + contentSimilarity * 0.3) * result.score
+  }
+
+  /**
+   * 使用AI增强查询
+   */
+  private async enhanceQueryWithAI(query: string): Promise<string> {
+    // 简单的查询扩展
+    const synonyms = await this.getSynonyms(query)
+    return [query, ...synonyms].join(' ')
+  }
+
+  /**
+   * 使用AI重新排序结果
+   */
+  private async reRankResultsWithAI(results: UnifiedSearchResult[], query: string): Promise<UnifiedSearchResult[]> {
+    return results.map(result => ({
+      ...result,
+      score: this.calculateAIScore(result, query)
+    })).sort((a, b) => b.score - a.score)
+  }
+
+  /**
+   * 计算AI增强分数
+   */
+  private calculateAIScore(result: UnifiedSearchResult, query: string): number {
+    let score = result.score
+    score *= this.getUserPreferenceMultiplier(result)
+    score *= this.getFreshnessMultiplier(result)
+    score *= this.getQualityMultiplier(result)
+    return Math.min(score, 1.0)
+  }
+
+  /**
+   * 获取同义词
+   */
+  private async getSynonyms(word: string): Promise<string[]> {
+    // 同义词获取逻辑
+    return []
+  }
+
+  /**
+   * 计算文本相似度
+   */
+  private calculateTextSimilarity(text1: string, text2: string): number {
+    const words1 = text1.toLowerCase().split(/\s+/)
+    const words2 = text2.toLowerCase().split(/\s+/)
+
+    const intersection = words1.filter(word => words2.includes(word))
+    const union = [...new Set([...words1, ...words2])]
+
+    return intersection.length / union.length
+  }
+
+  /**
+   * 获取用户偏好乘数
+   */
+  private getUserPreferenceMultiplier(result: UnifiedSearchResult): number {
+    return 1.0
+  }
+
+  /**
+   * 获取新鲜度乘数
+   */
+  private getFreshnessMultiplier(result: UnifiedSearchResult): number {
+    if (!result.updatedAt) return 1.0
+
+    const now = new Date()
+    const updated = new Date(result.updatedAt)
+    const daysDiff = (now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24)
+
+    return Math.max(0.5, 1.0 - daysDiff / 365)
+  }
+
+  /**
+   * 获取质量乘数
+   */
+  private getQualityMultiplier(result: UnifiedSearchResult): number {
+    let quality = 1.0
+
+    if (result.content) {
+      const contentLength = result.content.length
+      if (contentLength > 100 && contentLength < 10000) {
+        quality *= 1.1
+      }
+    }
+
+    if (result.associations && result.associations.length > 0) {
+      quality *= 1.0 + (result.associations.length * 0.1)
+    }
+
+    return Math.min(quality, 2.0)
   }
 }
 

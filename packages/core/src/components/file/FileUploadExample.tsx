@@ -5,7 +5,29 @@
 
 import React, { useState, useCallback } from 'react'
 import { FileUploadComponent, FileUploadItem, FileUploadConfig } from './FileUploadComponent'
-import { Button } from '../atoms/Button/Button'
+// import { Button } from '../atoms/Button/Button' // 模块不存在，暂时注释
+
+// 临时Button组件
+const Button = ({
+  children,
+  onClick,
+  className = '',
+  disabled = false
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  className?: string;
+  disabled?: boolean
+}) => (
+  <button
+    onClick={onClick}
+    className={`button ${className}`}
+    disabled={disabled}
+    type="button"
+  >
+    {children}
+  </button>
+)
 
 export const FileUploadExample: React.FC = () => {
   const [uploadedFiles, setUploadedFiles] = useState<FileUploadItem[]>([])

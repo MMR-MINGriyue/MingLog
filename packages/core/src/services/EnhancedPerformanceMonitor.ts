@@ -478,10 +478,10 @@ export class EnhancedPerformanceMonitor {
         entries.forEach(entry => {
           if (entry.entryType === 'navigation') {
             const navEntry = entry as PerformanceNavigationTiming
-            this.recordMetric('page-load-time', navEntry.loadEventEnd - navEntry.navigationStart, 'ms', {
+            this.recordMetric('page-load-time', navEntry.loadEventEnd - navEntry.startTime, 'ms', {
               type: 'navigation'
             })
-            this.recordMetric('dom-content-loaded', navEntry.domContentLoadedEventEnd - navEntry.navigationStart, 'ms', {
+            this.recordMetric('dom-content-loaded', navEntry.domContentLoadedEventEnd - navEntry.startTime, 'ms', {
               type: 'navigation'
             })
           }

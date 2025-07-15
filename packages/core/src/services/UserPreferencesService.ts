@@ -261,8 +261,8 @@ export class UserPreferencesService extends EventEmitter {
    * 设置用户偏好
    */
   async setPreference<T>(key: keyof UserPreferences, value: T): Promise<void> {
-    const oldValue = this.preferences[key]
-    this.preferences[key] = value as any
+    const oldValue = (this.preferences as any)[key]
+    (this.preferences as any)[key] = value
     this.preferences.lastUpdated = new Date()
 
     await this.savePreferences()
@@ -288,8 +288,8 @@ export class UserPreferencesService extends EventEmitter {
     const changes: Array<{ key: string, oldValue: any, newValue: any }> = []
 
     for (const [key, value] of Object.entries(updates)) {
-      const oldValue = this.preferences[key as keyof UserPreferences]
-      this.preferences[key as keyof UserPreferences] = value as any
+      const oldValue = (this.preferences as any)[key]
+      (this.preferences as any)[key] = value
       changes.push({ key, oldValue, newValue: value })
     }
 
@@ -327,9 +327,9 @@ export class UserPreferencesService extends EventEmitter {
    */
   async resetPreference(key: keyof UserPreferences): Promise<void> {
     const oldValue = this.preferences[key]
-    const newValue = this.defaultPreferences[key]
-
-    this.preferences[key] = newValue
+    // 获取默认值并设置
+    const defaultVal = (this.defaultPreferences as any)[key];
+    (this.preferences as any)[key] = defaultVal
     this.preferences.lastUpdated = new Date()
 
     await this.savePreferences()
@@ -337,7 +337,7 @@ export class UserPreferencesService extends EventEmitter {
     this.emit('preference:reset', {
       key,
       oldValue,
-      newValue
+      newValue: defaultVal
     })
   }
 
@@ -650,17 +650,17 @@ export class UserPreferencesService extends EventEmitter {
 
     // 验证主题设置
     if (preferences.theme) {
-      validated.theme = this.validateThemeConfig(preferences.theme)
+      validated.theme = this.validateThemeConfig(preferences.theme) as ThemeConfig
     }
 
     // 验证布局设置
     if (preferences.layout) {
-      validated.layout = this.validateLayoutConfig(preferences.layout)
+      validated.layout = this.validateLayoutConfig(preferences.layout) as LayoutConfig
     }
 
     // 验证编辑器设置
     if (preferences.editor) {
-      validated.editor = this.validateEditorConfig(preferences.editor)
+      validated.editor = this.validateEditorConfig(preferences.editor) as EditorConfig
     }
 
     // 验证快捷键设置

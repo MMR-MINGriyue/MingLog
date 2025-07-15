@@ -1,4 +1,4 @@
-import { Link, CreateLinkRequest } from '../types/links'
+import { Link, CreateLinkRequest, SourceType } from '../types/links'
 
 export interface ILinkService {
   createLink(request: CreateLinkRequest): Promise<Link>
@@ -223,7 +223,7 @@ export class LinkService implements ILinkService {
    * 批量创建链接（用于解析文档中的所有链接）
    */
   async createLinksFromContent(
-    sourceType: string,
+    sourceType: SourceType,
     sourceId: string,
     content: string
   ): Promise<Link[]> {

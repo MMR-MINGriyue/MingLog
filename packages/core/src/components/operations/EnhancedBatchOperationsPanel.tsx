@@ -6,6 +6,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { cn } from '../../utils'
 import { BatchOperationService, BatchOperationResult, BatchOperationStatus } from '../../services/BatchOperationService'
+import { EntityType } from '../../services/DataAssociationService'
 
 // 增强的批量操作项目
 export interface EnhancedBatchItem {
@@ -282,8 +283,10 @@ export const EnhancedBatchOperationsPanel: React.FC<EnhancedBatchOperationsPanel
       const preview = await batchOperationService.previewOperation(
         selectedItemsData.map(item => ({
           id: item.id,
-          entityType: item.entityType,
+          entityType: item.entityType as any, // 临时类型转换
+          entityId: item.id,
           title: item.title,
+          selected: true,
           metadata: item.metadata || {}
         })),
         {
@@ -291,7 +294,7 @@ export const EnhancedBatchOperationsPanel: React.FC<EnhancedBatchOperationsPanel
           name: currentOperation.name,
           description: currentOperation.description,
           type: currentOperation.id as any,
-          entityTypes: [selectedItemsData[0]?.entityType || ''],
+          entityTypes: [selectedItemsData[0]?.entityType as EntityType || EntityType.FILE],
           params: operationParams,
           options: {
             batchSize: currentOperation.batchSize,
@@ -353,8 +356,10 @@ export const EnhancedBatchOperationsPanel: React.FC<EnhancedBatchOperationsPanel
       const operationId = await batchOperationService.executeOperation(
         selectedItemsData.map(item => ({
           id: item.id,
-          entityType: item.entityType,
+          entityType: item.entityType as any, // 临时类型转换
+          entityId: item.id,
           title: item.title,
+          selected: true,
           metadata: item.metadata || {}
         })),
         {
@@ -362,7 +367,7 @@ export const EnhancedBatchOperationsPanel: React.FC<EnhancedBatchOperationsPanel
           name: currentOperation.name,
           description: currentOperation.description,
           type: currentOperation.id as any,
-          entityTypes: [selectedItemsData[0]?.entityType || ''],
+          entityTypes: [selectedItemsData[0]?.entityType as EntityType || EntityType.FILE],
           params: operationParams,
           options: {
             batchSize: currentOperation.batchSize || 10,
@@ -456,7 +461,7 @@ export const EnhancedBatchOperationsPanel: React.FC<EnhancedBatchOperationsPanel
               setErrors(result.errors.map(err => ({ id: err.itemId, message: err.error })))
             }
             if (result.warnings.length > 0) {
-              setWarnings(result.warnings.map(warn => ({ id: warn.itemId, message: warn.message })))
+              setWarnings(result.warnings.map(warn => ({ id: warn.itemId, message: warn.warning })))
             }
           }
         }

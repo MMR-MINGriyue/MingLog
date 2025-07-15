@@ -46,12 +46,18 @@ export interface AssociationRecord {
 export interface UnifiedSearchResult {
   id: string
   type: EntityType
+  entityType: EntityType            // 实体类型（与type保持一致）
+  moduleId?: string                 // 模块ID
   title: string
   content?: string
   snippet?: string
-  score: number                      // 相关性评分
+  score: number                     // 相关性评分
   metadata?: Record<string, any>
   associations?: AssociationRecord[]
+  // 时间戳
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastModified?: Date | string
 }
 
 // 关联查询选项
@@ -391,6 +397,7 @@ export class DataAssociationService extends EventEmitter {
     const searchResult: UnifiedSearchResult = {
       id: entityId,
       type: entityType,
+      entityType: entityType,  // 添加缺失的entityType字段
       title,
       content,
       score: 1.0,

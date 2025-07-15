@@ -277,7 +277,7 @@ export const FileAssociationIntegrationExample: React.FC = () => {
     const initializeServices = async () => {
       try {
         const eventBus = new EventBus()
-        const databaseManager = new DatabaseManager(':memory:')
+        const databaseManager = new DatabaseManager({} as any) // 临时修复类型问题
         const searchEngine = new SearchEngine()
         
         // 初始化文件存储服务

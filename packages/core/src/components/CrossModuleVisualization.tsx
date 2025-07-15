@@ -4,8 +4,19 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
-import { MindMapData } from '@minglog/mindmap'
-import { GraphData } from '@minglog/graph'
+// import { MindMapData } from '@minglog/mindmap' // 模块不存在，暂时注释
+// import { GraphData } from '@minglog/graph' // 模块不存在，暂时注释
+
+// 临时类型定义
+interface MindMapData {
+  nodes: Array<{ id: string; label: string; [key: string]: any }>
+  links: Array<{ source: string; target: string; [key: string]: any }>
+}
+
+interface GraphData {
+  nodes: Array<{ id: string; label: string; [key: string]: any }>
+  edges: Array<{ source: string; target: string; [key: string]: any }>
+}
 import { DataAssociation, CrossModuleDataBridge } from '../services/CrossModuleDataBridge'
 import { UnifiedSearchService, SearchQuery, SearchResponse } from '../services/UnifiedSearchService'
 

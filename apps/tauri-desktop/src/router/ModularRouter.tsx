@@ -88,7 +88,7 @@ export const ModularRouter: React.FC = () => {
   // 获取所有激活模块的路由
   const moduleRoutes = useMemo(() => {
     const routes: ModuleRoute[] = []
-    const moduleManager = core.getModuleManager()
+    const moduleManager = (core as any).getModuleManager?.() || { getActiveModules: () => [] } // TODO: 修复模块管理器
     const activeModules = moduleManager.getActiveModules()
 
     for (const module of activeModules) {

@@ -23,7 +23,7 @@ export interface GlobalShortcutConfig {
   /** 快捷键描述 */
   description: string;
   /** 快捷键分类 */
-  category: 'global' | 'navigation' | 'editing' | 'search' | 'modal';
+  category: 'global' | 'navigation' | 'editing' | 'search' | 'modal' | 'mubu';
   /** 优先级 (数字越大优先级越高) */
   priority: number;
   /** 是否全局有效 */
@@ -73,10 +73,13 @@ export class GlobalShortcutManager extends EventEmitter {
   private init(): void {
     // 注册默认的系统级快捷键
     this.registerDefaultShortcuts();
-    
+
+    // 注册幕布风格快捷键
+    this.registerMubuShortcuts();
+
     // 绑定全局键盘事件
     document.addEventListener('keydown', this.keydownHandler, true);
-    
+
     // 监听焦点变化
     document.addEventListener('focusin', this.updateContext.bind(this));
     document.addEventListener('focusout', this.updateContext.bind(this));
@@ -276,6 +279,144 @@ export class GlobalShortcutManager extends EventEmitter {
       },
       preventDefault: true
     });
+  }
+
+  /**
+   * 注册幕布风格编辑器快捷键
+   */
+  registerMubuShortcuts(): void {
+    // Tab - 增加缩进（仅在编辑器中）
+    this.register({
+      id: 'mubu-indent',
+      key: 'Tab',
+      modifiers: {},
+      description: '增加块缩进',
+      category: 'mubu',
+      priority: 85,
+      global: false,
+      context: ['editor', 'block-editor'],
+      handler: (event) => {
+        const target = event.target as HTMLElement;
+        if (this.isInBlockEditor(target)) {
+          this.emit('mubu-indent');
+          return true;
+        }
+        return false;
+      },
+      preventDefault: true
+    });
+
+    // Shift+Tab - 减少缩进（仅在编辑器中）
+    this.register({
+      id: 'mubu-outdent',
+      key: 'Tab',
+      modifiers: { shift: true },
+      description: '减少块缩进',
+      category: 'mubu',
+      priority: 85,
+      global: false,
+      context: ['editor', 'block-editor'],
+      handler: (event) => {
+        const target = event.target as HTMLElement;
+        if (this.isInBlockEditor(target)) {
+          this.emit('mubu-outdent');
+          return true;
+        }
+        return false;
+      },
+      preventDefault: true
+    });
+
+    // Ctrl+D - 复制当前块
+    this.register({
+      id: 'mubu-duplicate-block',
+      key: 'd',
+      modifiers: { ctrl: true },
+      description: '复制当前块',
+      category: 'mubu',
+      priority: 75,
+      global: false,
+      context: ['editor', 'block-editor'],
+      handler: (event) => {
+        const target = event.target as HTMLElement;
+        if (this.isInBlockEditor(target)) {
+          this.emit('mubu-duplicate-block');
+          return true;
+        }
+        return false;
+      },
+      preventDefault: true
+    });
+
+    // Ctrl+↑ - 向上移动块
+    this.register({
+      id: 'mubu-move-block-up',
+      key: 'ArrowUp',
+      modifiers: { ctrl: true },
+      description: '向上移动块',
+      category: 'mubu',
+      priority: 75,
+      global: false,
+      context: ['editor', 'block-editor'],
+      handler: (event) => {
+        const target = event.target as HTMLElement;
+        if (this.isInBlockEditor(target)) {
+          this.emit('mubu-move-block-up');
+          return true;
+        }
+        return false;
+      },
+      preventDefault: true
+    });
+
+    // Ctrl+↓ - 向下移动块
+    this.register({
+      id: 'mubu-move-block-down',
+      key: 'ArrowDown',
+      modifiers: { ctrl: true },
+      description: '向下移动块',
+      category: 'mubu',
+      priority: 75,
+      global: false,
+      context: ['editor', 'block-editor'],
+      handler: (event) => {
+        const target = event.target as HTMLElement;
+        if (this.isInBlockEditor(target)) {
+          this.emit('mubu-move-block-down');
+          return true;
+        }
+        return false;
+      },
+      preventDefault: true
+    });
+
+    // Ctrl+/ - 切换折叠
+    this.register({
+      id: 'mubu-toggle-collapse',
+      key: '/',
+      modifiers: { ctrl: true },
+      description: '切换块折叠状态',
+      category: 'mubu',
+      priority: 75,
+      global: false,
+      context: ['editor', 'block-editor'],
+      handler: (event) => {
+        const target = event.target as HTMLElement;
+        if (this.isInBlockEditor(target)) {
+          this.emit('mubu-toggle-collapse');
+          return true;
+        }
+        return false;
+      },
+      preventDefault: true
+    });
+  }
+
+  /**
+   * 检查是否在块编辑器中
+   */
+  private isInBlockEditor(element: HTMLElement): boolean {
+    return element.closest('.minglog-editor, .mubu-block-editor, [data-slate-editor]') !== null;
   }
 
   /**

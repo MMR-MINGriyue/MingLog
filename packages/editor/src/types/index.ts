@@ -59,6 +59,38 @@ export interface BaseElement {
   children: Descendant[]
   createdAt?: string
   updatedAt?: string
+  // 幕布风格扩展属性
+  level?: number // 缩进层级 (0-6)
+  parentId?: string // 父块ID
+  isCollapsed?: boolean // 是否折叠
+  isFocused?: boolean // 是否聚焦
+  position?: number // 在同级中的位置
+  metadata?: BlockMetadata // 块元数据
+}
+
+// 块元数据接口
+export interface BlockMetadata {
+  // 层级结构
+  depth: number // 嵌套深度
+  childrenIds: string[] // 子块ID列表
+  siblingIndex: number // 在兄弟节点中的索引
+
+  // 状态信息
+  isExpanded: boolean // 是否展开
+  isSelected: boolean // 是否选中
+  isEditing: boolean // 是否正在编辑
+
+  // 视觉属性
+  indentLevel: number // 视觉缩进级别
+  hasChildren: boolean // 是否有子块
+  isLastChild: boolean // 是否是最后一个子块
+
+  // 交互状态
+  isDragging: boolean // 是否正在拖拽
+  isDropTarget: boolean // 是否是拖放目标
+
+  // 自定义属性
+  customData?: Record<string, any>
 }
 
 // 段落元素
@@ -233,6 +265,66 @@ export interface EditorEvents {
   onBlockCreate?: (block: CustomElement) => void
   onBlockUpdate?: (block: CustomElement) => void
   onBlockDelete?: (blockId: string) => void
+  // 幕布风格事件扩展
+  onBlockIndent?: (blockId: string, level: number) => void
+  onBlockOutdent?: (blockId: string, level: number) => void
+  onBlockMove?: (blockId: string, direction: 'up' | 'down') => void
+  onBlockToggle?: (blockId: string, collapsed: boolean) => void
+  onBlockDuplicate?: (blockId: string) => void
+  onBlockFocus?: (blockId: string) => void
+  onBlockNavigate?: (direction: 'up' | 'down' | 'left' | 'right') => void
+}
+
+// 幕布风格快捷键配置
+export interface MubuShortcutConfig {
+  // 基础导航
+  navigateUp: string // 默认: 'ArrowUp'
+  navigateDown: string // 默认: 'ArrowDown'
+  navigateLeft: string // 默认: 'ArrowLeft'
+  navigateRight: string // 默认: 'ArrowRight'
+
+  // 块操作
+  createBlock: string // 默认: 'Enter'
+  createLineBreak: string // 默认: 'Shift+Enter'
+  deleteBlock: string // 默认: 'Backspace'
+  duplicateBlock: string // 默认: 'Ctrl+D'
+
+  // 层级操作
+  indentBlock: string // 默认: 'Tab'
+  outdentBlock: string // 默认: 'Shift+Tab'
+
+  // 移动操作
+  moveBlockUp: string // 默认: 'Ctrl+ArrowUp'
+  moveBlockDown: string // 默认: 'Ctrl+ArrowDown'
+
+  // 折叠操作
+  toggleCollapse: string // 默认: 'Ctrl+/'
+  collapseAll: string // 默认: 'Ctrl+Shift+/'
+  expandAll: string // 默认: 'Ctrl+Shift+.'
+}
+
+// 幕布风格编辑器配置
+export interface MubuEditorConfig {
+  // 快捷键配置
+  shortcuts: MubuShortcutConfig
+
+  // 层级配置
+  maxIndentLevel: number // 最大缩进层级，默认6
+  indentSize: number // 缩进大小，默认20px
+
+  // 视觉配置
+  showIndentGuides: boolean // 显示缩进指示线
+  highlightCurrentBlock: boolean // 高亮当前块
+  showCollapseIcons: boolean // 显示折叠图标
+
+  // 行为配置
+  autoIndent: boolean // 自动缩进
+  smartEnter: boolean // 智能回车
+  enableDragDrop: boolean // 启用拖拽
+
+  // 性能配置
+  virtualScrolling: boolean // 虚拟滚动
+  lazyRender: boolean // 懒渲染
 }
 
 // 块菜单项
@@ -291,6 +383,9 @@ export interface BlockEditorProps extends EditorConfig, EditorEvents {
   value?: Descendant[]
   className?: string
   style?: React.CSSProperties
+  // 幕布风格配置
+  mubuConfig?: Partial<MubuEditorConfig>
+  enableMubuMode?: boolean // 是否启用幕布模式
 }
 
 export interface BlockTreeProps {

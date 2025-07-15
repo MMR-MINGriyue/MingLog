@@ -552,7 +552,8 @@ export class BatchOperationService extends EventEmitter {
       })
 
       // 检查是否被取消
-      if (result.status === BatchOperationStatus.CANCELLED) {
+      const currentResult = this.operations.get(result.operationId)
+      if (currentResult?.status === BatchOperationStatus.CANCELLED) {
         break
       }
     }

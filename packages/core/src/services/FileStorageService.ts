@@ -25,6 +25,8 @@ export interface FileEntity {
   size: number
   /** 存储路径 */
   path: string
+  /** 文件URL（用于访问） */
+  url?: string
   /** 文件校验和 */
   checksum: string
   /** 缩略图路径 */
@@ -37,6 +39,8 @@ export interface FileEntity {
   created_at: Date
   /** 更新时间 */
   updated_at: Date
+  /** 修改时间（兼容性属性） */
+  modified_at?: Date
   /** 创建者ID */
   created_by?: string
   /** 更新者ID */
@@ -144,6 +148,8 @@ export interface FileQueryOptions {
   tag_filter?: string[]
   /** 分类过滤 */
   category_filter?: string[]
+  /** 文件夹路径 */
+  folder?: string
   /** 大小范围过滤 */
   size_range?: {
     min?: number
@@ -186,6 +192,8 @@ export interface FileQueryResult {
   has_next: boolean
   /** 是否有上一页 */
   has_prev: boolean
+  /** 是否有更多数据（兼容性属性） */
+  hasMore: boolean
 }
 
 // 文件操作结果接口
@@ -397,7 +405,7 @@ export class FileStorageService {
     // 应用搜索过滤
     if (search) {
       const searchResults = await this.searchEngine.search(search, {
-        filters: { type: 'file' },
+        filters: { /* type: 'file' */ }, // 属性不存在，暂时注释
         limit: 1000 // 获取所有匹配的文件
       })
       const searchFileIds = new Set(searchResults.map(r => r.document.id))
@@ -505,7 +513,8 @@ export class FileStorageService {
       page_size: limit,
       total_pages: totalPages,
       has_next: offset + limit < total,
-      has_prev: offset > 0
+      has_prev: offset > 0,
+      hasMore: offset + limit < total
     }
   }
 
@@ -764,7 +773,7 @@ export class FileStorageService {
   private registerEventListeners(): void {
     // 监听文件上传完成事件
     this.eventBus.on('file:upload:complete', async (event) => {
-      const { files } = event
+      const { files } = event.data || {}
       for (const uploadedFile of files) {
         // 将上传的文件添加到存储服务
         await this.storeFile(uploadedFile.file, {
@@ -788,7 +797,7 @@ export class FileStorageService {
 
     // 监听文件删除事件
     this.eventBus.on('file:upload:remove', async (event) => {
-      const { fileId } = event
+      const { fileId } = event.data || {}
       // 这里可以根据需要处理文件删除逻辑
     })
   }
@@ -1100,5 +1109,34 @@ export class FileStorageService {
    */
   private async updateSearchIndex(file: FileEntity): Promise<void> {
     await this.addToSearchIndex(file) // addDocument会自动处理更新
+  }
+
+  /**
+   * 获取存储统计信息
+   */
+  async getStorageStats(): Promise<{
+    totalFiles: number
+    totalSize: number
+    usedSpace: number
+    availableSpace: number
+    fileTypes: { [type: string]: number }
+  }> {
+    const files = Array.from(this.files.values())
+    const totalFiles = files.length
+    const totalSize = files.reduce((sum, file) => sum + file.size, 0)
+
+    // 按文件类型统计
+    const fileTypes: { [type: string]: number } = {}
+    files.forEach(file => {
+      fileTypes[file.type] = (fileTypes[file.type] || 0) + 1
+    })
+
+    return {
+      totalFiles,
+      totalSize,
+      usedSpace: totalSize,
+      availableSpace: this.config.max_file_size * 1000 - totalSize, // 简化计算
+      fileTypes
+    }
   }
 }

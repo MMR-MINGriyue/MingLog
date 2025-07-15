@@ -200,6 +200,37 @@ export const GlobalKeyboardManager: React.FC<GlobalKeyboardManagerProps> = ({
       document.dispatchEvent(event);
     };
 
+    // 幕布风格快捷键处理
+    const handleMubuIndent = () => {
+      const event = new CustomEvent('mubu-indent');
+      document.dispatchEvent(event);
+    };
+
+    const handleMubuOutdent = () => {
+      const event = new CustomEvent('mubu-outdent');
+      document.dispatchEvent(event);
+    };
+
+    const handleMubuDuplicateBlock = () => {
+      const event = new CustomEvent('mubu-duplicate-block');
+      document.dispatchEvent(event);
+    };
+
+    const handleMubuMoveBlockUp = () => {
+      const event = new CustomEvent('mubu-move-block-up');
+      document.dispatchEvent(event);
+    };
+
+    const handleMubuMoveBlockDown = () => {
+      const event = new CustomEvent('mubu-move-block-down');
+      document.dispatchEvent(event);
+    };
+
+    const handleMubuToggleCollapse = () => {
+      const event = new CustomEvent('mubu-toggle-collapse');
+      document.dispatchEvent(event);
+    };
+
     // 绑定事件监听器
     globalShortcutManager.on('global-search-open', handleGlobalSearch);
     globalShortcutManager.on('modal-close', handleModalClose);
@@ -213,6 +244,14 @@ export const GlobalKeyboardManager: React.FC<GlobalKeyboardManagerProps> = ({
     globalShortcutManager.on('help-open', handleHelpOpen);
     globalShortcutManager.on('settings-open', handleSettingsOpen);
 
+    // 幕布风格快捷键事件绑定
+    globalShortcutManager.on('mubu-indent', handleMubuIndent);
+    globalShortcutManager.on('mubu-outdent', handleMubuOutdent);
+    globalShortcutManager.on('mubu-duplicate-block', handleMubuDuplicateBlock);
+    globalShortcutManager.on('mubu-move-block-up', handleMubuMoveBlockUp);
+    globalShortcutManager.on('mubu-move-block-down', handleMubuMoveBlockDown);
+    globalShortcutManager.on('mubu-toggle-collapse', handleMubuToggleCollapse);
+
     return () => {
       globalShortcutManager.off('global-search-open', handleGlobalSearch);
       globalShortcutManager.off('modal-close', handleModalClose);
@@ -225,6 +264,14 @@ export const GlobalKeyboardManager: React.FC<GlobalKeyboardManagerProps> = ({
       globalShortcutManager.off('find-in-page', handleFindInPage);
       globalShortcutManager.off('help-open', handleHelpOpen);
       globalShortcutManager.off('settings-open', handleSettingsOpen);
+
+      // 移除幕布风格快捷键事件监听器
+      globalShortcutManager.off('mubu-indent', handleMubuIndent);
+      globalShortcutManager.off('mubu-outdent', handleMubuOutdent);
+      globalShortcutManager.off('mubu-duplicate-block', handleMubuDuplicateBlock);
+      globalShortcutManager.off('mubu-move-block-up', handleMubuMoveBlockUp);
+      globalShortcutManager.off('mubu-move-block-down', handleMubuMoveBlockDown);
+      globalShortcutManager.off('mubu-toggle-collapse', handleMubuToggleCollapse);
     };
   }, [enableShortcuts, showShortcutHelp]);
 
@@ -386,9 +433,10 @@ function getCategoryDisplayName(category: string): string {
     navigation: '导航',
     editing: '编辑',
     search: '搜索',
-    modal: '弹窗'
+    modal: '弹窗',
+    mubu: '幕布编辑'
   };
-  
+
   return categoryNames[category] || category;
 }
 

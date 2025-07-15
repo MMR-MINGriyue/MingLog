@@ -263,7 +263,7 @@ export const FileManagerIntegrationExample: React.FC = () => {
         setIsLoading(true)
         
         const eventBusInstance = new EventBus()
-        const databaseManager = new DatabaseManager(':memory:')
+        const databaseManager = new DatabaseManager({} as any) // 临时修复类型问题
         const searchEngine = new SearchEngine()
         
         // 初始化文件存储服务

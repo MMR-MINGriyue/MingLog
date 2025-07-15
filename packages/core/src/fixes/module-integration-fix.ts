@@ -136,7 +136,7 @@ export class ModuleIntegrationFix {
         if (moduleId && !activeModuleIds.has(moduleId)) {
           console.log(`[IntegrationFix] 清理非活动模块 ${moduleId} 的事件监听器`)
           handlers.forEach(handler => {
-            this.eventBus.off(eventType, handler)
+            this.eventBus.off(eventType, handler as (event: ModuleEvent) => void)
           })
           this.eventHandlers.delete(eventType)
         }
@@ -226,7 +226,7 @@ export class ModuleIntegrationFix {
     try {
       // 尝试重启模块
       const module = this.moduleManager.getModule(moduleId)
-      if (module && module.status === 'error') {
+      if (module && (module as any).status === 'error') {
         console.log(`[IntegrationFix] 尝试重启模块: ${moduleId}`)
         
         await this.moduleManager.deactivateModule(moduleId, true)

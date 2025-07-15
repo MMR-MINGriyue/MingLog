@@ -1,5 +1,20 @@
 import React, { useState, useCallback } from 'react'
-import { NodeViewWrapper, NodeViewProps } from '@tiptap/react'
+// import { NodeViewWrapper, NodeViewProps } from '@tiptap/react' // 模块不存在，暂时注释
+
+// 临时类型定义
+interface NodeViewProps {
+  node: {
+    attrs: Record<string, any>
+  }
+  updateAttributes: (attrs: Record<string, any>) => void
+  deleteNode: () => void
+  editor: any
+}
+
+// 临时组件
+const NodeViewWrapper = ({ children }: { children: React.ReactNode }) => (
+  <div className="node-view-wrapper">{children}</div>
+)
 
 interface LinkComponentProps extends NodeViewProps {
   node: {

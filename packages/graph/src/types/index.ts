@@ -27,7 +27,7 @@ export interface GraphLink {
   id: string
   source: string | GraphNode
   target: string | GraphNode
-  type: 'reference' | 'tag' | 'folder' | 'similarity'
+  type: 'reference' | 'tag' | 'folder' | 'similarity' | 'custom'
   weight?: number
   label?: string
   color?: string
@@ -82,6 +82,8 @@ export type LayoutType = 'force' | 'circular' | 'hierarchical' | 'grid' | 'radia
 // 布局配置
 export interface LayoutConfig {
   type: LayoutType
+  width?: number
+  height?: number
   iterations?: number
   alpha?: number
   alphaDecay?: number
@@ -91,6 +93,9 @@ export interface LayoutConfig {
   repelStrength?: number
   linkStrength?: number
   linkDistance?: number
+  chargeStrength?: number
+  centerForce?: number
+  collisionRadius?: number
 }
 
 // 过滤器

@@ -436,7 +436,7 @@ export class SearchAnalyticsService {
         WHERE timestamp < ?
       `, [cutoffDate.toISOString()])
 
-      console.log(`🧹 清理了 ${result.changes || 0} 条过期搜索记录`)
+      console.log(`🧹 清理了 ${(result as any)?.changes || 0} 条过期搜索记录`)
 
       // 清理性能数据
       await this.database.execute(`

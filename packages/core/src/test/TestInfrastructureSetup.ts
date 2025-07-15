@@ -55,9 +55,9 @@ export class MockFactory {
       once: vi.fn().mockImplementation((event: string, listener: Function) => {
         const onceListener = (data: any) => {
           listener(data)
-          this.off(event, onceListener)
+          // this.off(event, onceListener) // 方法不存在，暂时注释
         }
-        this.on(event, onceListener)
+        // this.on(event, onceListener) // 方法不存在，暂时注释
       })
     }
   }

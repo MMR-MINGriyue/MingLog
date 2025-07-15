@@ -8,7 +8,8 @@ import './index.css'
 import './i18n'
 
 // Import Tauri API for desktop functionality
-import { getCurrentWindow } from '@tauri-apps/api/window'
+// TODO: 修复Tauri API导入
+// import { getCurrentWindow } from '@tauri-apps/api/window'
 
 // Initialize Tauri app
 async function initializeApp() {

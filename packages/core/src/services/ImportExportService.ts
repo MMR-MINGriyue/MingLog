@@ -321,7 +321,7 @@ export class ImportExportService extends EventEmitter {
       const duration = endTime - startTime
 
       const result: ImportResult = {
-        success: importResult.success,
+        success: importResult.status === 'completed',
         format: options.format,
         totalItems: parsedItems.length,
         importedItems: importResult.successCount,
@@ -330,7 +330,7 @@ export class ImportExportService extends EventEmitter {
         createdItems: this.countItemsByType(parsedItems),
         updatedItems: {},
         duration,
-        errors: importResult.errors.map(e => ({ item: e.id, error: e.error })),
+        errors: importResult.errors.map(e => ({ item: e.itemId, error: e.error })),
         warnings: []
       }
 
@@ -527,9 +527,19 @@ export class ImportExportService extends EventEmitter {
 
     // 模拟批量导入结果
     return {
-      success: 0,
-      failed: 0,
-      errors: []
+      operationId: 'import-' + Date.now(),
+      status: 'completed' as any,
+      totalItems: 0,
+      processedItems: 0,
+      successCount: 0,
+      failureCount: 0,
+      skippedCount: 0,
+      startTime: new Date(),
+      endTime: new Date(),
+      duration: 0,
+      errors: [],
+      warnings: [],
+      summary: '导入完成'
     }
   }
 

@@ -8,10 +8,11 @@ import { cn } from '../../utils'
 import { UnifiedSearchService, SearchResultAggregation, AdvancedSearchOptions } from '../../services/UnifiedSearchService'
 import { AdvancedSearchService, SearchConditionGroup, SearchCondition, SearchConditionType } from '../../services/AdvancedSearchService'
 import { SearchAnalyticsService } from '../../services/SearchAnalyticsService'
+import { EntityType } from '../../services/DataAssociationService'
 
 // 增强的搜索过滤器
 export interface EnhancedSearchFilter {
-  entityTypes?: string[]
+  entityTypes?: EntityType[]
   moduleIds?: string[]
   tags?: string[]
   authors?: string[]
@@ -126,6 +127,9 @@ export const EnhancedAdvancedSearchComponent: React.FC<EnhancedAdvancedSearchCom
   // 高级搜索状态
   const [searchMode, setSearchMode] = useState<'simple' | 'advanced' | 'template'>('simple')
   const [conditionGroup, setConditionGroup] = useState<SearchConditionGroup>({
+    id: 'root',
+    name: '根条件组',
+    enabled: true,
     operator: 'AND',
     conditions: []
   })
@@ -348,7 +352,13 @@ export const EnhancedAdvancedSearchComponent: React.FC<EnhancedAdvancedSearchCom
     setFilters({})
     setSearchResults(null)
     setSearchError('')
-    setConditionGroup({ operator: 'AND', conditions: [] })
+    setConditionGroup({
+      id: 'root',
+      name: '根条件组',
+      enabled: true,
+      operator: 'AND',
+      conditions: []
+    })
     setShowSuggestions(false)
   }, [])
 
@@ -382,15 +392,22 @@ export const EnhancedAdvancedSearchComponent: React.FC<EnhancedAdvancedSearchCom
         description: '查找最近创建或修改的笔记',
         category: 'common',
         conditionGroup: {
+          id: 'recent-notes',
+          name: '最近笔记条件组',
+          enabled: true,
           operator: 'AND',
           conditions: [
             {
+              id: 'entity-type-note',
+              enabled: true,
               type: SearchConditionType.ENTITY_TYPE,
               field: 'type',
               operator: 'equals',
               value: 'note'
             },
             {
+              id: 'date-recent',
+              enabled: true,
               type: SearchConditionType.DATE,
               field: 'modified',
               operator: 'gte',
@@ -414,21 +431,30 @@ export const EnhancedAdvancedSearchComponent: React.FC<EnhancedAdvancedSearchCom
         description: '查找高优先级的未完成任务',
         category: 'common',
         conditionGroup: {
+          id: 'important-tasks',
+          name: '重要任务条件组',
+          enabled: true,
           operator: 'AND',
           conditions: [
             {
+              id: 'entity-type-task',
+              enabled: true,
               type: SearchConditionType.ENTITY_TYPE,
               field: 'type',
               operator: 'equals',
               value: 'task'
             },
             {
+              id: 'tag-priority-high',
+              enabled: true,
               type: SearchConditionType.TAG,
               field: 'priority',
               operator: 'equals',
               value: 'high'
             },
             {
+              id: 'text-status-not-completed',
+              enabled: true,
               type: SearchConditionType.TEXT,
               field: 'status',
               operator: 'not_equals',

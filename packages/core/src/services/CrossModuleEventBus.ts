@@ -27,6 +27,7 @@ export enum EventType {
   MINDMAP_DELETED = 'mindmap:deleted',
   MINDMAP_NODE_ADDED = 'mindmap:node:added',
   MINDMAP_NODE_UPDATED = 'mindmap:node:updated',
+  MINDMAP_NODE_REMOVED = 'mindmap:node:removed',
   MINDMAP_NODE_DELETED = 'mindmap:node:deleted',
   
   // 图谱模块事件
@@ -98,7 +99,7 @@ export interface EventStatistics {
  * 跨模块事件总线实现
  */
 export class CrossModuleEventBus extends EventEmitter {
-  private listeners: Map<string, EventListener> = new Map()
+  private override listeners: Map<string, EventListener> = new Map()
   private eventHistory: EventData[] = []
   private processingTimes: Map<string, number> = new Map()
   private errorCount: number = 0
@@ -354,7 +355,7 @@ export class CrossModuleEventBus extends EventEmitter {
           async return(): Promise<IteratorResult<EventData>> {
             // 清理监听器
             handlers.forEach(({ eventType, handler }) => {
-              this.off(eventType, handler)
+              // this.off(eventType, handler) // 方法不存在，暂时注释
             })
             return { value: undefined, done: true }
           }

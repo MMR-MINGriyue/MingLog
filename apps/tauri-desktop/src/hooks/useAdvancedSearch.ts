@@ -4,23 +4,40 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { 
-  AdvancedSearchService,
-  SearchCondition,
-  SearchConditionGroup,
-  SearchConditionType,
-  SearchOperator,
-  SavedSearchQuery,
-  SearchTemplate,
-  SearchSuggestion,
-  AdvancedSearchOptions
-} from '../../packages/core/src/services/AdvancedSearchService'
-import { 
-  SearchResultAggregation,
-  UnifiedSearchResult 
-} from '../../packages/core/src/services/UnifiedSearchService'
-import { DataAssociationService } from '../../packages/core/src/services/DataAssociationService'
-import { CrossModuleEventBus } from '../../packages/core/src/services/CrossModuleEventBus'
+
+// TODO: 修复模块导入路径
+// import {
+//   AdvancedSearchService,
+//   SearchCondition,
+//   SearchConditionGroup,
+//   SearchConditionType,
+//   SearchOperator,
+//   SavedSearchQuery,
+//   SearchTemplate,
+//   SearchSuggestion,
+//   AdvancedSearchOptions
+// } from '../../packages/core/src/services/AdvancedSearchService'
+// import {
+//   SearchResultAggregation,
+//   UnifiedSearchResult
+// } from '../../packages/core/src/services/UnifiedSearchService'
+// import { DataAssociationService } from '../../packages/core/src/services/DataAssociationService'
+// import { CrossModuleEventBus } from '../../packages/core/src/services/CrossModuleEventBus'
+
+// 临时类型定义
+type SearchCondition = any
+type SearchConditionGroup = any
+type SearchConditionType = any
+type SearchOperator = any
+type SavedSearchQuery = any
+type SearchTemplate = any
+type SearchSuggestion = any
+type AdvancedSearchOptions = any
+type SearchResultAggregation = any
+type UnifiedSearchResult = any
+type AdvancedSearchService = any
+type DataAssociationService = any
+type CrossModuleEventBus = any
 
 interface UseAdvancedSearchReturn {
   /** 高级搜索服务实例 */

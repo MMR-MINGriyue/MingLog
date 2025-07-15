@@ -5,7 +5,14 @@
 
 import { DatabaseManager } from '../database/DatabaseManager'
 import { EventBus } from '../event-system/EventBus'
-import { ModuleManager } from '../module-system/ModuleManager'
+// import { ModuleManager } from '../module-system/ModuleManager' // 模块不存在，暂时注释
+
+// 临时类型定义
+interface ModuleManager {
+  getModule(id: string): any
+  getAllModules(): any[]
+  isModuleActive(id: string): boolean
+}
 
 // 导出格式
 export type ExportFormat = 'pdf' | 'markdown' | 'html' | 'json' | 'csv' | 'xlsx' | 'docx' | 'txt' | 'zip'
@@ -171,7 +178,7 @@ export interface ExportHistory {
  */
 export class EnhancedExportService {
   private database: DatabaseManager
-  private eventBus: EventBus
+  public eventBus: EventBus  // 改为public以允许外部访问
   private moduleManager: ModuleManager
   private activeOperations = new Map<string, ExportProgress>()
   private exportTemplates = new Map<string, ExportTemplate>()
@@ -564,7 +571,7 @@ export class EnhancedExportService {
     // 更新内存中的历史记录
     this.exportHistory = this.exportHistory.filter(h => h.createdAt >= cutoffDate)
 
-    return deletedCount.changes || 0
+    return (deletedCount as any)?.changes || 0
   }
 
   /**

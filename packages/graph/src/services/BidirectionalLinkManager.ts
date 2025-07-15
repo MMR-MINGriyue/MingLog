@@ -3,7 +3,15 @@
  * 负责管理图谱中节点间的双向关联和链接创建
  */
 
-import { EventBus } from '@minglog/core'
+// TODO: 修复@minglog/core导入
+// import { EventBus } from '@minglog/core'
+
+// 临时EventBus类型定义
+interface EventBus {
+  emit(event: string, data: any): void
+  on(event: string, handler: (data: any) => void): void
+  off(event: string, handler: (data: any) => void): void
+}
 import { GraphNode, GraphLink, GraphData } from '../types'
 
 export interface LinkCreationRequest {

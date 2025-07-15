@@ -13,6 +13,7 @@ export enum SearchConditionType {
   REGEX = 'regex',                  // 正则表达式
   EXACT = 'exact',                  // 精确匹配
   FUZZY = 'fuzzy',                  // 模糊匹配
+  DATE = 'date',                    // 日期搜索
   DATE_RANGE = 'date_range',        // 日期范围
   ENTITY_TYPE = 'entity_type',      // 实体类型
   TAG = 'tag',                      // 标签
@@ -22,16 +23,26 @@ export enum SearchConditionType {
 
 // 搜索操作符
 export enum SearchOperator {
-  AND = 'and',
-  OR = 'or',
-  NOT = 'not'
+  AND = 'AND',
+  OR = 'OR',
+  NOT = 'NOT',
+  // 比较操作符
+  EQUALS = 'equals',
+  NOT_EQUALS = 'not_equals',
+  CONTAINS = 'contains',
+  STARTS_WITH = 'starts_with',
+  ENDS_WITH = 'ends_with',
+  GREATER_THAN = 'gt',
+  GREATER_THAN_EQUAL = 'gte',
+  LESS_THAN = 'lt',
+  LESS_THAN_EQUAL = 'lte'
 }
 
 // 搜索条件接口
 export interface SearchCondition {
   id: string
   type: SearchConditionType
-  operator: SearchOperator
+  operator: SearchOperator | string  // 支持字符串形式的操作符
   field?: string                    // 搜索字段
   value: any                        // 搜索值
   options?: Record<string, any>     // 额外选项
@@ -42,7 +53,7 @@ export interface SearchCondition {
 export interface SearchConditionGroup {
   id: string
   name: string
-  operator: SearchOperator
+  operator: SearchOperator | string  // 支持字符串形式的操作符
   conditions: (SearchCondition | SearchConditionGroup)[]
   enabled: boolean
 }
@@ -147,7 +158,7 @@ export class AdvancedSearchService extends UnifiedSearchService {
       resultsByModule: this.aggregateByModule(filteredResults),
       searchTime,
       results: paginatedResults,
-      suggestions: await this.getAdvancedSuggestions(conditionGroup),
+      suggestions: (await this.getAdvancedSuggestions(conditionGroup)).map(s => s.text),
       relatedQueries: this.getRelatedQueries(this.serializeConditionGroup(conditionGroup))
     }
 
@@ -423,7 +434,7 @@ export class AdvancedSearchService extends UnifiedSearchService {
     }
 
     // 根据操作符合并结果
-    return this.combineResults(results, group.operator)
+    return this.combineResults(results, group.operator as SearchOperator)
   }
 
   private async processSearchCondition(
@@ -814,7 +825,7 @@ export class AdvancedSearchService extends UnifiedSearchService {
   /**
    * 排序搜索结果
    */
-  private sortResults(results: UnifiedSearchResult[], options?: AdvancedSearchOptions): UnifiedSearchResult[] {
+  protected override sortResults(results: UnifiedSearchResult[], options?: AdvancedSearchOptions): UnifiedSearchResult[] {
     if (!options || !options.sortBy) {
       return results
     }
@@ -848,7 +859,7 @@ export class AdvancedSearchService extends UnifiedSearchService {
   /**
    * 分页搜索结果
    */
-  private paginateResults(results: UnifiedSearchResult[], options?: AdvancedSearchOptions): UnifiedSearchResult[] {
+  protected override paginateResults(results: UnifiedSearchResult[], options?: AdvancedSearchOptions): UnifiedSearchResult[] {
     if (!options || !options.pagination) {
       return results
     }

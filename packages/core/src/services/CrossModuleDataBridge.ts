@@ -4,8 +4,52 @@
  */
 
 import { EventBus } from '../event-system/EventBus'
-import { MindMapData, MindMapNode, MindMapLink } from '@minglog/mindmap'
-import { GraphData, GraphNode, GraphLink } from '@minglog/graph'
+// import { MindMapData, MindMapNode, MindMapLink } from '@minglog/mindmap' // 模块不存在，暂时注释
+// import { GraphData, GraphNode, GraphLink } from '@minglog/graph' // 模块不存在，暂时注释
+
+// 临时类型定义
+interface MindMapData {
+  nodes: MindMapNode[]
+  links: MindMapLink[]
+  metadata?: Record<string, any>
+}
+
+interface MindMapNode {
+  id: string
+  label: string
+  x?: number
+  y?: number
+  data?: Record<string, any>
+}
+
+interface MindMapLink {
+  id: string
+  source: string
+  target: string
+  type?: string
+  data?: Record<string, any>
+}
+
+interface GraphData {
+  nodes: GraphNode[]
+  edges: GraphLink[]
+  metadata?: Record<string, any>
+}
+
+interface GraphNode {
+  id: string
+  label: string
+  type?: string
+  data?: Record<string, any>
+}
+
+interface GraphLink {
+  id: string
+  source: string
+  target: string
+  type?: string
+  data?: Record<string, any>
+}
 
 export interface DataAssociation {
   /** 关联ID */

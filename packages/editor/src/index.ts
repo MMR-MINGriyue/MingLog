@@ -7,6 +7,8 @@ export { default as BlockEditor } from './components/BlockEditor'
 export { default as BlockTree } from './components/BlockTree'
 export { default as BlockElement } from './components/BlockElement'
 export { default as BlockMenu } from './components/BlockMenu'
+export { MubuBlockEditor } from './components/MubuBlockEditor'
+export { MubuBlockElement } from './components/MubuBlockElement'
 
 // 类型定义
 export type {
@@ -32,7 +34,10 @@ export type {
   ToggleElement,
   TextFormat,
   EditorState,
-  DragData
+  DragData,
+  BlockMetadata,
+  MubuShortcutConfig,
+  MubuEditorConfig
 } from './types'
 
 // 工具函数

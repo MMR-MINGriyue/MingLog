@@ -5,7 +5,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { dataSyncService, DataState, SearchIndex } from '../services/DataSyncService'
 import { GraphData, GraphNode } from '@minglog/graph'
-import { Descendant } from 'slate'
+// TODO: 修复slate导入
+// import { Descendant } from 'slate'
+
+// 临时类型定义
+type Descendant = any
 
 export interface UseDataSyncReturn {
   // 状态

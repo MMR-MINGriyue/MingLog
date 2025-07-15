@@ -17,7 +17,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { GraphView, GraphData, GraphNode } from '@minglog/graph'
-import { BlockEditor, BlockTree } from '@minglog/editor'
+import { BlockEditor, BlockTree, MubuBlockEditor } from '@minglog/editor'
 import {
   getGraphData,
   getPage,
@@ -60,6 +60,7 @@ const IntegratedWorkspacePage: React.FC<IntegratedWorkspacePageProps> = () => {
 
   // 同步状态
   const [isLinked, setIsLinked] = useState(true) // 是否启用双向链接
+  const [isMubuMode, setIsMubuMode] = useState(true) // 是否启用幕布模式
 
   // 从URL参数获取初始状态
   const initialNodeId = searchParams.get('nodeId')
@@ -145,7 +146,7 @@ const IntegratedWorkspacePage: React.FC<IntegratedWorkspacePageProps> = () => {
       ])
       
       if (page) {
-        setCurrentPage(page)
+        // setCurrentPage(page) // TODO: 修复setCurrentPage函数
       }
       
       if (pageBlocks) {
@@ -260,6 +261,15 @@ const IntegratedWorkspacePage: React.FC<IntegratedWorkspacePageProps> = () => {
             title={isLinked ? '禁用双向链接' : '启用双向链接'}
           >
             {isLinked ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+          </button>
+
+          {/* 幕布模式切换 */}
+          <button
+            onClick={() => setIsMubuMode(!isMubuMode)}
+            className={`btn-ghost p-2 ${isMubuMode ? 'text-green-600' : 'text-gray-400'}`}
+            title={isMubuMode ? '切换到普通编辑器' : '切换到幕布编辑器'}
+          >
+            <LinkIcon className="w-5 h-5" />
           </button>
 
           {/* 布局切换 */}
@@ -392,12 +402,45 @@ const IntegratedWorkspacePage: React.FC<IntegratedWorkspacePageProps> = () => {
                 </div>
               ) : currentPage ? (
                 <div className="p-6">
-                  <BlockEditor
-                    placeholder="开始编写内容..."
-                    onChange={handleEditorChange}
-                    autoFocus={true}
-                    className="min-h-96"
-                  />
+                  {isMubuMode ? (
+                    <MubuBlockEditor
+                      placeholder="开始编写内容..."
+                      onChange={handleEditorChange}
+                      autoFocus={true}
+                      className="min-h-96"
+                      mubuConfig={{
+                        highlightCurrentBlock: true,
+                        showIndentGuides: true,
+                        showCollapseIcons: true,
+                        maxIndentLevel: 6
+                      }}
+                      onBlockIndent={(blockId, level) => {
+                        console.log('Block indented:', blockId, level)
+                      }}
+                      onBlockOutdent={(blockId, level) => {
+                        console.log('Block outdented:', blockId, level)
+                      }}
+                      onBlockMove={(blockId, direction) => {
+                        console.log('Block moved:', blockId, direction)
+                      }}
+                      onBlockToggle={(blockId, collapsed) => {
+                        console.log('Block toggled:', blockId, collapsed)
+                      }}
+                      onBlockDuplicate={(blockId) => {
+                        console.log('Block duplicated:', blockId)
+                      }}
+                      onBlockFocus={(blockId) => {
+                        console.log('Block focused:', blockId)
+                      }}
+                    />
+                  ) : (
+                    <BlockEditor
+                      placeholder="开始编写内容..."
+                      onChange={handleEditorChange}
+                      autoFocus={true}
+                      className="min-h-96"
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-full">

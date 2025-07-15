@@ -54,7 +54,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     settings: {
       maxExecutions: undefined,
       executionTimeout: 30000,
-      errorHandling: 'stop' as const,
+      errorHandling: 'stop' as 'stop' | 'continue' | 'retry',
       logging: true,
       notifications: false
     }
@@ -76,7 +76,13 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         triggers: workflow.triggers,
         actions: workflow.actions,
         conditions: workflow.conditions || [],
-        settings: workflow.settings
+        settings: {
+          maxExecutions: workflow.settings?.maxExecutions,
+          executionTimeout: workflow.settings?.executionTimeout || 30000,
+          errorHandling: (workflow.settings?.errorHandling || 'stop') as 'stop' | 'continue' | 'retry',
+          logging: workflow.settings?.logging ?? true,
+          notifications: workflow.settings?.notifications ?? false
+        }
       })
     } else {
       // 重置为默认值

@@ -96,7 +96,7 @@ export const EnhancedFileManagerComponent: React.FC<EnhancedFileManagerComponent
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortField, setSortField] = useState<string>('name')
+  const [sortField, setSortField] = useState<'name' | 'size' | 'created_at' | 'updated_at' | 'type'>('name')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [showBatchPanel, setShowBatchPanel] = useState(false)
   const [draggedFile, setDraggedFile] = useState<FileEntity | null>(null)
@@ -342,7 +342,7 @@ export const EnhancedFileManagerComponent: React.FC<EnhancedFileManagerComponent
           value={`${sortField}-${sortOrder}`}
           onChange={(e) => {
             const [field, order] = e.target.value.split('-')
-            setSortField(field)
+            setSortField(field as 'name' | 'size' | 'created_at' | 'updated_at' | 'type')
             setSortOrder(order as 'asc' | 'desc')
           }}
           className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -640,12 +640,15 @@ export const EnhancedFileManagerComponent: React.FC<EnhancedFileManagerComponent
                 }
               })}
               operations={[
-                { id: 'delete', name: '删除', description: '删除选中的文件' },
-                { id: 'move', name: '移动', description: '移动到其他文件夹' },
-                { id: 'copy', name: '复制', description: '复制文件' },
-                { id: 'rename', name: '重命名', description: '批量重命名' }
+                { id: 'delete', name: '删除', description: '删除选中的文件', icon: 'trash' },
+                { id: 'move', name: '移动', description: '移动到其他文件夹', icon: 'move' },
+                { id: 'copy', name: '复制', description: '复制文件', icon: 'copy' },
+                { id: 'rename', name: '重命名', description: '批量重命名', icon: 'edit' }
               ]}
               selectedItems={Array.from(selectedFiles)}
+              onSelectionChange={(selectedIds) => {
+                setSelectedFiles(new Set(selectedIds))
+              }}
               onOperationExecute={async (operation) => {
                 const selectedFileEntities = files.filter(f => selectedFiles.has(f.id))
                 await onBatchOperation?.(operation, selectedFileEntities)
