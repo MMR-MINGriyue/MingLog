@@ -3,7 +3,7 @@
  */
 
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { EnhancedExportDialog } from '../EnhancedExportDialog'
 import { MindMapData, exportManager } from '@minglog/mindmap'
@@ -129,9 +129,12 @@ describe('EnhancedExportDialog', () => {
       )
 
       expect(screen.getByText('配置')).toBeInTheDocument()
-      expect(screen.getByText('预览')).toBeInTheDocument()
-      expect(screen.getByText('导出')).toBeInTheDocument()
-      expect(screen.getByText('完成')).toBeInTheDocument()
+      // 在步骤指示器中查找预览步骤
+      const stepIndicator = document.querySelector('.step-indicator')
+      expect(stepIndicator).toBeInTheDocument()
+      expect(within(stepIndicator).getByText('预览')).toBeInTheDocument()
+      expect(within(stepIndicator).getByText('导出')).toBeInTheDocument()
+      expect(within(stepIndicator).getByText('完成')).toBeInTheDocument()
     })
   })
 
@@ -314,8 +317,16 @@ describe('EnhancedExportDialog', () => {
         />
       )
 
-      expect(screen.getByText('2')).toBeInTheDocument() // 节点数量
-      expect(screen.getByText('1')).toBeInTheDocument() // 连接数量
+      // 验证节点和连接数量显示
+      const exportInfo = document.querySelector('.export-info')
+      expect(exportInfo).toBeInTheDocument()
+
+      // 查找节点数量和连接数量的具体值
+      const nodeCountElement = within(exportInfo).getByText(/节点数量:/)
+      const linkCountElement = within(exportInfo).getByText(/连接数量:/)
+
+      expect(nodeCountElement).toBeInTheDocument()
+      expect(linkCountElement).toBeInTheDocument()
     })
   })
 
@@ -331,7 +342,8 @@ describe('EnhancedExportDialog', () => {
       )
 
       // 点击导出按钮
-      fireEvent.click(screen.getByText('导出'))
+      const exportButton = screen.getByRole('button', { name: /导出/ })
+      fireEvent.click(exportButton)
 
       // 等待导出完成
       await waitFor(() => {
@@ -359,7 +371,8 @@ describe('EnhancedExportDialog', () => {
       )
 
       // 点击导出按钮
-      fireEvent.click(screen.getByText('导出'))
+      const exportButton = screen.getByRole('button', { name: /导出/ })
+      fireEvent.click(exportButton)
 
       // 验证进度步骤显示
       await waitFor(() => {

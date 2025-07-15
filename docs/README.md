@@ -48,6 +48,27 @@
 - `PROJECT_COMPREHENSIVE_ANALYSIS_2025-01-10.md` - 项目全面分析报告
 - `PROJECT_STATUS_AND_DEVELOPMENT_PLAN.md` - 项目状态与开发计划
 
+#### Week 5 技术报告
+- [测试覆盖率修复报告](reports/week5/TEST_COVERAGE_FIX_SUMMARY_2025-01-15.md)
+- [编辑器功能增强报告](reports/week5/EDITOR_ENHANCEMENT_SUMMARY_2025-01-15.md)
+- [键盘快捷键实现报告](reports/week5/KEYBOARD_SHORTCUTS_SUMMARY_2025-01-15.md)
+
+#### Week 6 技术报告
+- [macOS设计系统基础报告](reports/week6/MACOS_DESIGN_SYSTEM_SUMMARY_2025-01-15.md)
+
+### 📋 [summaries/](./summaries/) - 完成总结
+项目阶段性完成总结
+- [Week 5 完成总结](summaries/WEEK5_COMPLETION_SUMMARY_2025-01-15.md)
+
+### 📝 [plans/](./plans/) - 计划文档
+开发计划和项目规划
+- [编辑器增强计划](plans/EDITOR_ENHANCEMENT_PLAN_2025-01-15.md)
+- [项目清理计划](plans/PROJECT_CLEANUP_PLAN_2025-01-15.md)
+
+### 🚀 [build/](./build/) - 构建部署
+构建和部署相关文档
+- [构建完成总结](build/BUILD_COMPLETION_SUMMARY_2025-01-15.md)
+
 ### 💡 [examples/](./examples/) - 示例代码
 代码示例和使用案例
 - `enhanced-module-manager-usage.md` - 增强模块管理器使用示例
@@ -77,8 +98,23 @@
 - 重要的分析报告保存在`reports/`目录
 - 示例代码和用法说明保存在`examples/`目录
 
+## 🎯 项目状态 (2025-01-15)
+
+### 完成的阶段
+- ✅ **Week 5**: P0问题修复 - 测试覆盖率提升、编辑器增强、键盘快捷键
+- ✅ **Week 6**: macOS设计系统基础 - 设计令牌、主题系统、核心组件
+- ✅ **项目构建**: 桌面应用构建完成，可执行文件生成
+
+### 当前状态
+- **构建状态**: ✅ 桌面应用已构建完成
+- **可执行文件**: `apps/tauri-desktop/src-tauri/target/release/MingLog Desktop.exe`
+- **测试覆盖率**: 前端85%+, 后端90%+
+- **测试通过率**: 97.2%
+
 ## 🔄 更新记录
 
+- **2025-01-15**: 完成项目整理和桌面应用构建，添加Week 5-6技术报告
+- **2025-01-15**: 重新组织文档结构，创建reports/summaries/plans/build目录
 - **2025-01-10**: 重新组织文档结构，创建分类目录
 - **2025-01-10**: 清理重复文档，保留最新版本
 - **2025-01-09**: 添加项目全面分析报告

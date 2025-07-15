@@ -8,6 +8,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { ModuleRoute } from '@minglog/core'
 import { useCoreInstance } from '../contexts/CoreContext'
 import ModularSettingsPage from '../pages/ModularSettingsPage'
+import { NotesModule } from '../components/modules/NotesModule'
 
 // 模块组件懒加载包装器
 const ModuleComponentWrapper: React.FC<{ 
@@ -119,7 +120,27 @@ export const ModularRouter: React.FC = () => {
     <Routes>
       {/* 默认重定向到笔记页面 */}
       <Route path="/" element={<Navigate to="/notes" replace />} />
-      
+
+      {/* 笔记页面 */}
+      <Route
+        path="/notes"
+        element={
+          <RouteErrorBoundary>
+            <NotesModule />
+          </RouteErrorBoundary>
+        }
+      />
+
+      {/* 新建笔记页面 */}
+      <Route
+        path="/notes/new"
+        element={
+          <RouteErrorBoundary>
+            <NotesModule />
+          </RouteErrorBoundary>
+        }
+      />
+
       {/* 模块管理页面 */}
       <Route
         path="/modules"
@@ -139,10 +160,10 @@ export const ModularRouter: React.FC = () => {
           </RouteErrorBoundary>
         }
       />
-      
+
       {/* 动态模块路由 */}
       {renderModuleRoutes()}
-      
+
       {/* 404页面 */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
@@ -151,22 +172,24 @@ export const ModularRouter: React.FC = () => {
 
 // 模块管理页面组件
 const ModuleManagerPage: React.FC = () => {
-  const core = useCoreInstance()
-  const { ModuleManagerPage, useModuleManager } = require('@minglog/ui')
-  
-  const moduleManager = useModuleManager({ core })
-
   return (
-    <ModuleManagerPage
-      modules={moduleManager.modules}
-      moduleStatuses={moduleManager.moduleStatuses}
-      moduleSettings={moduleManager.moduleSettings}
-      moduleSchemas={moduleManager.moduleSchemas}
-      onToggleModule={moduleManager.toggleModule}
-      onUpdateModuleConfig={moduleManager.updateModuleConfig}
-      onRefresh={moduleManager.refresh}
-      loading={moduleManager.loading}
-    />
+    <div className="h-full p-6">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-2xl font-semibold text-gray-900 mb-6">模块管理</h1>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="text-center py-12">
+            <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">模块管理功能</h3>
+            <p className="text-gray-600">模块管理功能正在开发中，敬请期待。</p>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 

@@ -131,11 +131,11 @@ describe('TemplateSelector', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('全部')).toBeInTheDocument()
-        expect(screen.getByText('最近使用')).toBeInTheDocument()
-        expect(screen.getByText('收藏')).toBeInTheDocument()
-        expect(screen.getByText('商业')).toBeInTheDocument()
-        expect(screen.getByText('项目')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /全部/ })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /最近使用/ })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /收藏/ })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /商业/ })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /项目/ })).toBeInTheDocument()
       })
     })
   })
@@ -204,8 +204,9 @@ describe('TemplateSelector', () => {
         expect(screen.getByText('基础思维导图')).toBeInTheDocument()
       })
 
-      // 点击项目分类
-      fireEvent.click(screen.getByText('项目'))
+      // 点击项目分类 - 使用更具体的选择器
+      const projectCategory = screen.getByRole('button', { name: /项目/ })
+      fireEvent.click(projectCategory)
 
       // 应该只显示项目类模板
       await waitFor(() => {

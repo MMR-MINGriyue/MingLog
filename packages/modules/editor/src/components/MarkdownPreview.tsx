@@ -6,6 +6,7 @@
 import React, { useMemo, useCallback } from 'react';
 import type { CustomElement } from '@minglog/editor';
 import { MarkdownParser, type ParseResult } from '../services/MarkdownParser';
+import { MathRenderer } from './MathRenderer';
 
 /**
  * Markdown预览组件属性
@@ -65,13 +66,20 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
 
   // 渲染Markdown为HTML
   const renderedHtml = useMemo(() => {
-    return renderMarkdownToHtml(content, {
+    const rawHtml = renderMarkdownToHtml(content, {
       onLinkClick,
       onTagClick,
       onBlockReferenceClick,
       enableSyntaxHighlight,
       enableMath
     });
+
+    // 如果启用数学公式，进行后处理
+    if (enableMath) {
+      return postProcessMathFormulas(rawHtml);
+    }
+
+    return rawHtml;
   }, [content, onLinkClick, onTagClick, onBlockReferenceClick, enableSyntaxHighlight, enableMath]);
 
   // 处理链接点击
@@ -267,12 +275,12 @@ function renderChildrenToHtml(
       if (options.enableMath) {
         // 行内公式 $formula$
         text = text.replace(/\$([^$]+)\$/g, (match, formula) => {
-          return `<span class="math-inline">${escapeHtml(formula)}</span>`;
+          return `<span class="math-inline" data-formula="${escapeHtml(formula)}" data-inline="true">${escapeHtml(formula)}</span>`;
         });
-        
+
         // 块级公式 $$formula$$
         text = text.replace(/\$\$([^$]+)\$\$/g, (match, formula) => {
-          return `<div class="math-block">${escapeHtml(formula)}</div>`;
+          return `<div class="math-block" data-formula="${escapeHtml(formula)}" data-inline="false">${escapeHtml(formula)}</div>`;
         });
       }
       
@@ -296,6 +304,93 @@ function escapeHtml(text: string): string {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+/**
+ * 后处理数学公式，将标记转换为实际渲染
+ */
+function postProcessMathFormulas(html: string): string {
+  // 这里我们暂时保持HTML标记，在实际渲染时通过CSS和JavaScript处理
+  // 未来可以集成React组件渲染或服务端渲染
+  return html.replace(
+    /<(span|div) class="math-(inline|block)" data-formula="([^"]*)" data-inline="(true|false)"[^>]*>([^<]*)<\/(span|div)>/g,
+    (match, tag, type, formula, isInline, content, endTag) => {
+      const decodedFormula = decodeHtmlEntities(formula);
+      const processedFormula = processMathFormula(decodedFormula);
+
+      if (type === 'inline') {
+        return `<span class="math-inline math-rendered" data-formula="${formula}" title="${decodedFormula}">${processedFormula}</span>`;
+      } else {
+        return `<div class="math-block math-rendered" data-formula="${formula}" title="${decodedFormula}">${processedFormula}</div>`;
+      }
+    }
+  );
+}
+
+/**
+ * 解码HTML实体
+ */
+function decodeHtmlEntities(text: string): string {
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = text;
+  return textarea.value;
+}
+
+/**
+ * 处理数学公式，应用基础渲染
+ */
+function processMathFormula(formula: string): string {
+  if (!formula.trim()) {
+    return '<span style="color: #999; font-style: italic;">空公式</span>';
+  }
+
+  // 简单的数学符号替换 (与MathRenderer中的逻辑保持一致)
+  let processed = formula
+    // 希腊字母
+    .replace(/\\alpha/g, 'α')
+    .replace(/\\beta/g, 'β')
+    .replace(/\\gamma/g, 'γ')
+    .replace(/\\delta/g, 'δ')
+    .replace(/\\epsilon/g, 'ε')
+    .replace(/\\theta/g, 'θ')
+    .replace(/\\lambda/g, 'λ')
+    .replace(/\\mu/g, 'μ')
+    .replace(/\\pi/g, 'π')
+    .replace(/\\sigma/g, 'σ')
+    .replace(/\\phi/g, 'φ')
+    .replace(/\\omega/g, 'ω')
+
+    // 数学符号
+    .replace(/\\infty/g, '∞')
+    .replace(/\\sum/g, '∑')
+    .replace(/\\prod/g, '∏')
+    .replace(/\\int/g, '∫')
+    .replace(/\\partial/g, '∂')
+    .replace(/\\nabla/g, '∇')
+    .replace(/\\pm/g, '±')
+    .replace(/\\mp/g, '∓')
+    .replace(/\\times/g, '×')
+    .replace(/\\div/g, '÷')
+    .replace(/\\neq/g, '≠')
+    .replace(/\\leq/g, '≤')
+    .replace(/\\geq/g, '≥')
+    .replace(/\\approx/g, '≈')
+    .replace(/\\equiv/g, '≡')
+
+    // 上下标处理
+    .replace(/\^{([^}]+)}/g, '<sup>$1</sup>')
+    .replace(/\^(\w)/g, '<sup>$1</sup>')
+    .replace(/_{([^}]+)}/g, '<sub>$1</sub>')
+    .replace(/_(\w)/g, '<sub>$1</sub>')
+
+    // 分数处理
+    .replace(/\\frac{([^}]+)}{([^}]+)}/g, '<span style="display: inline-block; text-align: center;"><span style="display: block; border-bottom: 1px solid; padding-bottom: 2px;">$1</span><span style="display: block; padding-top: 2px;">$2</span></span>')
+
+    // 根号处理
+    .replace(/\\sqrt{([^}]+)}/g, '√($1)')
+    .replace(/\\sqrt/g, '√');
+
+  return `<span style="font-family: 'Times New Roman', serif; font-size: 1.1em;">${processed}</span>`;
 }
 
 /**

@@ -63,27 +63,31 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // 移除静态导航，使用模块化导航
 
   return (
-    <div className="h-full flex bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* 现代化侧边栏 */}
-      <div className={`${sidebarOpen ? 'w-72' : 'w-16'} transition-all duration-300 bg-white/80 backdrop-blur-sm border-r border-gray-200/50 flex flex-col shadow-lg`}>
-        {/* 侧边栏头部 */}
-        <div className="px-4 py-6 border-b border-gray-200/50">
+    <div className="h-full flex macos-content">
+      {/* macOS风格侧边栏 */}
+      <div className={`${sidebarOpen ? 'w-72' : 'w-16'} transition-all duration-300 flex flex-col macos-sidebar`}>
+        {/* macOS风格侧边栏头部 */}
+        <div className="px-4 py-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             {sidebarOpen && (
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-10 h-10 flex items-center justify-center bg-blue-500 rounded-xl shadow-sm">
                   <BookOpen className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">明志</span>
-                  <p className="text-xs text-gray-500 -mt-1">桌面版</p>
+                  <span className="text-xl font-semibold text-gray-900">
+                    MingLog
+                  </span>
+                  <p className="text-xs text-gray-500 -mt-1">
+                    桌面版
+                  </p>
                 </div>
               </div>
             )}
             <button
               type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
             >
               {sidebarOpen ? (
                 <X className="w-5 h-5 text-gray-600" />
@@ -106,12 +110,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           )}
         </div>
 
-        {/* 快速操作区 */}
+        {/* macOS风格快速操作区 */}
         {sidebarOpen && (
-          <div className="px-4 py-6 border-t border-gray-200/50 space-y-4">
+          <div className="px-4 py-6 space-y-4 border-t border-gray-200">
             <Link
               to="/notes/new"
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl py-3 px-4 flex items-center justify-center space-x-2 hover:shadow-lg hover:scale-105 transition-all duration-200 font-medium"
+              className="w-full bg-blue-500 text-white rounded-xl py-3 px-4 flex items-center justify-center space-x-2 hover:bg-blue-600 hover:shadow-lg hover:scale-105 transition-all duration-200 font-medium text-decoration-none"
             >
               <Plus className="w-5 h-5" />
               <span>新建笔记</span>
@@ -120,7 +124,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <button
               type="button"
               onClick={() => setShowShortcutsHelp(true)}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl py-2.5 px-4 flex items-center justify-center space-x-2 text-sm transition-all duration-200 hover:shadow-md"
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg py-2.5 px-4 flex items-center justify-center space-x-2 text-sm transition-all duration-200 hover:shadow-md"
               title="快捷键帮助"
             >
               <HelpCircle className="w-4 h-4" />
@@ -134,43 +138,47 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         )}
 
-        {/* 侧边栏底部信息 */}
-        <div className="px-4 py-4 border-t border-gray-200/50">
+        {/* macOS风格侧边栏底部信息 */}
+        <div className="px-4 py-4 border-t border-gray-200">
           {sidebarOpen ? (
             <div className="text-center space-y-2">
-              <div className="text-xs text-gray-600 font-medium">明志桌面版 v1.0.0</div>
-              <div className="text-xs text-gray-500">本地优先 • 隐私安全</div>
-              <div className="flex items-center justify-center space-x-1 text-xs text-gray-400">
+              <div className="text-xs font-medium text-gray-600">
+                MingLog 桌面版 v1.0.0
+              </div>
+              <div className="text-xs text-gray-500">
+                本地优先 • 隐私安全
+              </div>
+              <div className="flex items-center justify-center space-x-1">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span>运行正常</span>
+                <span className="text-xs text-gray-400">运行正常</span>
               </div>
             </div>
           ) : (
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto shadow-lg">
+            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center mx-auto shadow-sm">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
           )}
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* macOS风格主内容区域 */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* 现代化标题栏 */}
-        <div className="h-14 bg-white/80 backdrop-blur-sm border-b border-gray-200/50 flex items-center justify-between px-6 drag-region shadow-sm">
+        {/* macOS风格标题栏 */}
+        <div className="h-14 macos-titlebar flex items-center justify-between px-6 drag-region">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <h1 className="text-lg font-semibold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent drag-none">
+              <h1 className="text-lg font-semibold text-gray-900 drag-none">
                 {getPageTitle()}
               </h1>
             </div>
           </div>
 
-          {/* 状态信息和控制区 */}
+          {/* macOS风格状态信息和控制区 */}
           <div className="flex items-center space-x-4 drag-none">
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
+            <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span>已同步</span>
+              <span className="text-sm text-gray-500">已同步</span>
             </div>
             <div className="text-sm text-gray-500">
               {new Date().toLocaleDateString('zh-CN', {
@@ -182,13 +190,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </div>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-hidden">
+        {/* macOS风格页面内容 */}
+        <main className="flex-1 overflow-hidden macos-content">
           {children}
         </main>
       </div>
 
-      {/* Keyboard Shortcuts Help Modal */}
+      {/* 键盘快捷键帮助模态框 */}
       <KeyboardShortcutsHelp
         isOpen={showShortcutsHelp}
         onClose={() => setShowShortcutsHelp(false)}
@@ -197,4 +205,4 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   )
 }
 
-export default Layout
+export { Layout }

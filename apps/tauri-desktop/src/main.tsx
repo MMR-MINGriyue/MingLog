@@ -42,10 +42,26 @@ async function initializeApp() {
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', initializeApp)
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+// Hide loading screen and show app
+function showApp() {
+  const loadingScreen = document.getElementById('loading-screen')
+  const appElement = document.getElementById('app')
+
+  if (loadingScreen) {
+    loadingScreen.style.display = 'none'
+  }
+  if (appElement) {
+    appElement.style.display = 'block'
+  }
+}
+
+ReactDOM.createRoot(document.getElementById('app')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <App />
     </BrowserRouter>
   </React.StrictMode>,
 )
+
+// Show app after React has rendered
+setTimeout(showApp, 100)

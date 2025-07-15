@@ -2,48 +2,254 @@
 @tailwind components;
 @tailwind utilities;
 
+/* macOS Design System CSS Variables */
+:root {
+  /* macOS System Colors - Light Mode */
+  --macos-system-blue: #007AFF;
+  --macos-system-green: #34C759;
+  --macos-system-red: #FF3B30;
+  --macos-system-orange: #FF9500;
+  --macos-system-yellow: #FFCC00;
+  --macos-system-purple: #AF52DE;
+  --macos-system-pink: #FF2D92;
+  --macos-system-teal: #5AC8FA;
+  --macos-system-indigo: #5856D6;
+
+  /* macOS Text Colors */
+  --macos-text-primary: #000000;
+  --macos-text-secondary: rgba(60, 60, 67, 0.6);
+  --macos-text-tertiary: rgba(60, 60, 67, 0.3);
+  --macos-text-quaternary: rgba(60, 60, 67, 0.18);
+  --macos-text-link: #007AFF;
+
+  /* macOS Background Colors */
+  --macos-bg-primary: #ffffff;
+  --macos-bg-secondary: #f2f2f7;
+  --macos-bg-tertiary: #ffffff;
+
+  /* macOS Fill Colors */
+  --macos-fill-primary: rgba(120, 120, 128, 0.2);
+  --macos-fill-secondary: rgba(120, 120, 128, 0.16);
+  --macos-fill-tertiary: rgba(118, 118, 128, 0.12);
+  --macos-fill-quaternary: rgba(116, 116, 128, 0.08);
+
+  /* macOS Separator Colors */
+  --macos-separator-primary: rgba(60, 60, 67, 0.29);
+  --macos-separator-secondary: rgba(60, 60, 67, 0.12);
+
+  /* macOS Vibrancy Effects */
+  --macos-vibrancy-sidebar: rgba(246, 246, 246, 0.8);
+  --macos-vibrancy-menu: rgba(255, 255, 255, 0.8);
+  --macos-vibrancy-popover: rgba(255, 255, 255, 0.9);
+
+  /* macOS Shadows */
+  --macos-shadow-level1: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --macos-shadow-level2: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --macos-shadow-level3: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --macos-shadow-focus: 0 0 0 3px rgba(0, 122, 255, 0.3);
+
+  /* macOS Typography */
+  --macos-font-system: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+  --macos-font-mono: "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* macOS System Colors - Dark Mode */
+    --macos-system-blue: #0A84FF;
+    --macos-system-green: #30D158;
+    --macos-system-red: #FF453A;
+    --macos-system-orange: #FF9F0A;
+    --macos-system-yellow: #FFD60A;
+    --macos-system-purple: #BF5AF2;
+    --macos-system-pink: #FF375F;
+    --macos-system-teal: #64D2FF;
+    --macos-system-indigo: #5E5CE6;
+
+    /* macOS Text Colors - Dark Mode */
+    --macos-text-primary: #ffffff;
+    --macos-text-secondary: rgba(235, 235, 245, 0.6);
+    --macos-text-tertiary: rgba(235, 235, 245, 0.3);
+    --macos-text-quaternary: rgba(235, 235, 245, 0.18);
+    --macos-text-link: #0A84FF;
+
+    /* macOS Background Colors - Dark Mode */
+    --macos-bg-primary: #000000;
+    --macos-bg-secondary: #1c1c1e;
+    --macos-bg-tertiary: #2c2c2e;
+
+    /* macOS Fill Colors - Dark Mode */
+    --macos-fill-primary: rgba(120, 120, 128, 0.36);
+    --macos-fill-secondary: rgba(120, 120, 128, 0.32);
+    --macos-fill-tertiary: rgba(118, 118, 128, 0.28);
+    --macos-fill-quaternary: rgba(116, 116, 128, 0.24);
+
+    /* macOS Separator Colors - Dark Mode */
+    --macos-separator-primary: rgba(84, 84, 88, 0.65);
+    --macos-separator-secondary: rgba(84, 84, 88, 0.32);
+
+    /* macOS Vibrancy Effects - Dark Mode */
+    --macos-vibrancy-sidebar: rgba(30, 30, 30, 0.8);
+    --macos-vibrancy-menu: rgba(40, 40, 40, 0.8);
+    --macos-vibrancy-popover: rgba(50, 50, 50, 0.9);
+  }
+}
+
 /* Base styles for desktop app */
 @layer base {
   html {
     @apply h-full;
   }
-  
+
   body {
-    @apply h-full bg-gray-50 text-gray-900 antialiased;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-      sans-serif;
+    @apply h-full antialiased;
+    font-family: var(--macos-font-system);
+    background: var(--macos-bg-primary);
+    color: var(--macos-text-primary);
   }
-  
-  #root {
+
+  #app {
     @apply h-full;
   }
   
-  /* Scrollbar styles */
+  /* macOS Scrollbar styles */
   ::-webkit-scrollbar {
-    @apply w-2;
+    width: 8px;
   }
-  
+
   ::-webkit-scrollbar-track {
-    @apply bg-gray-100;
+    background: transparent;
   }
-  
+
   ::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 rounded-full;
+    background: var(--macos-fill-tertiary);
+    border-radius: 4px;
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400;
+    background: var(--macos-fill-secondary);
   }
-  
-  /* Selection styles */
+
+  /* macOS Selection styles */
   ::selection {
-    @apply bg-primary-200 text-primary-900;
+    background: var(--macos-system-blue);
+    color: white;
   }
-  
-  /* Focus styles */
+
+  /* macOS Focus styles */
   :focus-visible {
-    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+    outline: none;
+    box-shadow: var(--macos-shadow-focus);
+  }
+}
+
+/* macOS Component styles */
+@layer components {
+  /* macOS Vibrancy Effects */
+  .macos-vibrancy {
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  .macos-vibrancy-sidebar {
+    background: var(--macos-vibrancy-sidebar);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  .macos-vibrancy-menu {
+    background: var(--macos-vibrancy-menu);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  /* macOS Button Styles */
+  .macos-button {
+    font-family: var(--macos-font-system);
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+  }
+
+  .macos-button-primary {
+    background: var(--macos-system-blue);
+    color: white;
+  }
+
+  .macos-button-primary:hover {
+    transform: scale(1.02);
+    box-shadow: var(--macos-shadow-level2);
+  }
+
+  .macos-button-secondary {
+    background: var(--macos-fill-quaternary);
+    color: var(--macos-text-primary);
+    border: 1px solid var(--macos-separator-primary);
+  }
+
+  .macos-button-secondary:hover {
+    background: var(--macos-fill-tertiary);
+  }
+
+  /* macOS Input Styles */
+  .macos-input {
+    font-family: var(--macos-font-system);
+    background: var(--macos-bg-primary);
+    border: 1px solid var(--macos-separator-primary);
+    border-radius: 8px;
+    color: var(--macos-text-primary);
+    transition: all 0.2s ease;
+  }
+
+  .macos-input:focus {
+    border-color: var(--macos-system-blue);
+    box-shadow: var(--macos-shadow-focus);
+    outline: none;
+  }
+
+  /* macOS Card Styles */
+  .macos-card {
+    background: var(--macos-bg-primary);
+    border: 1px solid var(--macos-separator-primary);
+    border-radius: 12px;
+    box-shadow: var(--macos-shadow-level1);
+    transition: all 0.2s ease;
+  }
+
+  .macos-card:hover {
+    box-shadow: var(--macos-shadow-level2);
+  }
+
+  .macos-card-vibrancy {
+    background: var(--macos-vibrancy-menu);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--macos-separator-secondary);
+  }
+
+  /* macOS Layout Styles */
+  .macos-sidebar {
+    background: var(--macos-vibrancy-sidebar);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-right: 1px solid var(--macos-separator-primary);
+    box-shadow: var(--macos-shadow-level2);
+  }
+
+  .macos-titlebar {
+    background: var(--macos-vibrancy-menu);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid var(--macos-separator-primary);
+    box-shadow: var(--macos-shadow-level1);
+  }
+
+  .macos-content {
+    background: var(--macos-bg-primary);
+    color: var(--macos-text-primary);
   }
 }
 

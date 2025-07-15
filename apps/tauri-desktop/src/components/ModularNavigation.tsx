@@ -36,8 +36,15 @@ export const ModularNavigation: React.FC = () => {
   const navigationItems = useMemo(() => {
     const items: NavigationItem[] = []
 
-    // 添加系统导航项
+    // 添加核心导航项
     items.push(
+      {
+        id: 'notes',
+        label: '笔记',
+        path: '/notes',
+        icon: FileText,
+        order: 1
+      },
       {
         id: 'modules',
         label: t('modules.title') || '模块管理',
@@ -54,32 +61,8 @@ export const ModularNavigation: React.FC = () => {
       }
     )
 
-    // 只有在Core已初始化时才获取模块导航项
-    if (initialized && core) {
-      try {
-        // 获取激活模块的菜单项
-        const moduleManager = core.getModuleManager()
-        const activeModules = moduleManager.getActiveModules()
-
-        for (const module of activeModules) {
-          if (module.getMenuItems) {
-            const menuItems = module.getMenuItems()
-            for (const menuItem of menuItems) {
-              items.push({
-                id: menuItem.id,
-                label: menuItem.label,
-                path: menuItem.path,
-                icon: getIconComponent(menuItem.icon),
-                order: menuItem.order || 500,
-                moduleId: module.id
-              })
-            }
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to load module navigation items:', error)
-      }
-    }
+    // 简化版本：直接返回基础导航项
+    // 在实际的模块化系统中，这里会动态加载模块的导航项
 
     // 按order排序
     return items.sort((a, b) => a.order - b.order)

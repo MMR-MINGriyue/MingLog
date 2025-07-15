@@ -1,117 +1,69 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-
-// Import i18n configuration
-import './i18n'
-
-// Import modular architecture
-import { CoreProvider, CoreWrapper } from './contexts/CoreContext'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { CoreProvider } from './contexts/CoreContext'
+import { Layout } from './components/Layout'
 import { ModularRouter } from './router/ModularRouter'
+import { LoadingScreen } from './components/LoadingScreen'
 
-// Import local components
-import Layout from './components/Layout'
-import ErrorBoundary from './components/ErrorBoundary'
-import { NotificationProvider } from './components/NotificationSystem'
-import { ThemeProvider } from './hooks/useTheme'
-import OnboardingTour from './components/OnboardingTour'
-import SearchComponent from './components/SearchComponent'
+// 核心包装器组件
+const CoreWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <div className="h-full w-full bg-gray-50 dark:bg-gray-900 transition-colors">
+      {children}
+    </div>
+  )
+}
 
 function App() {
-  const { t } = useTranslation()
-  const [showOnboarding, setShowOnboarding] = useState(false)
-  const [showSearch, setShowSearch] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
 
-  // Handle global search shortcut
+  // 初始化应用
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Ctrl+K or Ctrl+F to open search
-      if ((event.ctrlKey || event.metaKey) && (event.key === 'k' || event.key === 'f')) {
-        // Don't trigger if already in an input field
-        const target = event.target as HTMLElement
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
-          return
-        }
-
-        event.preventDefault()
-        setShowSearch(true)
-      }
-
-      // Escape to close search
-      if (event.key === 'Escape' && showSearch) {
-        setShowSearch(false)
+    const initializeApp = async () => {
+      try {
+        // 模拟初始化过程
+        await new Promise(resolve => setTimeout(resolve, 500))
+        setIsLoaded(true)
+        console.log('MingLog App loaded successfully')
+      } catch (error) {
+        console.error('App initialization failed:', error)
+        setIsLoaded(true) // 即使出错也要显示应用
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [showSearch])
-
-  // Check for onboarding on mount
-  useEffect(() => {
-    try {
-      const hasCompletedOnboarding = localStorage.getItem('minglog-onboarding-completed')
-      if (!hasCompletedOnboarding) {
-        setShowOnboarding(true)
-      }
-    } catch (e) {
-      console.warn('LocalStorage not available:', e)
-    }
+    initializeApp()
   }, [])
 
-  // Main app content with modular architecture
+  // 显示加载屏幕
+  if (!isLoaded) {
+    return <LoadingScreen />
+  }
+
+  // 主应用内容
   return (
     <ErrorBoundary>
-      <ThemeProvider>
-        <NotificationProvider>
-          <BrowserRouter
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
-            <AppContent
-              showOnboarding={showOnboarding}
-              setShowOnboarding={setShowOnboarding}
-              showSearch={showSearch}
-              setShowSearch={setShowSearch}
-            />
-
-            {/* Onboarding Tour - moved inside NotificationProvider */}
-            <OnboardingTour
-              isOpen={showOnboarding}
-              onClose={() => setShowOnboarding(false)}
-              onComplete={() => setShowOnboarding(false)}
-            />
-
-            {/* Global Search - moved inside NotificationProvider */}
-            <SearchComponent
-              isOpen={showSearch}
-              onClose={() => setShowSearch(false)}
-            />
-          </BrowserRouter>
-        </NotificationProvider>
-      </ThemeProvider>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
+        <AppContent />
+      </BrowserRouter>
     </ErrorBoundary>
   )
 }
 
-// Separate component for app content (for testing)
-export const AppContent: React.FC<{
-  showOnboarding: boolean
-  setShowOnboarding: (show: boolean) => void
-  showSearch: boolean
-  setShowSearch: (show: boolean) => void
-}> = ({ showOnboarding, setShowOnboarding, showSearch, setShowSearch }) => {
+// 应用内容组件
+export const AppContent: React.FC = () => {
   return (
     <CoreProvider>
-      <CoreWrapper>
-        <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors">
-          <Layout>
-            <ModularRouter />
-          </Layout>
-        </div>
-      </CoreWrapper>
+      <div className="h-full flex flex-col macos-content">
+        <Layout>
+          <ModularRouter />
+        </Layout>
+      </div>
     </CoreProvider>
   )
 }
