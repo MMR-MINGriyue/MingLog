@@ -136,7 +136,7 @@ interface ThemeToggleProps {
 }
 
 export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = '' }) => {
-  const { theme, actualTheme, setTheme } = useThemeContext()
+  const { theme, setTheme } = useThemeContext()
 
   return (
     <div className={`flex items-center space-x-2 ${className}`}>

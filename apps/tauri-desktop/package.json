@@ -23,12 +23,18 @@
   },
   "dependencies": {
     "@minglog/core": "workspace:*",
+    "@minglog/ui": "workspace:*",
+    "@minglog/graph": "workspace:*",
+    "@minglog/editor": "workspace:*",
     "@minglog/mindmap": "workspace:*",
     "@minglog/notes": "workspace:*",
+    "@minglog/tasks": "workspace:*",
     "@tauri-apps/api": "^1.6.0",
+    "@types/d3": "^7.4.0",
     "@types/react-window": "^1.8.8",
     "chart.js": "^4.5.0",
     "clsx": "^2.1.1",
+    "d3": "^7.8.5",
     "i18next": "^25.2.1",
     "lucide-react": "^0.294.0",
     "react": "^18.3.1",
@@ -38,6 +44,8 @@
     "react-router-dom": "^6.30.1",
     "react-window": "^1.8.11",
     "react-window-infinite-loader": "^1.0.10",
+    "slate": "^0.103.0",
+    "slate-react": "^0.108.0",
     "zustand": "^5.0.6"
   },
   "lint-staged": {

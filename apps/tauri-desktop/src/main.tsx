@@ -15,6 +15,7 @@ import './i18n'
 async function initializeApp() {
   try {
     // Set up window properties
+    const { getCurrentWindow } = await import('@tauri-apps/api/window')
     const appWindow = getCurrentWindow()
     await appWindow.setTitle('MingLog Desktop')
     

@@ -21,6 +21,9 @@ export { LinkManagementPanel } from './components/LinkManagementPanel'
 // 双向链接服务
 export { BidirectionalLinkManager } from './services/BidirectionalLinkManager'
 
+// 模块主类和服务
+export { GraphModule, GraphService } from './GraphModule'
+
 // 类型定义
 export type {
   GraphNode,
@@ -57,7 +60,10 @@ export {
   setupDrag,
   filterGraphData,
   calculateGraphStats,
-  findShortestPath
+  findShortestPath,
+  findCentralNodes,
+  calculateShortestPath,
+  generateAnalysisReport
 } from './utils'
 
 // 布局算法

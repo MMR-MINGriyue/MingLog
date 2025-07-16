@@ -39,7 +39,7 @@ const SimpleTestPage: React.FC = () => {
         const element = document.createElement('div')
         element.className = 'test-class'
         document.body.appendChild(element)
-        const styles = window.getComputedStyle(element)
+        const _styles = window.getComputedStyle(element)
         document.body.removeChild(element)
         return Promise.resolve('CSS样式正常加载')
       }

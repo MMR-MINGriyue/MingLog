@@ -99,7 +99,7 @@ export interface EventStatistics {
  * 跨模块事件总线实现
  */
 export class CrossModuleEventBus extends EventEmitter {
-  private override listeners: Map<string, EventListener> = new Map()
+  private eventListeners: Map<string, EventListener> = new Map()
   private eventHistory: EventData[] = []
   private processingTimes: Map<string, number> = new Map()
   private errorCount: number = 0
@@ -115,7 +115,7 @@ export class CrossModuleEventBus extends EventEmitter {
    * 注册事件监听器
    */
   registerListener(listener: EventListener): void {
-    this.listeners.set(listener.id, listener)
+    this.eventListeners.set(listener.id, listener)
     
     // 为每个事件类型注册内部监听器
     listener.eventTypes.forEach(eventType => {
@@ -131,14 +131,14 @@ export class CrossModuleEventBus extends EventEmitter {
    * 注销事件监听器
    */
   unregisterListener(listenerId: string): void {
-    const listener = this.listeners.get(listenerId)
+    const listener = this.eventListeners.get(listenerId)
     if (listener) {
       // 移除内部监听器
       listener.eventTypes.forEach(eventType => {
         this.removeAllListeners(eventType)
       })
-      
-      this.listeners.delete(listenerId)
+
+      this.eventListeners.delete(listenerId)
       console.log(`事件监听器已注销: ${listenerId}`)
     }
   }

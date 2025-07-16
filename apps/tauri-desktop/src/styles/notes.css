@@ -1,0 +1,242 @@
+/**
+ * 笔记页面样式
+ */
+
+/* 笔记编辑器字体 */
+.notes-editor {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+}
+
+/* macOS风格的笔记卡片 */
+.note-card {
+  @apply p-4 border-b border-gray-100 cursor-pointer transition-all duration-200;
+  @apply hover:bg-gray-50 hover:shadow-sm;
+}
+
+.note-card.selected {
+  @apply bg-blue-50 border-blue-200 shadow-sm;
+}
+
+.note-card:hover {
+  @apply bg-gray-50;
+}
+
+.note-card.selected:hover {
+  @apply bg-blue-100;
+}
+
+/* 笔记标签样式 */
+.note-tag {
+  @apply px-2 py-0.5 text-xs rounded-full transition-colors;
+  @apply bg-gray-100 text-gray-600 hover:bg-gray-200;
+}
+
+.note-tag.selected {
+  @apply bg-blue-100 border-blue-300 text-blue-700;
+}
+
+/* 过滤器面板 */
+.filter-panel {
+  @apply space-y-3 p-3 rounded-lg transition-all duration-200;
+  @apply bg-gray-50 border border-gray-200;
+}
+
+/* macOS风格按钮 */
+.macos-button {
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
+  @apply border border-gray-300 bg-white text-gray-700;
+  @apply hover:bg-gray-50 hover:border-gray-400;
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  @apply active:bg-gray-100;
+}
+
+.macos-button-primary {
+  @apply border-blue-500 bg-blue-500 text-white;
+  @apply hover:bg-blue-600 hover:border-blue-600;
+  @apply active:bg-blue-700;
+}
+
+.macos-button-secondary {
+  @apply border-gray-300 bg-gray-100 text-gray-700;
+  @apply hover:bg-gray-200 hover:border-gray-400;
+  @apply active:bg-gray-300;
+}
+
+/* macOS风格输入框 */
+.macos-input {
+  @apply px-3 py-2 rounded-lg border border-gray-300;
+  @apply bg-white text-gray-900 placeholder-gray-500;
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+  @apply transition-all duration-200;
+}
+
+/* macOS风格侧边栏 */
+.macos-vibrancy-sidebar {
+  @apply bg-gray-50 bg-opacity-80;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* macOS风格内容区域 */
+.macos-content {
+  @apply bg-white;
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .macos-vibrancy-sidebar {
+    @apply bg-gray-900 bg-opacity-80;
+  }
+  
+  .macos-content {
+    @apply bg-gray-800;
+  }
+  
+  .note-card {
+    @apply border-gray-700;
+  }
+  
+  .note-card:hover {
+    @apply bg-gray-700;
+  }
+  
+  .note-card.selected {
+    @apply bg-blue-900 border-blue-700;
+  }
+  
+  .note-card.selected:hover {
+    @apply bg-blue-800;
+  }
+  
+  .macos-input {
+    @apply bg-gray-700 border-gray-600 text-white placeholder-gray-400;
+    @apply focus:border-blue-400;
+  }
+  
+  .macos-button {
+    @apply bg-gray-700 border-gray-600 text-gray-200;
+    @apply hover:bg-gray-600 hover:border-gray-500;
+  }
+  
+  .filter-panel {
+    @apply bg-gray-800 border-gray-700;
+  }
+  
+  .note-tag {
+    @apply bg-gray-700 text-gray-300;
+  }
+  
+  .note-tag.selected {
+    @apply bg-blue-800 text-blue-200;
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .notes-layout {
+    @apply flex-col;
+  }
+  
+  .notes-sidebar {
+    @apply w-full h-1/2;
+  }
+  
+  .notes-editor-container {
+    @apply w-full h-1/2;
+  }
+}
+
+/* 动画效果 */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 加载状态 */
+.loading-spinner {
+  @apply animate-spin rounded-full border-b-2 border-blue-600;
+}
+
+/* 空状态样式 */
+.empty-state {
+  @apply text-center p-6;
+}
+
+.empty-state-icon {
+  @apply w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center;
+}
+
+.empty-state-title {
+  @apply text-gray-600 font-medium mb-2;
+}
+
+.empty-state-description {
+  @apply text-sm text-gray-500;
+}
+
+/* 工具提示 */
+.tooltip {
+  @apply absolute z-10 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg;
+  @apply opacity-0 pointer-events-none transition-opacity duration-200;
+}
+
+.tooltip.visible {
+  @apply opacity-100 pointer-events-auto;
+}
+
+/* 滚动条样式 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-gray-100 rounded-full;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+/* 深色模式滚动条 */
+@media (prefers-color-scheme: dark) {
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-gray-800;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-600;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+  }
+}

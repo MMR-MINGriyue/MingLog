@@ -3,7 +3,7 @@
  */
 
 import { EventEmitter } from 'events'
-import { GraphData, GraphNode, GraphLink } from '@minglog/graph'
+import { GraphData } from '@minglog/graph'
 import { Descendant } from 'slate'
 
 // 数据同步事件类型

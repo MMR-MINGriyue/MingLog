@@ -6,7 +6,7 @@
  * conflict resolution and change tracking.
  */
 
-import { Note, Tag } from './tauri'
+// import { Note, Tag } from './tauri'
 
 export interface SyncConfig {
   enabled: boolean
@@ -127,7 +127,7 @@ class SyncEngine {
     localStorage.setItem('minglog-sync-config', JSON.stringify(this.config))
   }
 
-  private loadConfig(): SyncConfig {
+  private _loadConfig(): SyncConfig {
     const saved = localStorage.getItem('minglog-sync-config')
     if (saved) {
       try {
@@ -254,7 +254,7 @@ class SyncEngine {
   }
 
   // Conflict resolution
-  async resolveConflict(conflictId: string, resolution: 'local' | 'remote' | 'merge'): Promise<void> {
+  async resolveConflict(_conflictId: string, _resolution: 'local' | 'remote' | 'merge'): Promise<void> {
     // Conflict resolution logic would go here
     // For now, just remove from conflicts count
     this.status.conflicts = Math.max(0, this.status.conflicts - 1)

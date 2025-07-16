@@ -39,10 +39,42 @@ vi.mock('@minglog/notes', () => ({
   NotesModuleFactory: vi.fn()
 }))
 
-import { CoreProvider, CoreWrapper } from '../contexts/CoreContext'
+// Mock CoreContext hooks
+vi.mock('../contexts/CoreContext', () => ({
+  useCore: vi.fn(() => ({
+    core: {
+      version: '1.0.0',
+      initialized: true,
+      modules: ['notes', 'settings']
+    },
+    initialized: true,
+    loading: false,
+    error: null
+  })),
+  useCoreInstance: vi.fn(() => ({
+    version: '1.0.0',
+    initialized: true,
+    modules: ['notes', 'settings'],
+    getModuleManager: vi.fn(() => ({
+      getActiveModules: vi.fn(() => [
+        { id: 'notes', name: '笔记模块', version: '1.0.0', status: 'active' },
+        { id: 'settings', name: '设置模块', version: '1.0.0', status: 'active' }
+      ]),
+      getRegisteredModules: vi.fn(() => [
+        { id: 'notes', name: '笔记模块', version: '1.0.0', status: 'active' },
+        { id: 'settings', name: '设置模块', version: '1.0.0', status: 'active' },
+        { id: 'mindmap', name: '思维导图模块', version: '1.0.0', status: 'inactive' }
+      ])
+    }))
+  })),
+  CoreProvider: ({ children }: { children: React.ReactNode }) => children
+}))
+
 import { ModularRouter } from '../router/ModularRouter'
 import ModularSettingsPage from '../pages/ModularSettingsPage'
 import { ModularNavigation } from '../components/ModularNavigation'
+
+
 
 // 测试组件包装器
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -52,11 +84,7 @@ const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
       v7_relativeSplatPath: true,
     }}
   >
-    <CoreProvider>
-      <CoreWrapper>
-        {children}
-      </CoreWrapper>
-    </CoreProvider>
+    {children}
   </MemoryRouter>
 )
 
@@ -73,9 +101,7 @@ describe('模块化架构测试', () => {
           v7_relativeSplatPath: true,
         }}
       >
-        <CoreProvider>
-          <div data-testid="test-content">测试内容</div>
-        </CoreProvider>
+        <div data-testid="test-content">测试内容</div>
       </MemoryRouter>
     )
 
@@ -130,7 +156,7 @@ describe('模块化架构测试', () => {
   })
 
   it('设置页面应该能够切换标签', async () => {
-    let container: any
+    let _container: any
     await act(async () => {
       const result = render(
         <TestWrapper>
@@ -168,8 +194,8 @@ describe('模块化架构测试', () => {
     await waitFor(() => {
       expect(screen.getByText('模块状态')).toBeInTheDocument()
       expect(screen.getByText('总模块数')).toBeInTheDocument()
-      expect(screen.getByText('已激活')).toBeInTheDocument()
-      expect(screen.getByText('未激活')).toBeInTheDocument()
+      expect(screen.getAllByText('已激活')).toHaveLength(3) // 统计区域1个 + 模块状态2个
+      expect(screen.getAllByText('未激活')).toHaveLength(2) // 统计区域1个 + 模块状态1个
     })
   })
 

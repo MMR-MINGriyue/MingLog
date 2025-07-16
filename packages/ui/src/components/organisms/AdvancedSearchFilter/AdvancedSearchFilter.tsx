@@ -555,6 +555,3 @@ export const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
 }
 
 export default AdvancedSearchFilter
-
-// 导出类型
-export type { AdvancedSearchFilterProps }

@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { MindMapModule, MindMapService } from '../../packages/mindmap/src/MindMapModule'
-import { MindMapData, MindMapNode, LayoutConfig, ExportConfig } from '../../packages/mindmap/src/types'
+import { MindMapModule, MindMapService } from '@minglog/mindmap'
+import { MindMapData, MindMapNode, LayoutConfig, ExportConfig } from '@minglog/mindmap'
 
 interface UseMindMapModuleReturn {
   /** 思维导图模块实例 */
@@ -77,10 +77,10 @@ export const useMindMapModule = (): UseMindMapModuleReturn => {
       emit: (event: string, data: any) => {
         console.log('Event emitted:', event, data)
       },
-      on: (event: string, handler: Function) => {
+      on: (event: string, _handler: Function) => {
         console.log('Event listener added:', event)
       },
-      off: (event: string, handler: Function) => {
+      off: (event: string, _handler: Function) => {
         console.log('Event listener removed:', event)
       }
     },

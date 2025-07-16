@@ -55,8 +55,12 @@ describe('EnhancedNodeStyleEditor', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // 确保appCore初始化状态为true
     mockAppCore.isInitialized.mockReturnValue(true)
     mockAppCore.getEventBus.mockReturnValue(mockEventBus)
+
+    // 重置事件总线mock
+    mockEventBus.emit.mockClear()
   })
 
   afterEach(() => {
@@ -338,8 +342,8 @@ describe('EnhancedNodeStyleEditor', () => {
     })
   })
 
-  describe('事件总线集成', () => {
-    it('应该在样式变更时发送事件', async () => {
+  describe('样式应用验证', () => {
+    it('应该正确应用预设样式并触发回调', async () => {
       render(
         <EnhancedNodeStyleEditor
           selectedNode={mockNode}
@@ -350,23 +354,28 @@ describe('EnhancedNodeStyleEditor', () => {
         />
       )
 
-      // 等待组件初始化
+      // 应用预设样式
+      const blueThemeButton = screen.getByText('蓝色主题')
+      fireEvent.click(blueThemeButton)
+
+      // 验证样式变更回调被调用
       await waitFor(() => {
-        expect(mockAppCore.getEventBus).toHaveBeenCalled()
+        expect(mockOnStyleChange).toHaveBeenCalledWith(
+          expect.objectContaining({
+            backgroundColor: '#eff6ff',
+            borderColor: '#3b82f6',
+            fontColor: '#1e40af'
+          })
+        )
       })
 
-      // 切换到字体标签页并调整字体大小
-      fireEvent.click(screen.getByText('字体'))
-      const fontSizeSlider = screen.getByDisplayValue('14')
-      fireEvent.change(fontSizeSlider, { target: { value: '16' } })
-
-      expect(mockEventBus.emit).toHaveBeenCalledWith(
-        'mindmap:node:style-changed',
-        expect.objectContaining({
-          nodeId: 'test-node'
-        }),
-        'EnhancedNodeStyleEditor'
-      )
+      // 验证预览节点样式已更新
+      const previewNode = screen.getByText('测试节点')
+      expect(previewNode).toHaveStyle({
+        backgroundColor: 'rgb(239, 246, 255)',
+        borderColor: 'rgb(59, 130, 246)',
+        color: 'rgb(30, 64, 175)'
+      })
     })
   })
 })

@@ -1,0 +1,317 @@
+/**
+ * Markdown编辑器样式
+ */
+
+/* 编辑器容器 */
+.markdown-editor {
+  @apply border border-gray-200 rounded-lg overflow-hidden bg-white;
+}
+
+.markdown-editor.fullscreen {
+  @apply fixed inset-0 z-50 border-none rounded-none;
+}
+
+/* 工具栏样式 */
+.markdown-editor .toolbar {
+  @apply border-b border-gray-200 p-3 bg-gray-50;
+}
+
+.markdown-editor .toolbar-button {
+  @apply p-2 rounded text-gray-600 hover:bg-gray-200 transition-colors;
+}
+
+.markdown-editor .toolbar-button.active {
+  @apply bg-blue-100 text-blue-600;
+}
+
+.markdown-editor .toolbar-separator {
+  @apply w-px h-6 bg-gray-300 mx-2;
+}
+
+/* 编辑器文本区域 */
+.markdown-editor textarea {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  @apply flex-1 p-4 resize-none border-none outline-none;
+  @apply text-gray-900 placeholder-gray-400 leading-relaxed text-sm;
+  @apply focus:ring-0 focus:border-transparent;
+}
+
+/* 预览区域样式 */
+.markdown-editor .preview {
+  @apply p-4 overflow-y-auto bg-white;
+}
+
+/* Markdown内容样式 */
+.markdown-editor .prose {
+  @apply text-gray-900 leading-relaxed;
+}
+
+.markdown-editor .prose h1 {
+  @apply text-2xl font-bold text-gray-900 mb-4 mt-6 first:mt-0;
+  @apply border-b border-gray-200 pb-2;
+}
+
+.markdown-editor .prose h2 {
+  @apply text-xl font-semibold text-gray-900 mb-3 mt-5 first:mt-0;
+  @apply border-b border-gray-100 pb-1;
+}
+
+.markdown-editor .prose h3 {
+  @apply text-lg font-medium text-gray-900 mb-2 mt-4 first:mt-0;
+}
+
+.markdown-editor .prose h4 {
+  @apply text-base font-medium text-gray-900 mb-2 mt-3 first:mt-0;
+}
+
+.markdown-editor .prose h5 {
+  @apply text-sm font-medium text-gray-900 mb-1 mt-2 first:mt-0;
+}
+
+.markdown-editor .prose h6 {
+  @apply text-sm font-medium text-gray-600 mb-1 mt-2 first:mt-0;
+}
+
+.markdown-editor .prose p {
+  @apply mb-4 text-gray-700 leading-relaxed;
+}
+
+.markdown-editor .prose strong {
+  @apply font-semibold text-gray-900;
+}
+
+.markdown-editor .prose em {
+  @apply italic text-gray-700;
+}
+
+.markdown-editor .prose code {
+  @apply px-1.5 py-0.5 text-sm bg-gray-100 text-gray-800 rounded;
+  @apply border border-gray-200;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+}
+
+.markdown-editor .prose pre {
+  @apply p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto mb-4;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+}
+
+.markdown-editor .prose pre code {
+  @apply p-0 bg-transparent text-gray-100 border-none;
+}
+
+.markdown-editor .prose blockquote {
+  @apply border-l-4 border-blue-500 pl-4 py-2 mb-4;
+  @apply bg-blue-50 text-gray-700 italic;
+}
+
+.markdown-editor .prose ul {
+  @apply list-disc list-inside mb-4 space-y-1;
+}
+
+.markdown-editor .prose ol {
+  @apply list-decimal list-inside mb-4 space-y-1;
+}
+
+.markdown-editor .prose li {
+  @apply text-gray-700 leading-relaxed;
+}
+
+.markdown-editor .prose a {
+  @apply text-blue-600 hover:text-blue-800 underline;
+  @apply transition-colors duration-200;
+}
+
+.markdown-editor .prose img {
+  @apply max-w-full h-auto rounded-lg shadow-sm mb-4;
+}
+
+.markdown-editor .prose table {
+  @apply w-full border-collapse border border-gray-300 mb-4;
+}
+
+.markdown-editor .prose th {
+  @apply border border-gray-300 px-4 py-2 bg-gray-50 font-semibold text-left;
+}
+
+.markdown-editor .prose td {
+  @apply border border-gray-300 px-4 py-2;
+}
+
+.markdown-editor .prose hr {
+  @apply border-0 border-t border-gray-300 my-6;
+}
+
+/* 代码高亮样式 */
+.markdown-editor .prose .hljs {
+  @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto;
+}
+
+.markdown-editor .prose .hljs-comment {
+  @apply text-gray-500;
+}
+
+.markdown-editor .prose .hljs-keyword {
+  @apply text-blue-400;
+}
+
+.markdown-editor .prose .hljs-string {
+  @apply text-green-400;
+}
+
+.markdown-editor .prose .hljs-number {
+  @apply text-yellow-400;
+}
+
+.markdown-editor .prose .hljs-function {
+  @apply text-purple-400;
+}
+
+.markdown-editor .prose .hljs-variable {
+  @apply text-red-400;
+}
+
+/* 分屏模式样式 */
+.markdown-editor .split-view {
+  @apply flex divide-x divide-gray-200;
+}
+
+.markdown-editor .split-view .editor-pane {
+  @apply w-1/2 flex flex-col;
+}
+
+.markdown-editor .split-view .preview-pane {
+  @apply w-1/2 overflow-y-auto;
+}
+
+/* 全屏模式样式 */
+.markdown-editor.fullscreen {
+  @apply h-screen;
+}
+
+.markdown-editor.fullscreen .editor-content {
+  @apply h-full;
+}
+
+/* 滚动条样式 */
+.markdown-editor .preview::-webkit-scrollbar {
+  width: 6px;
+}
+
+.markdown-editor .preview::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+.markdown-editor .preview::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+}
+
+.markdown-editor .preview::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .markdown-editor .split-view {
+    @apply flex-col divide-x-0 divide-y divide-gray-200;
+  }
+  
+  .markdown-editor .split-view .editor-pane,
+  .markdown-editor .split-view .preview-pane {
+    @apply w-full h-1/2;
+  }
+  
+  .markdown-editor .toolbar {
+    @apply p-2;
+  }
+  
+  .markdown-editor .toolbar-button {
+    @apply p-1.5;
+  }
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .markdown-editor {
+    @apply bg-gray-800 border-gray-700;
+  }
+  
+  .markdown-editor .toolbar {
+    @apply bg-gray-900 border-gray-700;
+  }
+  
+  .markdown-editor .toolbar-button {
+    @apply text-gray-400 hover:bg-gray-700;
+  }
+  
+  .markdown-editor .toolbar-button.active {
+    @apply bg-blue-900 text-blue-400;
+  }
+  
+  .markdown-editor textarea {
+    @apply bg-gray-800 text-gray-100 placeholder-gray-500;
+  }
+  
+  .markdown-editor .preview {
+    @apply bg-gray-800;
+  }
+  
+  .markdown-editor .prose {
+    @apply text-gray-100;
+  }
+  
+  .markdown-editor .prose h1,
+  .markdown-editor .prose h2,
+  .markdown-editor .prose h3,
+  .markdown-editor .prose h4,
+  .markdown-editor .prose h5 {
+    @apply text-gray-100 border-gray-700;
+  }
+  
+  .markdown-editor .prose h6 {
+    @apply text-gray-400;
+  }
+  
+  .markdown-editor .prose p {
+    @apply text-gray-300;
+  }
+  
+  .markdown-editor .prose strong {
+    @apply text-gray-100;
+  }
+  
+  .markdown-editor .prose em {
+    @apply text-gray-300;
+  }
+  
+  .markdown-editor .prose code {
+    @apply bg-gray-700 text-gray-200 border-gray-600;
+  }
+  
+  .markdown-editor .prose blockquote {
+    @apply bg-blue-900 border-blue-400 text-gray-300;
+  }
+  
+  .markdown-editor .prose li {
+    @apply text-gray-300;
+  }
+  
+  .markdown-editor .prose a {
+    @apply text-blue-400 hover:text-blue-300;
+  }
+  
+  .markdown-editor .prose table {
+    @apply border-gray-600;
+  }
+  
+  .markdown-editor .prose th {
+    @apply border-gray-600 bg-gray-700;
+  }
+  
+  .markdown-editor .prose td {
+    @apply border-gray-600;
+  }
+  
+  .markdown-editor .prose hr {
+    @apply border-gray-600;
+  }
+}

@@ -8,16 +8,14 @@ import {
   Network,
   Edit3,
   ArrowLeft,
-  ArrowRight,
   Maximize2,
-  Minimize2,
   Link as LinkIcon,
   Eye,
   EyeOff,
   RefreshCw
 } from 'lucide-react'
-import { GraphView, GraphData, GraphNode } from '@minglog/graph'
-import { BlockEditor, BlockTree, MubuBlockEditor } from '@minglog/editor'
+import { GraphView } from '@minglog/graph'
+import { BlockEditor, MubuBlockEditor } from '@minglog/editor'
 import {
   getGraphData,
   getPage,
@@ -33,7 +31,7 @@ interface IntegratedWorkspacePageProps {}
 const IntegratedWorkspacePage: React.FC<IntegratedWorkspacePageProps> = () => {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { success, error } = useNotifications()
+  const { success } = useNotifications()
 
   // 使用数据同步Hook
   const {
@@ -44,9 +42,8 @@ const IntegratedWorkspacePage: React.FC<IntegratedWorkspacePageProps> = () => {
     updateEditorContent,
     openPage,
     isLoading: isSyncLoading,
-    errors: syncErrors,
-    clearErrors,
-    refresh
+    isConnected,
+    lastSync
   } = useDataSync()
 
   // 布局状态
@@ -63,7 +60,7 @@ const IntegratedWorkspacePage: React.FC<IntegratedWorkspacePageProps> = () => {
   const [isMubuMode, setIsMubuMode] = useState(true) // 是否启用幕布模式
 
   // 从URL参数获取初始状态
-  const initialNodeId = searchParams.get('nodeId')
+  const _initialNodeId = searchParams.get('nodeId')
   const initialPageId = searchParams.get('pageId')
 
   // 加载图谱数据

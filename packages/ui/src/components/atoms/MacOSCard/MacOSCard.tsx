@@ -27,7 +27,7 @@ export type MacOSCardSize =
 /**
  * 卡片属性接口
  */
-export interface MacOSCardProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface MacOSCardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
   /** 卡片变体 */
   variant?: MacOSCardVariant;
   /** 卡片尺寸 */

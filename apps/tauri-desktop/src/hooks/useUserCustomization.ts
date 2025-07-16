@@ -15,7 +15,7 @@ import {
   ThemeType,
   LanguageType,
   ViewMode
-} from '../../packages/core/src/services/UserPreferencesService'
+} from '@minglog/core'
 
 interface UseUserCustomizationReturn {
   /** 用户偏好设置服务实例 */

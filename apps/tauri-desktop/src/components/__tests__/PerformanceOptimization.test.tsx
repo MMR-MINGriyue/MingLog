@@ -222,7 +222,7 @@ describe('Performance Optimizations', () => {
         <BrowserRouter>
           <VirtualizedPageList
             pages={largePages}
-            formatDate={(timestamp) => new Date(timestamp).toLocaleDateString()}
+            formatDate={(timestamp: number) => new Date(timestamp).toLocaleDateString()}
             onPageClick={vi.fn()}
             onPageEdit={vi.fn()}
           />

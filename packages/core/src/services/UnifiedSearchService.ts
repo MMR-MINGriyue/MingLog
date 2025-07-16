@@ -11,6 +11,7 @@ export type { UnifiedSearchResult } from './DataAssociationService'
 // 搜索查询接口
 export interface SearchQuery {
   query: string
+  scope?: string
   options?: AdvancedSearchOptions
 }
 
@@ -19,6 +20,7 @@ export interface SearchResponse {
   results: UnifiedSearchResult[]
   total: number
   searchTime: number
+  duration?: number
   suggestions?: string[]
   facets?: Record<string, any>
   pagination?: {
@@ -140,29 +142,41 @@ export class UnifiedSearchService {
    * 基础搜索
    */
   async search(
-    query: string,
+    query: string | SearchQuery,
     options?: AdvancedSearchOptions
   ): Promise<SearchResultAggregation> {
     const startTime = performance.now()
-    
+
+    // 处理SearchQuery对象
+    let searchQuery: string
+    let searchOptions: AdvancedSearchOptions | undefined
+
+    if (typeof query === 'string') {
+      searchQuery = query
+      searchOptions = options
+    } else {
+      searchQuery = query.query
+      searchOptions = query.options || options
+    }
+
     // 记录查询历史
-    this.recordQuery(query)
+    this.recordQuery(searchQuery)
 
     // 获取相关提供者
-    const relevantProviders = this.getRelevantProviders(options)
+    const relevantProviders = this.getRelevantProviders(searchOptions)
     
     // 并行搜索
     const searchPromises = relevantProviders.map(async provider => {
       try {
         const providerOptions: SearchProviderOptions = {
-          limit: options?.limit,
-          offset: options?.offset,
-          fuzzyMatch: options?.fuzzyMatch,
-          includeContent: options?.includeContent,
-          filters: options?.filters
+          limit: searchOptions?.limit,
+          offset: searchOptions?.offset,
+          fuzzyMatch: searchOptions?.fuzzyMatch,
+          includeContent: searchOptions?.includeContent,
+          filters: searchOptions?.filters
         }
-        
-        const results = await provider.search(query, providerOptions)
+
+        const results = await provider.search(searchQuery, providerOptions)
         return results.map(result => ({
           ...result,
           metadata: {
@@ -188,24 +202,26 @@ export class UnifiedSearchService {
     }
 
     // 排序
-    const sortedResults = this.sortResults(uniqueResults, options)
+    const sortedResults = this.sortResults(uniqueResults, searchOptions)
 
     // 分页
-    const paginatedResults = this.paginateResults(sortedResults, options)
+    const paginatedResults = this.paginateResults(sortedResults, searchOptions)
 
     // 生成统计信息
     const endTime = performance.now()
     const searchTime = endTime - startTime
 
+    const queryString = typeof query === 'string' ? query : query.query
+
     const aggregation: SearchResultAggregation = {
-      query,
+      query: queryString,
       totalResults: uniqueResults.length,
       resultsByType: this.aggregateByType(uniqueResults),
       resultsByModule: this.aggregateByModule(uniqueResults),
       searchTime,
       results: paginatedResults,
-      suggestions: await this.getSuggestions(query),
-      relatedQueries: this.getRelatedQueries(query)
+      suggestions: await this.getSuggestions(queryString),
+      relatedQueries: this.getRelatedQueries(queryString)
     }
 
     // 发布搜索事件

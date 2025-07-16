@@ -3,12 +3,12 @@
  */
 
 import { dataSyncService } from '../services/DataSyncService'
-import { GraphData } from '@minglog/graph'
+// import { GraphData } from '@minglog/graph'
 import {
   createTestGraphData,
   createTestEditorContent,
   validateGraphData,
-  validateSearchIndex,
+  // validateSearchIndex,
   performanceTest,
   generateTestReport
 } from '../utils/testHelpers'
@@ -193,7 +193,7 @@ class IntegrationTester {
 
   private async testErrorHandling(): Promise<void> {
     await this.runTest('错误处理机制', async () => {
-      const initialErrorCount = dataSyncService.getState().errors.length
+      const _initialErrorCount = dataSyncService.getState().errors.length
       
       // 清理错误
       dataSyncService.clearErrors()

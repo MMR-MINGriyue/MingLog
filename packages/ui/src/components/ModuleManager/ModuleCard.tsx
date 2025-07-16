@@ -105,7 +105,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
         <div className="mb-4">
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">依赖模块:</p>
           <div className="flex flex-wrap gap-1">
-            {module.dependencies.map(dep => (
+            {module.dependencies.map((dep: string) => (
               <span
                 key={dep}
                 className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded"

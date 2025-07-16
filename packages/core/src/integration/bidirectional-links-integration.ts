@@ -41,10 +41,10 @@ export class BidirectionalLinksIntegration {
     }
 
     this.linkManager = new LinkManagerService(this.database as any, this.eventBus as any)
-    this.crossModuleService = new CrossModuleLinkService(this.database as any, this.eventBus as any, {
+    this.crossModuleService = new CrossModuleLinkService(this.eventBus as any, this.database as any, {
       enableBidirectionalLinks: true,
       enableLinkValidation: true,
-      maxCacheSize: 1000
+      cacheSize: 1000
     })
   }
 

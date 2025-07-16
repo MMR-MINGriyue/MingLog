@@ -2,7 +2,7 @@
  * 思维导图页面
  */
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { createMindMap, themes, layoutConfigs } from '@minglog/mindmap'
 import { useNotes } from '../hooks/useNotes'

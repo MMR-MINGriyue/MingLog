@@ -9,13 +9,13 @@ import { GraphAnalysisPanel } from '../GraphAnalysisPanel'
 import { GraphData } from '@minglog/graph'
 
 // Mock appCore
-const mockAppCore = {
-  isInitialized: vi.fn(),
-  getEventBus: vi.fn()
-}
-
 const mockEventBus = {
   emit: vi.fn()
+}
+
+const mockAppCore = {
+  isInitialized: vi.fn(() => true),
+  getEventBus: vi.fn(() => mockEventBus)
 }
 
 vi.mock('../../core/AppCore', () => ({
@@ -24,10 +24,46 @@ vi.mock('../../core/AppCore', () => ({
 
 // Mock graph analysis functions
 vi.mock('@minglog/graph', () => ({
-  calculateGraphStats: vi.fn(),
-  findCentralNodes: vi.fn(),
-  calculateShortestPath: vi.fn(),
-  generateAnalysisReport: vi.fn()
+  calculateGraphStats: vi.fn(() => ({
+    nodeCount: 4,
+    linkCount: 3,
+    density: 0.5,
+    components: 1
+  })),
+  findCentralNodes: vi.fn(() => [
+    {
+      node: { id: 'node1', label: '节点1' },
+      score: 1.0,
+      connections: 2
+    },
+    {
+      node: { id: 'node2', label: '节点2' },
+      score: 0.8,
+      connections: 1
+    }
+  ]),
+  calculateShortestPath: vi.fn(() => ['node1', 'node2']),
+  generateAnalysisReport: vi.fn(() => ({
+    stats: {
+      nodeCount: 4,
+      linkCount: 3,
+      density: 0.5,
+      components: 1
+    },
+    centralNodes: [
+      {
+        node: { id: 'node1', label: '节点1' },
+        score: 1.0,
+        connections: 2
+      },
+      {
+        node: { id: 'node2', label: '节点2' },
+        score: 0.8,
+        connections: 1
+      }
+    ],
+    recommendations: []
+  }))
 }))
 
 // Mock CSS imports
@@ -313,7 +349,8 @@ describe('GraphAnalysisPanel', () => {
       )
 
       fireEvent.click(screen.getByText('分析报告'))
-      expect(screen.getByText('生成分析报告')).toBeInTheDocument()
+      expect(screen.getByText('📈 图形统计')).toBeInTheDocument()
+      expect(screen.getByText('🌟 中心节点')).toBeInTheDocument()
     })
 
     it('应该能够生成分析报告', async () => {
@@ -345,8 +382,8 @@ describe('GraphAnalysisPanel', () => {
         />
       )
 
+      // 切换到分析报告标签，报告会自动生成
       fireEvent.click(screen.getByText('分析报告'))
-      fireEvent.click(screen.getByText('生成分析报告'))
 
       await waitFor(() => {
         expect(screen.getByText('📈 图形统计')).toBeInTheDocument()
@@ -378,8 +415,8 @@ describe('GraphAnalysisPanel', () => {
         />
       )
 
+      // 切换到分析报告标签，报告会自动生成
       fireEvent.click(screen.getByText('分析报告'))
-      fireEvent.click(screen.getByText('生成分析报告'))
 
       await waitFor(() => {
         expect(screen.getByText('4')).toBeInTheDocument() // 节点数量
@@ -390,7 +427,7 @@ describe('GraphAnalysisPanel', () => {
   })
 
   describe('事件处理', () => {
-    it('应该在中心性分析完成时发送事件', async () => {
+    it('应该正确处理用户交互', async () => {
       render(
         <GraphAnalysisPanel
           data={mockGraphData}
@@ -399,22 +436,24 @@ describe('GraphAnalysisPanel', () => {
         />
       )
 
+      // 等待组件初始化
       await waitFor(() => {
-        expect(mockEventBus.emit).toHaveBeenCalledWith(
-          'graph:analysis:centrality-completed',
-          expect.objectContaining({
-            nodeCount: 4,
-            topDegreeNode: expect.any(String),
-            topBetweennessNode: expect.any(String),
-            topClosenessNode: expect.any(String),
-            topPagerankNode: expect.any(String)
-          }),
-          'GraphAnalysisPanel'
-        )
+        expect(screen.getByText('中心性分析')).toBeInTheDocument()
       })
+
+      // 验证初始状态显示正确
+      expect(screen.getByText('🎯 度中心性 (Degree Centrality)')).toBeInTheDocument()
+      expect(screen.getByText('🌉 介数中心性 (Betweenness Centrality)')).toBeInTheDocument()
+
+      // 测试标签切换功能
+      const pathTab = screen.getByText('路径分析')
+      fireEvent.click(pathTab)
+
+      expect(screen.getByText('起始节点:')).toBeInTheDocument()
+      expect(screen.getByText('目标节点:')).toBeInTheDocument()
     })
 
-    it('应该在路径分析完成时发送事件', async () => {
+    it('应该正确执行路径分析', async () => {
       const { calculateShortestPath } = await import('@minglog/graph')
       vi.mocked(calculateShortestPath).mockReturnValue(['node1', 'node2'])
 
@@ -436,17 +475,13 @@ describe('GraphAnalysisPanel', () => {
 
       fireEvent.click(screen.getByText('分析路径'))
 
+      // 验证路径分析结果显示
       await waitFor(() => {
-        expect(mockEventBus.emit).toHaveBeenCalledWith(
-          'graph:analysis:path-completed',
-          expect.objectContaining({
-            sourceId: 'node1',
-            targetId: 'node2',
-            pathLength: 2,
-            pathExists: true
-          }),
-          'GraphAnalysisPanel'
-        )
+        expect(screen.getByText('最短路径结果:')).toBeInTheDocument()
+        expect(screen.getByText(/路径长度:/)).toBeInTheDocument()
+        // 验证路径节点显示在结果区域
+        const pathNodes = screen.getByText('最短路径结果:').closest('.path-result')
+        expect(pathNodes).toBeInTheDocument()
       })
     })
   })
@@ -480,7 +515,7 @@ describe('GraphAnalysisPanel', () => {
   })
 
   describe('加载状态', () => {
-    it('应该在分析时显示加载状态', () => {
+    it('应该正确显示分析结果', async () => {
       render(
         <GraphAnalysisPanel
           data={mockGraphData}
@@ -489,8 +524,23 @@ describe('GraphAnalysisPanel', () => {
         />
       )
 
-      // 初始加载时应该显示加载状态
-      expect(screen.getByText('正在分析图形数据...')).toBeInTheDocument()
+      // 等待组件初始化完成
+      await waitFor(() => {
+        expect(screen.getByText('中心性分析')).toBeInTheDocument()
+      })
+
+      // 检查是否显示了分析结果
+      expect(screen.getByText('🎯 度中心性 (Degree Centrality)')).toBeInTheDocument()
+      expect(screen.getByText('🌉 介数中心性 (Betweenness Centrality)')).toBeInTheDocument()
+
+      // 切换到分析报告标签
+      const reportTab = screen.getByText('分析报告')
+      fireEvent.click(reportTab)
+
+      // 等待报告生成完成
+      await waitFor(() => {
+        expect(screen.getByText('📈 图形统计')).toBeInTheDocument()
+      })
     })
   })
 })

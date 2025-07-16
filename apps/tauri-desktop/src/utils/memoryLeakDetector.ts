@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 
 interface MemorySnapshot {
   timestamp: number;
@@ -11,7 +11,7 @@ interface MemorySnapshot {
 
 interface MemoryLeak {
   id: string;
-  type: 'memory' | 'dom' | 'listeners';
+  type: 'memory' | 'dom' | 'listeners' | 'intervals' | 'timeouts';
   severity: 'low' | 'medium' | 'high';
   description: string;
   detected: number;
@@ -23,8 +23,8 @@ class ResourceTracker {
   private static instance: ResourceTracker | null = null;
   private resources: Map<string, any> = new Map();
   private cleanupCallbacks: Map<string, () => void> = new Map();
-  private intervals: Set<number> = new Set();
-  private timeouts: Set<number> = new Set();
+  private intervals: Set<NodeJS.Timeout> = new Set();
+  private timeouts: Set<NodeJS.Timeout> = new Set();
   private eventListeners: Array<{ target: EventTarget; type: string; listener: EventListener }> = [];
 
   private constructor() {}
@@ -52,22 +52,22 @@ class ResourceTracker {
     this.resources.delete(id);
   }
 
-  registerInterval(id: number): void {
+  registerInterval(id: NodeJS.Timeout): void {
     this.intervals.add(id);
   }
 
-  clearInterval(id: number): void {
+  clearInterval(id: NodeJS.Timeout): void {
     if (this.intervals.has(id)) {
       clearInterval(id);
       this.intervals.delete(id);
     }
   }
 
-  registerTimeout(id: number): void {
+  registerTimeout(id: NodeJS.Timeout): void {
     this.timeouts.add(id);
   }
 
-  clearTimeout(id: number): void {
+  clearTimeout(id: NodeJS.Timeout): void {
     if (this.timeouts.has(id)) {
       clearTimeout(id);
       this.timeouts.delete(id);
@@ -288,7 +288,7 @@ export const useMemoryLeakDetection = (enabled: boolean = true, interval: number
   const [leaks, setLeaks] = React.useState<MemoryLeak[]>([]);
 
   const checkForLeaks = useCallback(() => {
-    const snapshot = globalDetector.takeSnapshot();
+    const _snapshot = globalDetector.takeSnapshot();
     const detectedLeaks = globalDetector.detectLeaks();
 
     setSnapshots(globalDetector.getSnapshots());
@@ -348,13 +348,13 @@ export const useSafeResource = () => {
     };
   }, []);
 
-  const safeSetInterval = useCallback((callback: () => void, delay: number) => {
+  const safeSetInterval = useCallback((callback: () => void, delay: number): NodeJS.Timeout => {
     const id = setInterval(callback, delay);
     trackerRef.current.registerInterval(id);
     return id;
   }, []);
 
-  const safeSetTimeout = useCallback((callback: () => void, delay: number) => {
+  const safeSetTimeout = useCallback((callback: () => void, delay: number): NodeJS.Timeout => {
     const id = setTimeout(callback, delay);
     trackerRef.current.registerTimeout(id);
     return id;
@@ -370,11 +370,11 @@ export const useSafeResource = () => {
     };
   }, []);
 
-  const safeClearInterval = useCallback((id: number) => {
+  const safeClearInterval = useCallback((id: NodeJS.Timeout) => {
     trackerRef.current.clearInterval(id);
   }, []);
 
-  const safeClearTimeout = useCallback((id: number) => {
+  const safeClearTimeout = useCallback((id: NodeJS.Timeout) => {
     trackerRef.current.clearTimeout(id);
   }, []);
 
@@ -407,7 +407,7 @@ export const performanceValidator = {
     return nodeCount < threshold;
   },
 
-  validateRenderTime: (threshold: number = 16): boolean => {
+  validateRenderTime: (_threshold: number = 16): boolean => {
     // This would need to be implemented with actual render time measurement
     return true;
   },

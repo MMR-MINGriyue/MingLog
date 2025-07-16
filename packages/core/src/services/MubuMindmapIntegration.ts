@@ -523,7 +523,11 @@ export class MubuMindmapIntegration extends EventEmitter {
       type: 'paragraph',
       level: node.level,
       parentId: node.parentId,
-      children: [{ text: node.content || node.title }],
+      children: [{
+        id: `text-${node.id}`,
+        type: 'text',
+        text: node.content || node.title
+      }],
       metadata: node.metadata,
       createdAt: node.createdAt.toISOString(),
       updatedAt: node.updatedAt.toISOString()

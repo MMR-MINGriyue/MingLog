@@ -447,19 +447,6 @@ export const EnhancedGraphVisualization: React.FC<EnhancedGraphVisualizationProp
     setState(prev => ({ ...prev, searchQuery: query }))
   }, [])
 
-  // 处理节点选择
-  const handleNodeSelection = useCallback((nodeId: string, selected: boolean) => {
-    setState(prev => {
-      const newSelectedNodes = new Set(prev.selectedNodes)
-      if (selected) {
-        newSelectedNodes.add(nodeId)
-      } else {
-        newSelectedNodes.delete(nodeId)
-      }
-      return { ...prev, selectedNodes: newSelectedNodes }
-    })
-  }, [])
-
   // 过滤后的数据
   const filteredData = useMemo(() => {
     let filteredNodes = data.nodes

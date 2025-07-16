@@ -110,8 +110,8 @@ describe('Chinese Localization', () => {
       expect(screen.getByText('模块管理')).toBeInTheDocument()
       expect(screen.getByText('设置')).toBeInTheDocument()
 
-      // Check for app branding
-      expect(screen.getByText('明志')).toBeInTheDocument()
+      // Check for app branding - Layout.tsx shows "MingLog" hardcoded
+      expect(screen.getByText('MingLog')).toBeInTheDocument()
       expect(screen.getByText('桌面版')).toBeInTheDocument()
     })
 

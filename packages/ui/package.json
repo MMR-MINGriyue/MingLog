@@ -21,6 +21,7 @@
   "author": "MingLog Team",
   "license": "MIT",
   "dependencies": {
+    "@minglog/core": "workspace:*",
     "clsx": "^2.0.0",
     "lucide-react": "^0.300.0",
     "tailwind-merge": "^2.0.0",

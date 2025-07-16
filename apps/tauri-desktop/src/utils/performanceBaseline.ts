@@ -168,7 +168,7 @@ class PerformanceBaselineManager {
     console.log('📊 Establishing performance baseline...')
 
     const memory = performanceUtils.memoryUsage()
-    const connection = performanceUtils.getConnectionInfo()
+    const _connection = performanceUtils.getConnectionInfo()
     
     // 测试网络延迟
     const networkLatency = await this.measureNetworkLatency()

@@ -3,11 +3,10 @@
  */
 
 // 模块主类导出
-export { MindMapModule, createMindMapModule, MINDMAP_MODULE_DEFAULT_CONFIG } from './MindMapModule'
+export { MindMapModule, MindMapService } from './MindMapModule'
 
 // 服务层导出
 export {
-  MindMapService,
   LayoutService,
   ExportService,
   type IMindMapService,

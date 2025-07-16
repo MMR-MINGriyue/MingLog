@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { GraphModule, GraphService } from '../../packages/graph/src/GraphModule'
+import { GraphModule, GraphService } from '@minglog/graph'
 import { 
   GraphData, 
   GraphNode, 
@@ -16,7 +16,7 @@ import {
   Cluster,
   Path,
   ExportOptions
-} from '../../packages/graph/src/types'
+} from '@minglog/graph'
 
 interface UseGraphModuleReturn {
   /** 图谱模块实例 */
@@ -114,10 +114,10 @@ export const useGraphModule = (): UseGraphModuleReturn => {
       emit: (event: string, data: any) => {
         console.log('Event emitted:', event, data)
       },
-      on: (event: string, handler: Function) => {
+      on: (event: string, _handler: Function) => {
         console.log('Event listener added:', event)
       },
-      off: (event: string, handler: Function) => {
+      off: (event: string, _handler: Function) => {
         console.log('Event listener removed:', event)
       }
     },

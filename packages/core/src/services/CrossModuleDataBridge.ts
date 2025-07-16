@@ -4,52 +4,9 @@
  */
 
 import { EventBus } from '../event-system/EventBus'
-// import { MindMapData, MindMapNode, MindMapLink } from '@minglog/mindmap' // 模块不存在，暂时注释
-// import { GraphData, GraphNode, GraphLink } from '@minglog/graph' // 模块不存在，暂时注释
-
-// 临时类型定义
-interface MindMapData {
-  nodes: MindMapNode[]
-  links: MindMapLink[]
-  metadata?: Record<string, any>
-}
-
-interface MindMapNode {
-  id: string
-  label: string
-  x?: number
-  y?: number
-  data?: Record<string, any>
-}
-
-interface MindMapLink {
-  id: string
-  source: string
-  target: string
-  type?: string
-  data?: Record<string, any>
-}
-
-interface GraphData {
-  nodes: GraphNode[]
-  edges: GraphLink[]
-  metadata?: Record<string, any>
-}
-
-interface GraphNode {
-  id: string
-  label: string
-  type?: string
-  data?: Record<string, any>
-}
-
-interface GraphLink {
-  id: string
-  source: string
-  target: string
-  type?: string
-  data?: Record<string, any>
-}
+// 导入正确的类型定义
+import { MindMapData, MindMapNode, MindMapLink } from '../types/mindmap'
+import { GraphData, GraphNode, GraphLink } from '../types/graph'
 
 export interface DataAssociation {
   /** 关联ID */
@@ -259,13 +216,12 @@ export class CrossModuleDataBridge {
         id: graphNode.id,
         text: graphNode.title,
         level: this.calculateNodeLevel(graphNode, graphData),
-        children: this.findChildNodes(graphNode.id, graphData),
+        children: [], // 暂时设为空数组，后续可以实现完整的子节点转换
         x: graphNode.x,
         y: graphNode.y,
         tags: graphNode.tags,
         style: {
-          backgroundColor: graphNode.color,
-          radius: (graphNode.size || 1) * 20
+          backgroundColor: graphNode.color
         }
       }
       mindMapData.nodes.push(mindMapNode)
@@ -275,12 +231,11 @@ export class CrossModuleDataBridge {
     graphData.links.forEach(graphLink => {
       const mindMapLink: MindMapLink = {
         id: graphLink.id,
-        source: graphLink.source,
-        target: graphLink.target,
+        source: typeof graphLink.source === 'string' ? graphLink.source : graphLink.source.id,
+        target: typeof graphLink.target === 'string' ? graphLink.target : graphLink.target.id,
         type: 'parent-child',
         style: {
-          color: graphLink.color,
-          width: (graphLink.weight || 0.5) * 4
+          color: graphLink.color
         }
       }
       mindMapData.links.push(mindMapLink)
@@ -405,8 +360,8 @@ export class CrossModuleDataBridge {
   private calculateNodeSize(mindMapNode: MindMapNode): number {
     // 根据节点层级和子节点数量计算大小
     const baseSize = 1
-    const levelFactor = Math.max(1, 4 - mindMapNode.level)
-    const childrenFactor = Math.min(2, 1 + mindMapNode.children.length * 0.1)
+    const levelFactor = Math.max(1, 4 - (mindMapNode.level || 1))
+    const childrenFactor = Math.min(2, 1 + (mindMapNode.children?.length || 0) * 0.1)
     return baseSize * levelFactor * childrenFactor
   }
 

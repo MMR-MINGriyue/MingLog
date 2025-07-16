@@ -4,7 +4,7 @@
  */
 
 import { MingLogCore, DatabaseConnection } from '@minglog/core'
-import { NotesModuleFactory } from '@minglog/notes'
+import { NotesModule } from '@minglog/notes'
 import { MindMapModule } from '@minglog/mindmap'
 
 // Tauri数据库连接适配器
@@ -114,7 +114,10 @@ export class AppCore {
 
     try {
       // 注册笔记模块
-      await this.mingLogCore.registerModule('notes', NotesModuleFactory, {
+      const notesModuleFactory = {
+        create: async (config: any) => new NotesModule(config)
+      }
+      await this.mingLogCore.registerModule('notes', notesModuleFactory, {
         id: 'notes',
         name: '笔记管理',
         version: '1.0.0',

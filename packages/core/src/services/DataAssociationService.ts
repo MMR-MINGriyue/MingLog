@@ -48,12 +48,18 @@ export interface UnifiedSearchResult {
   type: EntityType
   entityType: EntityType            // 实体类型（与type保持一致）
   moduleId?: string                 // 模块ID
+  module?: string                   // 模块名称（兼容性）
   title: string
   content?: string
   snippet?: string
   score: number                     // 相关性评分
+  relevance?: number                // 相关性（兼容性）
   metadata?: Record<string, any>
-  associations?: AssociationRecord[]
+  associations?: AssociationRecord[] & {
+    connectionCount?: number        // 连接数量
+    tags?: string[]                 // 标签
+  }                                 // 关联记录
+  highlights?: string[]             // 高亮片段
   // 时间戳
   createdAt?: Date | string
   updatedAt?: Date | string

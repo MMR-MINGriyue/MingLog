@@ -64,6 +64,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
+      '@minglog/core': resolve(__dirname, '../../packages/core/src'),
+      '@minglog/graph': resolve(__dirname, '../../packages/graph/src'),
+      '@minglog/mindmap': resolve(__dirname, '../../packages/mindmap/src'),
+      '@minglog/ui': resolve(__dirname, '../../packages/ui/src'),
     },
   },
 

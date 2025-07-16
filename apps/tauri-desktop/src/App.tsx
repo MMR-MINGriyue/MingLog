@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter } from 'react-router-dom'
-import { ErrorBoundary } from './components/ErrorBoundary'
+import ErrorBoundary from './components/ErrorBoundary'
 import { CoreProvider } from './contexts/CoreContext'
 import { Layout } from './components/Layout'
 import { ModularRouter } from './router/ModularRouter'
 import { LoadingScreen } from './components/LoadingScreen'
+import { routerFutureConfig } from './config/routerConfig'
 
 // 核心包装器组件
 const CoreWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -12,6 +13,19 @@ const CoreWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div className="h-full w-full bg-gray-50 dark:bg-gray-900 transition-colors">
       {children}
     </div>
+  )
+}
+
+// 应用内容组件
+const AppContent: React.FC = () => {
+  return (
+    <CoreProvider>
+      <div className="h-full flex flex-col macos-content">
+        <Layout>
+          <ModularRouter />
+        </Layout>
+      </div>
+    </CoreProvider>
   )
 }
 
@@ -43,29 +57,14 @@ function App() {
   // 主应用内容
   return (
     <ErrorBoundary>
-      <BrowserRouter
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true,
-        }}
-      >
+      <BrowserRouter future={routerFutureConfig}>
         <AppContent />
       </BrowserRouter>
     </ErrorBoundary>
   )
 }
 
-// 应用内容组件
-export const AppContent: React.FC = () => {
-  return (
-    <CoreProvider>
-      <div className="h-full flex flex-col macos-content">
-        <Layout>
-          <ModularRouter />
-        </Layout>
-      </div>
-    </CoreProvider>
-  )
-}
+
 
 export default App
+export { AppContent }

@@ -11,9 +11,15 @@ interface NodeViewProps {
   editor: any
 }
 
-// 临时组件
-const NodeViewWrapper = ({ children }: { children: React.ReactNode }) => (
-  <div className="node-view-wrapper">{children}</div>
+// 临时组件，支持className属性
+const NodeViewWrapper = ({
+  children,
+  className
+}: {
+  children: React.ReactNode
+  className?: string
+}) => (
+  <div className={`node-view-wrapper ${className || ''}`}>{children}</div>
 )
 
 interface LinkComponentProps extends NodeViewProps {

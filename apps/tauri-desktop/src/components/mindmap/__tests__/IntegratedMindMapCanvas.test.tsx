@@ -2,7 +2,7 @@
  * 集成思维导图画布组件测试
  */
 
-import React from 'react'
+import React, { createContext } from 'react'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { IntegratedMindMapCanvas } from '../IntegratedMindMapCanvas'
@@ -17,7 +17,14 @@ const mockAppCore = {
 }
 
 const mockModuleManager = {
-  getModule: vi.fn()
+  getModule: vi.fn((id: string) => {
+    if (id === 'mindmap') {
+      return mockMindMapModule
+    }
+    return null
+  }),
+  getActiveModules: vi.fn(() => [mockMindMapModule]),
+  getRegisteredModules: vi.fn(() => [mockMindMapModule])
 }
 
 const mockEventBus = {
@@ -31,21 +38,77 @@ const mockMindMapModule = {
 }
 
 vi.mock('../../core/AppCore', () => ({
+  AppCore: vi.fn().mockImplementation(() => mockAppCore),
   appCore: mockAppCore
 }))
 
-// Mock MindMapCanvas
+// 创建一个测试用的CoreProvider
+const TestCoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const mockCoreValue = {
+    core: {
+      version: '1.0.0',
+      initialized: true,
+      modules: ['notes', 'settings']
+    },
+    initialized: true,
+    loading: false,
+    error: null
+  }
+
+  return React.createElement(
+    'div',
+    { 'data-testid': 'core-provider' },
+    children
+  )
+}
+
+// Mock CoreContext hooks completely
+vi.mock('../../contexts/CoreContext', () => ({
+  useCore: vi.fn(() => ({
+    core: {
+      version: '1.0.0',
+      initialized: true,
+      modules: ['notes', 'settings', 'mindmap']
+    },
+    initialized: true,
+    loading: false,
+    error: null
+  })),
+  useCoreInstance: vi.fn(() => ({
+    version: '1.0.0',
+    initialized: true,
+    modules: ['notes', 'settings', 'mindmap'],
+    isInitialized: vi.fn(() => true),
+    initialize: vi.fn(),
+    getModuleManager: vi.fn(() => mockModuleManager),
+    getEventBus: vi.fn(() => mockEventBus)
+  })),
+  CoreProvider: ({ children }: { children: React.ReactNode }) => children
+}))
+
+// Mock MindMapModule and MindMapCanvas
 vi.mock('@minglog/mindmap', () => ({
+  MindMapModule: vi.fn().mockImplementation((config) => ({
+    id: 'mindmap',
+    name: '思维导图',
+    version: '1.0.0',
+    status: 'loaded',
+    config,
+    initialize: vi.fn(),
+    activate: vi.fn(),
+    deactivate: vi.fn(),
+    getService: vi.fn()
+  })),
   MindMapCanvas: vi.fn(({ onNodeClick, onNodeDoubleClick, onBackgroundClick }) => (
     <div data-testid="mindmap-canvas">
-      <button 
-        data-testid="test-node" 
+      <button
+        data-testid="test-node"
         onClick={() => onNodeClick?.({ id: 'test-node', text: '测试节点', level: 0, children: [] })}
       >
         测试节点
       </button>
-      <button 
-        data-testid="test-node-double" 
+      <button
+        data-testid="test-node-double"
         onDoubleClick={() => onNodeDoubleClick?.({ id: 'test-node', text: '测试节点', level: 0, children: [] })}
       >
         双击测试

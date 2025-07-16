@@ -821,7 +821,11 @@ export class MubuTaskIntegration extends EventEmitter {
       type: 'paragraph',
       level: this.calculateTaskLevel(task),
       parentId: task.parentTaskId,
-      children: [{ text }],
+      children: [{
+        id: `text-${task.id}`,
+        type: 'text',
+        text
+      }],
       metadata: {
         isTask: true,
         taskStatus: task.status,

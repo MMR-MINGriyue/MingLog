@@ -399,27 +399,29 @@ export const GlobalKeyboardManager: React.FC<GlobalKeyboardManagerProps> = ({
       />
       
       {/* 键盘导航样式 */}
-      <style jsx global>{`
-        .keyboard-focus {
-          outline: 2px solid #007AFF !important;
-          outline-offset: 2px !important;
-          border-radius: 4px;
-        }
-        
-        .keyboard-focus:focus {
-          outline: 2px solid #007AFF !important;
-          outline-offset: 2px !important;
-        }
-        
-        [data-navigable] {
-          position: relative;
-        }
-        
-        [data-navigable]:focus {
-          outline: 2px solid #007AFF;
-          outline-offset: 2px;
-        }
-      `}</style>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .keyboard-focus {
+            outline: 2px solid #007AFF !important;
+            outline-offset: 2px !important;
+            border-radius: 4px;
+          }
+
+          .keyboard-focus:focus {
+            outline: 2px solid #007AFF !important;
+            outline-offset: 2px !important;
+          }
+
+          [data-navigable] {
+            position: relative;
+          }
+
+          [data-navigable]:focus {
+            outline: 2px solid #007AFF;
+            outline-offset: 2px;
+          }
+        `
+      }} />
     </>
   );
 };

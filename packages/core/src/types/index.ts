@@ -306,30 +306,7 @@ export interface DatabaseSchema {
   }
 }
 
-// 搜索相关类型
-export interface SearchQuery {
-  query: string
-  filters?: Record<string, any>
-  limit?: number
-  offset?: number
-  sortBy?: string
-  sortOrder?: 'asc' | 'desc'
-}
-
-export interface SearchResult {
-  id: string
-  title: string
-  content: string
-  type: string
-  moduleId: string
-  score: number
-  highlights?: string[]
-  metadata?: Record<string, any>
-}
-
-export interface SearchResponse {
-  results: SearchResult[]
-  total: number
-  query: SearchQuery
-  took: number
-}
+// 重新导出统一的类型定义
+export * from './search'
+export * from './mindmap'
+export * from './graph'

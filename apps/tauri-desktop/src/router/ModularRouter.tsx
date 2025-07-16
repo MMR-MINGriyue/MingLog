@@ -8,7 +8,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { ModuleRoute } from '@minglog/core'
 import { useCoreInstance } from '../contexts/CoreContext'
 import ModularSettingsPage from '../pages/ModularSettingsPage'
-import { NotesModule } from '../components/modules/NotesModule'
+import NotesPage from '../pages/NotesPage'
+// import { NotesModule } from '../components/modules/NotesModule'
 
 // 模块组件懒加载包装器
 const ModuleComponentWrapper: React.FC<{ 
@@ -126,17 +127,17 @@ export const ModularRouter: React.FC = () => {
         path="/notes"
         element={
           <RouteErrorBoundary>
-            <NotesModule />
+            <NotesPage />
           </RouteErrorBoundary>
         }
       />
 
-      {/* 新建笔记页面 */}
+      {/* 笔记详情页面 */}
       <Route
-        path="/notes/new"
+        path="/notes/:noteId"
         element={
           <RouteErrorBoundary>
-            <NotesModule />
+            <NotesPage />
           </RouteErrorBoundary>
         }
       />

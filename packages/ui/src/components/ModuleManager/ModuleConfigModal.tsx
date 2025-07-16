@@ -251,7 +251,7 @@ export const ModuleConfigModal: React.FC<ModuleConfigModalProps> = ({
             className={baseInputClass}
           >
             <option value="">请选择...</option>
-            {setting.options?.map(option => (
+            {setting.options?.map((option: any) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -262,7 +262,7 @@ export const ModuleConfigModal: React.FC<ModuleConfigModalProps> = ({
       case 'multiselect':
         return (
           <div className="space-y-2">
-            {setting.options?.map(option => (
+            {setting.options?.map((option: any) => (
               <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -419,7 +419,7 @@ export const ModuleConfigModal: React.FC<ModuleConfigModalProps> = ({
                     {category}
                   </h3>
                   <div className="space-y-6">
-                    {categorySettings.map(renderSettingItem)}
+                    {(categorySettings as any[]).map(renderSettingItem)}
                   </div>
                 </div>
               ))}

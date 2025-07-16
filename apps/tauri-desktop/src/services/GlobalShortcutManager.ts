@@ -120,7 +120,7 @@ export class GlobalShortcutManager extends EventEmitter {
       category: 'modal',
       priority: 90,
       global: true,
-      handler: (event) => {
+      handler: (_event) => {
         // 检查是否有模态框打开
         const modal = document.querySelector('[role="dialog"][aria-modal="true"]');
         if (modal) {
@@ -149,7 +149,7 @@ export class GlobalShortcutManager extends EventEmitter {
       category: 'global',
       priority: 80,
       global: true,
-      handler: (event) => {
+      handler: (_event) => {
         this.emit('quick-save');
         return true;
       },
@@ -205,7 +205,7 @@ export class GlobalShortcutManager extends EventEmitter {
       category: 'global',
       priority: 60,
       global: true,
-      handler: (event) => {
+      handler: (_event) => {
         this.emit('new-document');
         return true;
       },
@@ -221,7 +221,7 @@ export class GlobalShortcutManager extends EventEmitter {
       category: 'global',
       priority: 60,
       global: true,
-      handler: (event) => {
+      handler: (_event) => {
         this.emit('open-document');
         return true;
       },
@@ -257,7 +257,7 @@ export class GlobalShortcutManager extends EventEmitter {
       category: 'global',
       priority: 40,
       global: true,
-      handler: (event) => {
+      handler: (_event) => {
         this.emit('help-open');
         return true;
       },
@@ -273,7 +273,7 @@ export class GlobalShortcutManager extends EventEmitter {
       category: 'global',
       priority: 40,
       global: true,
-      handler: (event) => {
+      handler: (_event) => {
         this.emit('settings-open');
         return true;
       },
@@ -522,7 +522,7 @@ export class GlobalShortcutManager extends EventEmitter {
   /**
    * 检查是否应该执行快捷键
    */
-  private shouldExecuteShortcut(shortcut: GlobalShortcutConfig, event: KeyboardEvent): boolean {
+  private shouldExecuteShortcut(shortcut: GlobalShortcutConfig, _event: KeyboardEvent): boolean {
     // 检查上下文限制
     if (shortcut.context && shortcut.context.length > 0) {
       const currentContext = this.getCurrentContextString();

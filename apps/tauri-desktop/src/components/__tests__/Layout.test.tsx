@@ -6,6 +6,39 @@ import i18n from '../../i18n'
 import Layout from '../Layout'
 import { NotificationProvider } from '../NotificationSystem'
 
+// Mock CoreContext
+vi.mock('../../contexts/CoreContext', () => ({
+  useCore: vi.fn(() => ({
+    core: {
+      version: '1.0.0',
+      initialized: true,
+      modules: ['notes', 'settings']
+    },
+    initialized: true,
+    loading: false,
+    error: null
+  })),
+  useCoreInstance: vi.fn(() => ({
+    version: '1.0.0',
+    initialized: true,
+    modules: ['notes', 'settings']
+  })),
+  CoreProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="core-provider">{children}</div>
+  )
+}))
+
+// Mock ModularNavigation components
+vi.mock('../ModularNavigation', () => ({
+  ModularNavigation: () => <nav data-testid="modular-navigation">Navigation</nav>,
+  ModuleStatusIndicator: () => <div data-testid="module-status">Status</div>
+}))
+
+// Mock keyboard shortcuts hook
+vi.mock('../../hooks/useKeyboardShortcuts', () => ({
+  useGlobalShortcuts: vi.fn()
+}))
+
 // Mock Tauri API
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn().mockResolvedValue({}),

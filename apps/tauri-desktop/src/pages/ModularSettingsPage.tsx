@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { 
   Settings, 
   Palette, 
-  Globe, 
+
   Info,
   Puzzle,
   Monitor,
@@ -21,7 +21,7 @@ import { useCoreInstance } from '../contexts/CoreContext'
 import { clsx } from 'clsx'
 
 const ModularSettingsPage: React.FC = () => {
-  const { t } = useTranslation()
+  const { t: _t } = useTranslation()
   const { theme, setTheme } = useTheme()
   const core = useCoreInstance()
   const [activeTab, setActiveTab] = useState('general')

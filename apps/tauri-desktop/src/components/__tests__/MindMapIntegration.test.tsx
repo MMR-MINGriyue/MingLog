@@ -64,7 +64,20 @@ vi.mock('@minglog/mindmap', () => ({
 
     if (orphans.length > 0) {
       // Add virtual root for orphans
-      nodes.push({ id: 'virtual-root', label: 'Root', x: 0, y: 0 })
+      nodes.push({
+        id: 'virtual-root',
+        label: 'Root',
+        level: 0,
+        style: {
+          backgroundColor: '#4F46E5',
+          fontColor: '#FFFFFF',
+          fontWeight: 'bold',
+          borderColor: '#E5E7EB',
+          borderWidth: 2
+        },
+        x: 0,
+        y: 0
+      })
       orphans.forEach(orphan => {
         links.push({
           source: 'virtual-root',
@@ -200,6 +213,28 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
+// Mock CoreContext hooks completely
+vi.mock('../../contexts/CoreContext', () => ({
+  useCore: vi.fn(() => ({
+    core: {
+      version: '1.0.0',
+      initialized: true,
+      modules: ['notes', 'settings', 'mindmap']
+    },
+    initialized: true,
+    loading: false,
+    error: null
+  })),
+  useCoreInstance: vi.fn(() => ({
+    version: '1.0.0',
+    initialized: true,
+    modules: ['notes', 'settings', 'mindmap']
+  })),
+  CoreProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="core-provider">{children}</div>
+  )
+}))
+
 // 测试组件包装器
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <MemoryRouter
@@ -208,7 +243,9 @@ const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
       v7_relativeSplatPath: true,
     }}
   >
-    {children}
+    <div data-testid="core-provider">
+      {children}
+    </div>
   </MemoryRouter>
 )
 

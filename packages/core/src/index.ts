@@ -27,5 +27,19 @@ export { CrossModuleDataBridge } from './services/CrossModuleDataBridge'
 export { UnifiedSearchService } from './services/UnifiedSearchService'
 export { CrossModuleVisualization } from './components/CrossModuleVisualization'
 
+// 导出用户偏好服务
+export {
+  UserPreferencesService,
+  ThemeType,
+  LanguageType,
+  type UserPreferences,
+  type ThemeConfig,
+  type LayoutConfig,
+  type EditorConfig,
+  type KeyboardShortcut,
+  type NotificationConfig,
+  type ViewMode
+} from './services/UserPreferencesService'
+
 // 导出工具函数
 export * from './utils/index.js'

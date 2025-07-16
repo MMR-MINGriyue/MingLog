@@ -163,19 +163,22 @@ export const EnhancedGraphInteractions: React.FC<EnhancedGraphInteractionsProps>
     
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([minZoom, maxZoom])
-      .on('zoom', (event) => {
-        const { x, y, k } = event.transform
-        const newTransform = { x, y, k }
-        
-        setState(prev => ({ ...prev, transform: newTransform }))
-        onViewportChange?.(newTransform)
-      })
-      .on('start', () => {
-        setState(prev => ({ ...prev, isPanning: true }))
-      })
-      .on('end', () => {
-        setState(prev => ({ ...prev, isPanning: false }))
-      })
+
+    zoom.on('zoom', (event) => {
+      const { x, y, k } = event.transform
+      const newTransform = { x, y, k }
+
+      setState(prev => ({ ...prev, transform: newTransform }))
+      onViewportChange?.(newTransform)
+    })
+
+    zoom.on('start', () => {
+      setState(prev => ({ ...prev, isPanning: true }))
+    })
+
+    zoom.on('end', () => {
+      setState(prev => ({ ...prev, isPanning: false }))
+    })
 
     if (enablePan) {
       svg.call(zoom)

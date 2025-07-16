@@ -4,12 +4,29 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { TasksModule } from '../../packages/modules/tasks/src/TasksModule'
-import { 
-  ITasksService, 
-  IProjectsService, 
-  IGTDService 
-} from '../../packages/modules/tasks/src/services'
+// import { TasksModule } from '@minglog/tasks'
+// import {
+//   ITasksService,
+//   IProjectsService,
+//   IGTDService
+// } from '@minglog/tasks'
+
+// 临时类型定义，直到@minglog/tasks模块修复完成
+interface ITasksService {
+  // TODO: 实现ITasksService接口
+}
+
+interface IProjectsService {
+  // TODO: 实现IProjectsService接口
+}
+
+interface IGTDService {
+  // TODO: 实现IGTDService接口
+}
+
+interface TasksModule {
+  // TODO: 实现TasksModule接口
+}
 
 interface UseTasksModuleReturn {
   /** 任务模块实例 */
@@ -61,10 +78,10 @@ export const useTasksModule = (): UseTasksModuleReturn => {
       emit: (event: string, data: any) => {
         console.log('Event emitted:', event, data)
       },
-      on: (event: string, handler: Function) => {
+      on: (event: string, _handler: Function) => {
         console.log('Event listener added:', event)
       },
-      off: (event: string, handler: Function) => {
+      off: (event: string, _handler: Function) => {
         console.log('Event listener removed:', event)
       }
     },

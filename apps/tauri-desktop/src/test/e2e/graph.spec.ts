@@ -112,7 +112,7 @@ test.describe('Graph Visualization', () => {
   test('should filter nodes by type', async ({ page }) => {
     // Look for filter controls
     const pageFilter = page.getByRole('checkbox', { name: /pages/i })
-    const blockFilter = page.getByRole('checkbox', { name: /blocks/i })
+    const _blockFilter = page.getByRole('checkbox', { name: /blocks/i })
     
     if (await pageFilter.isVisible()) {
       // Uncheck pages filter
@@ -230,7 +230,7 @@ test.describe('Graph Visualization', () => {
     await expect(graphContainer).toBeVisible()
     
     // Should show empty state message if no data
-    const emptyMessage = page.getByText(/no data|empty graph/i)
+    const _emptyMessage = page.getByText(/no data|empty graph/i)
     // This might not be visible if there's test data
   })
 

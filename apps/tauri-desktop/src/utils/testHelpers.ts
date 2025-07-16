@@ -2,7 +2,7 @@
  * 测试辅助工具 - 提供简化的测试验证功能
  */
 
-import { GraphData, GraphNode } from '@minglog/graph'
+import { GraphData } from '@minglog/graph'
 
 // 创建测试用的图谱数据
 export const createTestGraphData = (): GraphData => {
@@ -299,7 +299,7 @@ export const generateTestReport = (results: any[]): string => {
   report += `通过率: ${passRate}%\n`
   report += `==================\n\n`
   
-  results.forEach((result, index) => {
+  results.forEach((result, _index) => {
     const status = result.passed ? '✅' : '❌'
     report += `${status} ${result.name}\n`
     if (!result.passed) {

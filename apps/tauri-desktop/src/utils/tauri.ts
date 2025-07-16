@@ -362,7 +362,7 @@ export const importData = (path: string): Promise<string | undefined> =>
 // Error handling wrapper
 export const withErrorHandling = async <T>(
   operation: () => Promise<T>,
-  errorMessage?: string
+  _errorMessage?: string
 ): Promise<T | undefined> => {
   try {
     return await operation()

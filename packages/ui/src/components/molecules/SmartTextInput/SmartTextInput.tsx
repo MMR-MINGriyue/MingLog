@@ -69,7 +69,7 @@ const findPotentialLink = (text: string, cursorPosition: number): LinkParseResul
   }
 }
 
-export interface SmartTextInputProps extends Omit<InputProps, 'onChange' | 'onKeyDown'> {
+export interface SmartTextInputProps extends Omit<InputProps, 'onChange'> {
   /** 输入值 */
   value: string
   /** 值变化回调 */

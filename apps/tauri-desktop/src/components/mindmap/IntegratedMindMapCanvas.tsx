@@ -7,7 +7,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { MindMapCanvas } from '@minglog/mindmap'
 import { MindMapData, MindMapNode, LayoutConfig, NodeStyle, MindMapTemplate } from '@minglog/mindmap'
 import { GraphData, GraphNode, GraphLink } from '@minglog/graph'
-import { appCore } from '../../core/AppCore'
+import { useCoreInstance } from '../../contexts/CoreContext'
 import { LoadingSpinner } from '../ui/LoadingSpinner'
 import { ErrorBoundary } from '../ui/ErrorBoundary'
 import { EnhancedNodeStyleEditor } from './EnhancedNodeStyleEditor'
@@ -115,6 +115,9 @@ export const IntegratedMindMapCanvas: React.FC<IntegratedMindMapCanvasProps> = (
   className = '',
   style
 }) => {
+  // 获取核心实例
+  const appCore = useCoreInstance()
+
   // 状态管理
   const [canvasState, setCanvasState] = useState<CanvasState>({
     isLoading: true,

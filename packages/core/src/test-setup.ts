@@ -7,7 +7,7 @@ import '@testing-library/jest-dom';
 import { vi, beforeEach, afterEach } from 'vitest';
 
 // 导入测试基础设施
-import { MockFactory } from './test/TestInfrastructureSetup';
+// import { MockFactory } from './test/TestInfrastructureSetup'; // 暂时注释，避免编译错误
 
 // 模拟浏览器API
 Object.defineProperty(window, 'indexedDB', {
@@ -183,7 +183,44 @@ HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
   transform: vi.fn(),
   rect: vi.fn(),
   clip: vi.fn(),
-}))
+  // 添加必需的属性
+  canvas: {} as HTMLCanvasElement,
+  globalAlpha: 1,
+  globalCompositeOperation: 'source-over' as GlobalCompositeOperation,
+  fillStyle: '#000000',
+  strokeStyle: '#000000',
+  lineWidth: 1,
+  lineCap: 'butt' as CanvasLineCap,
+  lineJoin: 'miter' as CanvasLineJoin,
+  miterLimit: 10,
+  font: '10px sans-serif',
+  textAlign: 'start' as CanvasTextAlign,
+  textBaseline: 'alphabetic' as CanvasTextBaseline,
+  direction: 'inherit' as CanvasDirection,
+  imageSmoothingEnabled: true,
+  imageSmoothingQuality: 'low' as ImageSmoothingQuality,
+  shadowBlur: 0,
+  shadowColor: 'rgba(0, 0, 0, 0)',
+  shadowOffsetX: 0,
+  shadowOffsetY: 0,
+  filter: 'none',
+  isPointInPath: vi.fn(() => false),
+  isPointInStroke: vi.fn(() => false),
+  // 添加其他必需的方法
+  strokeText: vi.fn(),
+  createLinearGradient: vi.fn(),
+  createRadialGradient: vi.fn(),
+  createPattern: vi.fn(),
+  bezierCurveTo: vi.fn(),
+  quadraticCurveTo: vi.fn(),
+  arcTo: vi.fn(),
+  ellipse: vi.fn(),
+  resetTransform: vi.fn(),
+  getTransform: vi.fn(),
+  setLineDash: vi.fn(),
+  getLineDash: vi.fn(() => []),
+  lineDashOffset: 0
+}) as any)
 
 // Mock SVG
 Object.defineProperty(SVGElement.prototype, 'getBBox', {
@@ -306,4 +343,4 @@ afterEach(() => {
 })
 
 // 导出增强的测试工具
-export { MockFactory }
+// export { MockFactory } // 暂时注释，避免编译错误

@@ -2,7 +2,7 @@
  * 全局键盘管理器测试
  */
 
-import React from 'react';
+// import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import GlobalKeyboardManager from '../components/GlobalKeyboardManager';

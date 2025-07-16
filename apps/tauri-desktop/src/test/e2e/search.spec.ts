@@ -132,7 +132,7 @@ test.describe('Search Functionality', () => {
     await searchInput.fill('test')
     
     // Check for loading indicator (should appear briefly)
-    const loadingIndicator = page.getByText(/searching/i)
+    const _loadingIndicator = page.getByText(/searching/i)
     // Note: This might be too fast to catch in some cases
   })
 

@@ -4,21 +4,9 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
-// import { MindMapData } from '@minglog/mindmap' // 模块不存在，暂时注释
-// import { GraphData } from '@minglog/graph' // 模块不存在，暂时注释
-
-// 临时类型定义
-interface MindMapData {
-  nodes: Array<{ id: string; label: string; [key: string]: any }>
-  links: Array<{ source: string; target: string; [key: string]: any }>
-}
-
-interface GraphData {
-  nodes: Array<{ id: string; label: string; [key: string]: any }>
-  edges: Array<{ source: string; target: string; [key: string]: any }>
-}
+import { MindMapData, GraphData, SearchQuery } from '../types'
 import { DataAssociation, CrossModuleDataBridge } from '../services/CrossModuleDataBridge'
-import { UnifiedSearchService, SearchQuery, SearchResponse } from '../services/UnifiedSearchService'
+import { UnifiedSearchService, SearchResponse } from '../services/UnifiedSearchService'
 
 interface CrossModuleVisualizationProps {
   /** 思维导图数据 */
@@ -131,7 +119,7 @@ export const CrossModuleVisualization: React.FC<CrossModuleVisualizationProps> =
       const searchQuery: SearchQuery = {
         query,
         scope: 'all',
-        type: 'fuzzy',
+        type: 'fuzzy' as const,
         sortBy: 'relevance',
         limit: 20
       }
@@ -141,7 +129,11 @@ export const CrossModuleVisualization: React.FC<CrossModuleVisualizationProps> =
       setVisualizationState(prev => ({
         ...prev,
         searchQuery: query,
-        searchResults: results,
+        searchResults: {
+          ...results,
+          total: results.results?.length || 0,
+          duration: results.searchTime || 0
+        } as SearchResponse,
         error: null
       }))
     } catch (error) {
@@ -180,7 +172,17 @@ export const CrossModuleVisualization: React.FC<CrossModuleVisualizationProps> =
         }))
       }, 100)
 
-      const result = await dataBridge.performBidirectionalSync(mindMapData, graphData)
+      // 确保数据格式正确
+      const validMindMapData: MindMapData = {
+        ...mindMapData,
+        links: mindMapData.links.map((link, index) => ({
+          ...link,
+          id: link.id || `link-${index}`,
+          type: link.type || 'custom'
+        }))
+      }
+
+      const result = await dataBridge.performBidirectionalSync(validMindMapData, graphData)
       
       clearInterval(progressInterval)
       

@@ -5,29 +5,47 @@
 
 import React, { useState, useCallback } from 'react'
 import { FileUploadComponent, FileUploadItem, FileUploadConfig } from './FileUploadComponent'
-// import { Button } from '../atoms/Button/Button' // 模块不存在，暂时注释
+// 临时Button组件，支持variant属性
+interface ButtonProps {
+  children: React.ReactNode
+  onClick?: () => void
+  className?: string
+  disabled?: boolean
+  variant?: 'primary' | 'outline' | 'secondary'
+  size?: 'sm' | 'md' | 'lg'
+}
 
-// 临时Button组件
 const Button = ({
   children,
   onClick,
   className = '',
-  disabled = false
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
-  className?: string;
-  disabled?: boolean
-}) => (
-  <button
-    onClick={onClick}
-    className={`button ${className}`}
-    disabled={disabled}
-    type="button"
-  >
-    {children}
-  </button>
-)
+  disabled = false,
+  variant = 'primary',
+  size = 'md'
+}: ButtonProps) => {
+  const variantClasses = {
+    primary: 'bg-blue-500 text-white hover:bg-blue-600',
+    outline: 'border border-gray-300 text-gray-700 hover:bg-gray-50',
+    secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+  }
+
+  const sizeClasses = {
+    sm: 'px-3 py-1 text-sm',
+    md: 'px-4 py-2 text-base',
+    lg: 'px-6 py-3 text-lg'
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      className={`button ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      disabled={disabled}
+      type="button"
+    >
+      {children}
+    </button>
+  )
+}
 
 export const FileUploadExample: React.FC = () => {
   const [uploadedFiles, setUploadedFiles] = useState<FileUploadItem[]>([])
