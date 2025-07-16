@@ -7,15 +7,40 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { FileStorageService, type FileEntity, type FileMetadata, type FileAssociation } from './FileStorageService'
 import { EventBus } from '../event-system/EventBus'
 import { SearchEngine } from '../search/SearchEngine'
-import fs from 'fs/promises'
 import path from 'path'
 
 // Mock fs模块
-vi.mock('fs/promises', () => ({
-  mkdir: vi.fn(),
-  writeFile: vi.fn(),
-  unlink: vi.fn(),
-  copyFile: vi.fn()
+vi.mock('fs/promises', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    mkdir: vi.fn().mockResolvedValue(undefined),
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    unlink: vi.fn().mockResolvedValue(undefined),
+    copyFile: vi.fn().mockResolvedValue(undefined),
+    readFile: vi.fn().mockResolvedValue(Buffer.from('test content')),
+    stat: vi.fn().mockResolvedValue({
+      size: 1024,
+      isFile: () => true,
+      isDirectory: () => false,
+      mtime: new Date()
+    }),
+    access: vi.fn().mockResolvedValue(undefined)
+  }
+})
+
+// Mock crypto模块
+vi.mock('crypto', () => ({
+  default: {
+    createHash: vi.fn().mockReturnValue({
+      update: vi.fn().mockReturnThis(),
+      digest: vi.fn().mockReturnValue('mock-hash-value')
+    })
+  },
+  createHash: vi.fn().mockReturnValue({
+    update: vi.fn().mockReturnThis(),
+    digest: vi.fn().mockReturnValue('mock-hash-value')
+  })
 }))
 
 // Mock crypto模块
@@ -30,6 +55,12 @@ vi.mock('crypto', () => ({
 const createTestFile = (name: string, type: string, size: number, content: string = 'test content'): File => {
   const file = new File([content], name, { type })
   Object.defineProperty(file, 'size', { value: size })
+
+  // 确保File对象有arrayBuffer方法
+  if (!file.arrayBuffer) {
+    file.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(size))
+  }
+
   return file
 }
 
@@ -37,8 +68,12 @@ describe('FileStorageService', () => {
   let fileStorageService: FileStorageService
   let mockEventBus: EventBus
   let mockSearchEngine: SearchEngine
+  let mockFs: any
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // 获取mock fs的引用
+    mockFs = await vi.importMock('fs/promises')
+
     // 创建mock对象
     mockEventBus = {
       emit: vi.fn(),
@@ -80,8 +115,8 @@ describe('FileStorageService', () => {
     it('应该正确初始化服务', async () => {
       await fileStorageService.initialize()
 
-      expect(fs.mkdir).toHaveBeenCalledWith('./test-storage', { recursive: true })
-      expect(fs.mkdir).toHaveBeenCalledWith('./test-thumbnails', { recursive: true })
+      expect(mockFs.mkdir).toHaveBeenCalledWith('./test-storage', { recursive: true })
+      expect(mockFs.mkdir).toHaveBeenCalledWith('./test-thumbnails', { recursive: true })
       expect(mockEventBus.emit).toHaveBeenCalledWith('file-storage:initialized', expect.any(Object))
     })
 

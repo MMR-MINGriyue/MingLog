@@ -260,7 +260,7 @@ describe('CrossModuleDataBridge', () => {
   })
 
   describe('数据转换', () => {
-    it('应该正确计算节点大小', () => {
+    it('应该正确计算节点大小', async () => {
       const mindMapNode: MindMapNode = {
         id: 'test',
         text: '测试节点',
@@ -269,7 +269,7 @@ describe('CrossModuleDataBridge', () => {
       }
 
       // 通过同步测试节点大小计算
-      const graphData = dataBridge.syncMindMapToGraph({
+      const graphData = await dataBridge.syncMindMapToGraph({
         nodes: [mindMapNode],
         links: [],
         rootId: 'test'
@@ -279,7 +279,7 @@ describe('CrossModuleDataBridge', () => {
       expect(convertedNode.size).toBeGreaterThan(1) // 应该根据层级和子节点数量计算
     })
 
-    it('应该正确识别根节点', () => {
+    it('应该正确识别根节点', async () => {
       const graphData: GraphData = {
         nodes: [
           { id: 'root', title: '根节点', type: 'note' },
@@ -292,11 +292,11 @@ describe('CrossModuleDataBridge', () => {
         ]
       }
 
-      const mindMapData = dataBridge.syncGraphToMindMap(graphData)
+      const mindMapData = await dataBridge.syncGraphToMindMap(graphData)
       expect(mindMapData.rootId).toBe('root')
     })
 
-    it('应该正确计算节点层级', () => {
+    it('应该正确计算节点层级', async () => {
       const graphData: GraphData = {
         nodes: [
           { id: 'root', title: '根节点', type: 'note' },
@@ -309,8 +309,8 @@ describe('CrossModuleDataBridge', () => {
         ]
       }
 
-      const mindMapData = dataBridge.syncGraphToMindMap(graphData)
-      
+      const mindMapData = await dataBridge.syncGraphToMindMap(graphData)
+
       const rootNode = mindMapData.nodes.find(n => n.id === 'root')
       const level1Node = mindMapData.nodes.find(n => n.id === 'level1')
       const level2Node = mindMapData.nodes.find(n => n.id === 'level2')
